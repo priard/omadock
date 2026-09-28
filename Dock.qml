@@ -28,6 +28,8 @@ Item {
   readonly property alias customFolderPickerProc: customFolderPickerProc
   readonly property alias folderStackScanner: folderStackScanner
 
+  readonly property var dockRoot: root
+
   property var shell: null
   property string omarchyPath: ""
   property var manifest: null
@@ -37,18 +39,54 @@ Item {
   property bool _savingConfig: false
 
   property string screenName: ""
+  // Qt parks windows on a nameless placeholder screen while every output is
+  // gone (a DP panel drops off the link for a few seconds on DPMS blank and
+  // suspend). A layer surface mapped there never comes back on its own, so
+  // the placeholder is never a valid dock screen.
+  readonly property var realScreens: {
+    var list = Quickshell.screens || []
+    var out = []
+    for (var i = 0; i < list.length; i++)
+      if (list[i] && list[i].name) out.push(list[i])
+    return out
+  }
+
   readonly property var dockScreen: {
     var s = root.screenName ? root.screenForName(root.screenName) : null
     if (s) return s
-    return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+    return root.realScreens.length > 0 ? root.realScreens[0] : null
   }
 
   function screenForName(name) {
-    var list = Quickshell.screens
+    var list = root.realScreens
     for (var i = 0; i < list.length; i++)
       if (list[i].name === name) return list[i]
     return null
   }
+
+  // The dock surface is dropped whenever the output set changes and mapped
+  // again once it has settled, so it is always recreated on a live output
+  // instead of staying bound to one the compositor already closed.
+  property bool surfaceArmed: true
+
+  Timer {
+    id: surfaceRearmTimer
+    interval: 1500
+    repeat: false
+    onTriggered: root.surfaceArmed = root.dockScreen !== null
+  }
+
+  function rearmSurface() {
+    root.surfaceArmed = false
+    surfaceRearmTimer.restart()
+  }
+
+  Connections {
+    target: Quickshell
+    function onScreensChanged() { root.rearmSurface() }
+  }
+
+  onDockScreenChanged: root.rearmSurface()
 
   readonly property var appLibrary: (shell && shell.appLibrary) ? shell.appLibrary : localAppLibrary
 
@@ -579,6 +617,11 @@ Item {
   }
   property string dockShape: "rounded"
   property string dockBgColor: "theme"
+  property bool showBackground: true
+  property bool showShadow: true
+  property bool showBorder: true
+  property bool settingsPanelOpen: false
+  property string settingsPanelPage: "appearance"
   property int themeVersion: 0
   property string currentIconThemeName: "Yaru"
   property string folderColor: "theme"
@@ -1129,7 +1172,7 @@ Item {
       return
     }
 
-    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (revealHover && revealHover.hovered) || root.contextAppId !== "" || root.dragAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== ""
+    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (revealHover && revealHover.hovered) || root.contextAppId !== "" || root.dragAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen
 
     // Hovered, Context Menu Open, or Dragging: keep visible
     if (isHovered) {
@@ -1158,6 +1201,7 @@ Item {
   onActiveStackFolderChanged: root.syncVisibility()
   onActiveAppGroupIdChanged: root.syncVisibility()
   onDragAppIdChanged: root.syncVisibility()
+  onSettingsPanelOpenChanged: root.syncVisibility()
   onAutohideChanged: root.syncVisibility()
   onIntelligentAutohideChanged: {
     if (root.intelligentAutohide) debounceOverlapTimer.restart()
@@ -1594,6 +1638,9 @@ Item {
     }
     root.dockShape = parsed && typeof parsed.shape === "string" ? parsed.shape : "rounded"
     root.dockBgColor = parsed && typeof parsed.bgColor === "string" ? parsed.bgColor : "theme"
+    root.showBackground = parsed ? parsed.showBackground !== false : true
+    root.showShadow = parsed ? parsed.showShadow !== false : true
+    root.showBorder = parsed ? parsed.showBorder !== false : true
     root.folderColor = parsed && typeof parsed.folderColor === "string" ? parsed.folderColor : "theme"
     root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" ? parsed.itemSpacing : 4
     if (parsed && typeof parsed.minimizeMode === "string") {
@@ -1673,6 +1720,29 @@ Item {
     root.contextY = y
     root.settingsSubmenu = ""
     root.contextAppId = "__dock_settings__"
+  }
+
+  function openSettingsPanel() {
+    root.closeContext()
+    root.closeFolderStack()
+    root.closeAppGroup()
+    root.settingsPanelOpen = true
+  }
+
+  function closeSettingsPanel() {
+    root.settingsPanelOpen = false
+    root.syncVisibility()
+  }
+
+  // Plain value settings from the settings panel: set, persist.
+  function setOption(key, value) {
+    root[key] = value
+    root.saveConfig()
+  }
+
+  function setDockScreen(name) {
+    root.screenName = name || ""
+    root.saveConfig()
   }
 
   function setAutohideMode(mode) {
@@ -2388,6 +2458,19 @@ Item {
       root.setDockAlignment(align)
     }
 
+    function openSettings(): void {
+      root.openSettingsPanel()
+    }
+
+    function openSettingsPage(page: string): void {
+      root.settingsPanelPage = page
+      root.openSettingsPanel()
+    }
+
+    function closeSettings(): void {
+      root.closeSettingsPanel()
+    }
+
     function setPosition(pos: string): void {
       root.setDockPosition(pos)
     }
@@ -2471,11 +2554,15 @@ Item {
     conf.launchBounce = root.launchBounce
     conf.advancedTooltips = root.advancedTooltips
     if (root.screenName) conf.screen = root.screenName
+    else delete conf.screen
     if (root.configuredIconSize > 0) conf.iconSize = root.configuredIconSize
     else delete conf.iconSize
     conf.opacity = root.dockOpacity < 0 ? "theme" : root.dockOpacity
     conf.shape = root.dockShape
     conf.bgColor = root.dockBgColor
+    conf.showBackground = root.showBackground
+    conf.showShadow = root.showShadow
+    conf.showBorder = root.showBorder
     conf.folderColor = root.folderColor
     conf.itemSpacing = root.itemSpacing
     conf.minimizeMode = root.minimizeMode
@@ -2866,6 +2953,7 @@ Item {
     id: dockWindow
 
     screen: root.dockScreen
+    visible: root.surfaceArmed && root.dockScreen !== null
     color: "transparent"
     WlrLayershell.namespace: "omadock"
     WlrLayershell.layer: WlrLayer.Top
@@ -2991,6 +3079,18 @@ Item {
     DockContextMenu {
       id: contextMenuComp
       rootRef: root
+    }
+  }
+
+  // ------------------------------------------------------------ settings panel
+  // Built on open and torn down on close, so it always lands on the output the
+  // dock is on right now.
+  LazyLoader {
+    active: root.settingsPanelOpen && root.dockScreen !== null
+
+    SettingsPanel {
+      // Not `root`: inside SettingsPanel that name is its own property.
+      rootRef: dockRoot
     }
   }
 }

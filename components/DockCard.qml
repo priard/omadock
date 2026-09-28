@@ -168,7 +168,7 @@ Item {
 
   Item {
     id: cardShadow
-    visible: true
+    visible: root ? root.showShadow : true
     // Follows the card out of view; a blur left behind would hang on screen
     // after the dock has gone.
     opacity: cardWrapper.opacity
@@ -208,8 +208,11 @@ Item {
       return Util.alpha(root.dockForeground, Math.max(0.24, root.effectiveDockOpacity * 0.35))
     }
 
-    color: (root && root.dockBgColor === "none") ? effectiveBgColor : Util.alpha(effectiveBgColor, root ? root.effectiveDockOpacity : 1.0)
-    borderSpec: Border.flat(dockCard.effectiveBorderColor, dockCard.effectiveBorderWidth)
+    color: (root && !root.showBackground) ? "transparent"
+      : ((root && root.dockBgColor === "none") ? effectiveBgColor : Util.alpha(effectiveBgColor, root ? root.effectiveDockOpacity : 1.0))
+    borderSpec: (root && !root.showBorder)
+      ? Border.none()
+      : Border.flat(dockCard.effectiveBorderColor, dockCard.effectiveBorderWidth)
     radius: root ? root.cardRadius(height) : Style.cornerRadius
     padding: Style.space(5)
     z: 1
@@ -227,8 +230,18 @@ Item {
       id: cardArea
       anchors.fill: parent
       z: 0
-      acceptedButtons: Qt.LeftButton
-      onClicked: if (root && root.contextAppId !== "") root.closeContext()
+      acceptedButtons: Qt.LeftButton | Qt.RightButton
+      onClicked: function(mouse) {
+        if (!root) return
+        if (mouse.button === Qt.RightButton) {
+          // Right-click on the dock background reaches the settings even
+          // when the Omarchy button is hidden.
+          var pt = root.contentItemRef ? cardArea.mapToItem(root.contentItemRef, mouse.x, 0) : null
+          root.openDockSettingsMenu(pt ? pt.x : mouse.x, 0)
+          return
+        }
+        if (root.contextAppId !== "") root.closeContext()
+      }
       onReleased: {
         if (root && root.dragAppId !== "") {
           root.dragAppId = ""

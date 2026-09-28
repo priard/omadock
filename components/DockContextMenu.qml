@@ -86,49 +86,40 @@ BorderSurface {
       spacing: Style.space(1)
       visible: root ? root.contextAppId === "__dock_settings__" : false
 
-      // 1. Main Categories Page (Minimalist & Categorized)
+      // 1. Main page: quick actions plus the entry to the settings panel.
+      // The category sub-pages below stay for upstream parity but are no
+      // longer reachable from here (fork: priard).
       Column {
         spacing: Style.space(2)
         visible: root ? root.settingsSubmenu === "" : false
 
         ContextRow {
-          text: "Omadock Settings"
+          text: "Omadock"
           isHeader: true
         }
 
         ContextRow {
-          text: "Appearance ›"
-          onTriggered: { if (root) root.settingsSubmenu = "appearance" }
+          text: "Dock Settings…"
+          textColor: Color.accent
+          onTriggered: { if (root) root.openSettingsPanel() }
+        }
+
+        MenuDivider {}
+
+        ContextRow {
+          text: "Autohide"
+          checked: root ? root.autohide : false
+          onTriggered: { if (root) root.setAutohideMode(root.autohide ? "always" : "intelligent") }
         }
 
         ContextRow {
-          text: "Placement & Alignment ›"
-          onTriggered: { if (root) root.settingsSubmenu = "alignment" }
-        }
-
-        ContextRow {
-          text: "Behavior & Windows ›"
-          onTriggered: { if (root) root.settingsSubmenu = "behavior" }
-        }
-
-        ContextRow {
-          text: "Effects & Animations ›"
-          onTriggered: { if (root) root.settingsSubmenu = "effects" }
-        }
-
-        ContextRow {
-          text: "Size & Spacing ›"
-          onTriggered: { if (root) root.settingsSubmenu = "size_spacing" }
-        }
-
-        ContextRow {
-          text: "Folders & Stacks ›"
-          onTriggered: { if (root) root.settingsSubmenu = "folders" }
-        }
-
-        ContextRow {
-          text: "App Folders & Groups ›"
-          onTriggered: { if (root) root.settingsSubmenu = "app_groups" }
+          text: "Create Group from Running Apps"
+          onTriggered: {
+            if (root) {
+              root.createAppGroupFromRunning()
+              root.closeContext()
+            }
+          }
         }
       }
 
