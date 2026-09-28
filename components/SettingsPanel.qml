@@ -300,26 +300,41 @@ PanelWindow {
             color: current ? Util.alpha(Color.accent, 0.18)
               : (navMouse.containsMouse ? Util.alpha(Color.menu.text, 0.07) : "transparent")
 
-            Row {
+            // Glyph centred on its painted (tight) bounds, not its line box:
+            // icon fonts sit low in the line, which left them under the label.
+            Item {
+              id: navIcon
               anchors.left: parent.left
               anchors.leftMargin: Style.spacing.xl
               anchors.verticalCenter: parent.verticalCenter
-              spacing: Style.spacing.lg
+              width: Style.space(18)
+              height: Style.space(18)
+
+              TextMetrics {
+                id: navGlyphMetrics
+                font: navGlyph.font
+                text: navGlyph.text
+              }
 
               Text {
-                width: Style.space(18)
+                id: navGlyph
                 text: navItem.modelData.glyph
                 color: navItem.current ? Color.accent : Util.alpha(Color.menu.text, 0.55)
                 font.family: Style.font.family
                 font.pixelSize: Style.font.iconLarge
-                horizontalAlignment: Text.AlignHCenter
+                x: Math.round(navIcon.width / 2 - (navGlyphMetrics.tightBoundingRect.x + navGlyphMetrics.tightBoundingRect.width / 2))
+                y: Math.round(navIcon.height / 2 - (navGlyph.baselineOffset + navGlyphMetrics.tightBoundingRect.y + navGlyphMetrics.tightBoundingRect.height / 2))
               }
-              Text {
-                text: navItem.modelData.label
-                color: navItem.current ? Color.accent : Color.menu.text
-                font.family: Style.font.family
-                font.pixelSize: Style.font.subtitle
-              }
+            }
+
+            Text {
+              anchors.left: navIcon.right
+              anchors.leftMargin: Style.spacing.lg
+              anchors.verticalCenter: parent.verticalCenter
+              text: navItem.modelData.label
+              color: navItem.current ? Color.accent : Color.menu.text
+              font.family: Style.font.family
+              font.pixelSize: Style.font.subtitle
             }
 
             MouseArea {
@@ -525,9 +540,26 @@ PanelWindow {
             onPicked: function(v) { root.setDockAlignment(v) }
           }
 
+          SectionLabel { text: "Monitors" }
+
+          SwitchRow {
+            label: "Show on all monitors"
+            hint: "One dock per connected monitor."
+            checked: root ? root.multiMonitor : false
+            onToggled: root.setOption("multiMonitor", !root.multiMonitor)
+          }
+          SwitchRow {
+            label: "Only this monitor's apps"
+            hint: "Each dock lists the windows on its own monitor; pinned apps show everywhere."
+            visible: root ? root.multiMonitor : false
+            checked: root ? root.perMonitorApps : true
+            onToggled: root.setOption("perMonitorApps", !root.perMonitorApps)
+          }
           SettingRow {
-            label: "Monitor"
-            hint: "Automatic picks the first connected output."
+            label: root && root.multiMonitor ? "Primary monitor" : "Monitor"
+            hint: root && root.multiMonitor
+              ? "Plays the alert sounds."
+              : "Automatic picks the first connected output."
 
             Dropdown {
               width: Style.space(200)

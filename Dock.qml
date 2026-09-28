@@ -39,22 +39,121 @@ Item {
   property bool _savingConfig: false
 
   property string screenName: ""
-  // Qt parks windows on a nameless placeholder screen while every output is
-  // gone (a DP panel drops off the link for a few seconds on DPMS blank and
-  // suspend). A layer surface mapped there never comes back on its own, so
-  // the placeholder is never a valid dock screen.
+  // Connected outputs only (placeholder and "{ NULL SCREEN }" entries
+  // skipped); also feeds the monitor picker in the settings panel.
   readonly property var realScreens: {
     var list = Quickshell.screens || []
     var out = []
-    for (var i = 0; i < list.length; i++)
-      if (list[i] && list[i].name) out.push(list[i])
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i]
+      if (s && s.name && s.name !== "{ NULL SCREEN }") out.push(s)
+    }
     return out
   }
 
-  readonly property var dockScreen: {
-    var s = root.screenName ? root.screenForName(root.screenName) : null
+  // Real, connected outputs only: Qt keeps placeholder screens (empty name)
+  // alive while every output is gone and Quickshell marks destroyed outputs
+  // dangling ("{ NULL SCREEN }"). Hosting the dock window on either one
+  // breaks revival, so the fallback picks the first genuine screen instead
+  // of blindly trusting screens[0].
+  function pickScreen() {
+    var name = root.forcedScreenName || root.screenName
+    var s = name ? root.screenForName(name) : null
     if (s) return s
-    return root.realScreens.length > 0 ? root.realScreens[0] : null
+    var list = Quickshell.screens
+    for (var i = 0; i < list.length; i++) {
+      var cand = list[i]
+      if (cand && cand.name && cand.name !== "{ NULL SCREEN }") return cand
+    }
+    return null
+  }
+
+  readonly property var dockScreen: root.pickScreen()
+
+  // ------------------------------------------------- multi-monitor
+  // Set by DockHost when one dock runs per monitor. forcedScreenName pins this
+  // instance to its monitor regardless of the "screen" config key; isPrimary
+  // marks the one dock that owns global side effects (alert sounds);
+  // sharedState carries parked-window bookkeeping across all docks so a tile
+  // lands on the monitor its window was minimized from, whichever dock did it.
+  property string forcedScreenName: ""
+  property bool isPrimary: true
+  property bool ipcEnabled: true
+  property QtObject sharedState: null
+  property bool multiMonitor: false
+  property bool perMonitorApps: true
+  readonly property bool filterByMonitor: root.perMonitorApps && root.forcedScreenName !== ""
+
+  function monitorNameForWorkspace(target) {
+    if (!target || !Hyprland.workspaces) return ""
+    var list = Hyprland.workspaces.values || []
+    for (var i = 0; i < list.length; i++) {
+      var ws = list[i]
+      if (!ws) continue
+      if (String(ws.name || "") === target || String(ws.id) === target)
+        return (ws.monitor && ws.monitor.name) ? String(ws.monitor.name) : ""
+    }
+    return ""
+  }
+
+  // The monitor a window belongs to. A parked window sits on the shared
+  // special workspace, so it belongs to the monitor it was minimized from.
+  function monitorNameForHypr(h) {
+    if (!h) return ""
+    var addr = root.windowAddress(h)
+    var origin = (addr && root.minimizedOrigins) ? root.minimizedOrigins[addr] : undefined
+    if (origin !== undefined) {
+      var fromOrigin = root.monitorNameForWorkspace(String(origin))
+      if (fromOrigin) return fromOrigin
+    }
+    // The workspace's monitor tracks moveworkspace events; the window's own
+    // monitor is only a fallback.
+    var mon = (h.workspace && h.workspace.monitor) ? h.workspace.monitor : h.monitor
+    return (mon && mon.name) ? String(mon.name) : ""
+  }
+
+  // Unresolved handles count as local: a window may show on every dock for a
+  // beat while Hyprland catches up, but it never vanishes from all of them.
+  function isHyprOnThisMonitor(h) {
+    if (!root.filterByMonitor) return true
+    var name = root.monitorNameForHypr(h)
+    return name === "" || name === root.forcedScreenName
+  }
+
+  function isToplevelOnThisMonitor(top) {
+    if (!root.filterByMonitor) return true
+    var h = root.hyprToplevelFor(top)
+    return h ? root.isHyprOnThisMonitor(h) : true
+  }
+
+  onFilterByMonitorChanged: modelTimer.restart()
+
+  property bool _syncingShared: false
+  onMinimizedOriginsChanged: root.pushSharedState()
+  onParkedAtChanged: root.pushSharedState()
+  onSharedStateChanged: root.pullSharedState()
+
+  function pushSharedState() {
+    if (!root.sharedState || root._syncingShared) return
+    root._syncingShared = true
+    root.sharedState.minimizedOrigins = root.minimizedOrigins
+    root.sharedState.parkedAt = root.parkedAt
+    root._syncingShared = false
+  }
+
+  function pullSharedState() {
+    if (!root.sharedState || root._syncingShared) return
+    root._syncingShared = true
+    root.minimizedOrigins = root.sharedState.minimizedOrigins || ({})
+    root.parkedAt = root.sharedState.parkedAt || ({})
+    root._syncingShared = false
+    modelTimer.restart()
+  }
+
+  Connections {
+    target: root.sharedState
+    function onMinimizedOriginsChanged() { root.pullSharedState() }
+    function onParkedAtChanged() { root.pullSharedState() }
   }
 
   function screenForName(name) {
@@ -64,29 +163,6 @@ Item {
     return null
   }
 
-  // The dock surface is dropped whenever the output set changes and mapped
-  // again once it has settled, so it is always recreated on a live output
-  // instead of staying bound to one the compositor already closed.
-  property bool surfaceArmed: true
-
-  Timer {
-    id: surfaceRearmTimer
-    interval: 1500
-    repeat: false
-    onTriggered: root.surfaceArmed = root.dockScreen !== null
-  }
-
-  function rearmSurface() {
-    root.surfaceArmed = false
-    surfaceRearmTimer.restart()
-  }
-
-  Connections {
-    target: Quickshell
-    function onScreensChanged() { root.rearmSurface() }
-  }
-
-  onDockScreenChanged: root.rearmSurface()
 
   readonly property var appLibrary: (shell && shell.appLibrary) ? shell.appLibrary : localAppLibrary
 
@@ -183,7 +259,20 @@ Item {
       if (id === "") return
       // Always append .desktop — DesktopEntry.id strips the extension, so
       // ids like org.telegram.desktop need it re-added to resolve correctly.
-      Quickshell.execDetached(["uwsm-app", "--", "gtk-launch", "--", id + ".desktop"])
+      var args = ["uwsm-app", "--", "gtk-launch", "--", id + ".desktop"]
+      // gtk-launch exits non-zero up front when the desktop file no longer
+      // resolves (stale pin, uninstalled app), but execDetached cannot
+      // observe exit codes. Launches run through launchProc so failures
+      // surface a notification instead of bouncing silently. The overlap
+      // fallback keeps rare concurrent clicks fire-and-forget; the probe
+      // itself exits within milliseconds.
+      if (launchProc.running) {
+        Quickshell.execDetached(args)
+        return
+      }
+      launchProc.pendingName = String(name || id)
+      launchProc.command = args
+      launchProc.running = true
     }
   }
 
@@ -197,6 +286,19 @@ Item {
     onExited: {
       localAppLibrary.iconIndex = localAppLibrary.pendingIconIndex
       localAppLibrary.appsChanged()
+    }
+  }
+
+  // Launch wrapper: one-shot, event-driven (a failed gtk-launch probe exits
+  // in milliseconds), so this adds zero idle CPU. A non-zero exit means the
+  // desktop file no longer resolves and the user gets told about it.
+  Process {
+    id: launchProc
+    property string pendingName: ""
+    onExited: function (exitCode, exitStatus) {
+      if (exitCode !== 0 && launchProc.pendingName !== "")
+        root.notifyAppMissing(launchProc.pendingName, "It cannot be launched — reinstall the app or unpin it from the dock.")
+      launchProc.pendingName = ""
     }
   }
 
@@ -445,8 +547,10 @@ Item {
   readonly property var groupedSection: root.dockModel.grouped || []
 
   function refreshDock() {
+    var tops = ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []
+    if (root.filterByMonitor) tops = tops.filter(root.isToplevelOnThisMonitor)
     root.dockModel = root.appLibrary
-      ? DockModel.buildEntries(root.pinnedIds, (ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []), root.appRows,
+      ? DockModel.buildEntries(root.pinnedIds, tops, root.appRows,
                                root.appLibrary, root.hyprToplevelFor, root.minimizedWorkspace, root.minimizedOrigins, root.appGroups)
       : { pinned: [], running: [] }
     root.rescanMinimizedWindows()
@@ -465,6 +569,7 @@ Item {
       var isParked = (h.workspace && String(h.workspace.name || "") === root.minimizedWorkspace)
                   || (root.minimizedOrigins && root.minimizedOrigins[addr] !== undefined)
       if (!isParked) continue
+      if (!root.isHyprOnThisMonitor(h)) continue
       var top = root.liveToplevelForAddress(addr)
       var title = String((top && top.title) || h.title || "Window")
       var appId = ""
@@ -1472,6 +1577,10 @@ Item {
       if (n === "openwindow" || n === "closewindow" || n === "urgent"
           || n === "movewindow" || n === "movewindowv2"
           || n === "workspace" || n === "workspacev2") modelTimer.restart()
+      // Per-monitor docks: a workspace (and its windows) changing monitor
+      // moves those apps to another dock.
+      if (root.filterByMonitor && (n === "moveworkspace" || n === "moveworkspacev2"
+          || n === "monitoradded" || n === "monitorremoved")) modelSettleTimer.restart()
       // Park/restore moves get one deferred rebuild: the 40ms rebuild can land
       // inside Quickshell's Hyprland-handle lag and freeze pre-move state into
       // the model (stale isMinimized kept the running icon beside its tile).
@@ -1561,7 +1670,8 @@ Item {
     }
 
     // Play notification alert sound (suppressed if DND is active)
-    if (root.urgentSound && root.urgentSoundName !== "none" && !root.isDndActive) {
+    // Only one dock chimes when several run side by side.
+    if (root.isPrimary && root.urgentSound && root.urgentSoundName !== "none" && !root.isDndActive) {
       Quickshell.execDetached(["canberra-gtk-play", "-i", root.urgentSoundName])
     }
   }
@@ -1628,6 +1738,8 @@ Item {
     root.launchBounce = parsed && parsed.launchBounce !== false
     root.advancedTooltips = parsed && parsed.advancedTooltips !== false
     root.screenName = parsed && typeof parsed.screen === "string" ? parsed.screen : ""
+    root.multiMonitor = parsed ? parsed.multiMonitor === true : false
+    root.perMonitorApps = parsed ? parsed.perMonitorApps !== false : true
     root.configuredIconSize = parsed && typeof parsed.iconSize === "number" ? parsed.iconSize : 0
     if (parsed && (parsed.opacity === "theme" || parsed.opacity === "auto" || parsed.opacity === -1)) {
       root.dockOpacity = -1.0
@@ -2424,22 +2536,35 @@ Item {
   // so users can bind them in ~/.config/hypr/bindings.lua, e.g.:
   //   o.bind("SUPER + M", "Minimize focused",
   //     "exec qs -p /usr/share/omarchy/shell ipc call omadock minimizeActive")
+  function minimizeActive() {
+    var addr = root.activeWindowAddress
+    if (addr !== "") root.minimizeToplevel(addr)
+  }
+
+  // Returns whether a window was restored, so DockHost can fall through to the
+  // next monitor's dock when this one has nothing parked.
+  function restoreLast() {
+    var parked = []
+    var all = root.pinnedSection.concat(root.runningSection)
+    for (var i = 0; i < all.length; i++) {
+      if (!all[i]) continue
+      parked = parked.concat(root.parkedWindows(all[i].windowList || []))
+    }
+    if (parked.length === 0) return false
+    return root.restoreWindow(root.oldestParked(parked), "")
+  }
+
+  // With several docks running, DockHost owns the "omadock" target instead.
   IpcHandler {
     target: "omadock"
+    enabled: root.ipcEnabled
 
     function minimizeActive(): void {
-      var addr = root.activeWindowAddress
-      if (addr !== "") root.minimizeToplevel(addr)
+      root.minimizeActive()
     }
 
     function restoreLast(): void {
-      var parked = []
-      var all = root.pinnedSection.concat(root.runningSection)
-      for (var i = 0; i < all.length; i++) {
-        if (!all[i]) continue
-        parked = parked.concat(root.parkedWindows(all[i].windowList || []))
-      }
-      if (parked.length > 0) root.restoreWindow(root.oldestParked(parked), "")
+      root.restoreLast()
     }
 
     function toggleVisibility(): void {
@@ -2555,6 +2680,8 @@ Item {
     conf.advancedTooltips = root.advancedTooltips
     if (root.screenName) conf.screen = root.screenName
     else delete conf.screen
+    conf.multiMonitor = root.multiMonitor
+    conf.perMonitorApps = root.perMonitorApps
     if (root.configuredIconSize > 0) conf.iconSize = root.configuredIconSize
     else delete conf.iconSize
     conf.opacity = root.dockOpacity < 0 ? "theme" : root.dockOpacity
@@ -2736,7 +2863,35 @@ Item {
   }
 
   function togglePin(appId) {
-    root.setPinned(DockModel.togglePinned(root.pinnedIds, appId))
+    var id = DockModel.stripDesktop(appId)
+    if (!id) return
+    // Pin-time validation: never pin an id that no longer resolves to an
+    // installed desktop entry — the pin could only ever bounce silently.
+    // Unpinning bypasses the check so stale pins can always be removed.
+    if (!DockModel.isPinned(root.pinnedIds, id) && !root.resolveDesktopEntry(id)) {
+      root.notifyAppMissing(id, "It cannot be pinned to the dock — reinstall the app first.")
+      return
+    }
+    root.setPinned(DockModel.togglePinned(root.pinnedIds, id))
+  }
+
+  function resolveDesktopEntry(appId) {
+    var entry = DockModel.entryFor(root.appRows, appId)
+    if (!entry && typeof DesktopEntries !== "undefined" && DesktopEntries)
+      entry = DesktopEntries.heuristicLookup(appId) || DesktopEntries.byId(appId)
+    return entry || null
+  }
+
+  // Shared feedback for the "app is gone" classes (launching a stale pin,
+  // pinning an unresolvable id) that used to fail silently. The label is
+  // markup-escaped: notification bodies are rendered as markup.
+  function notifyAppMissing(name, detail) {
+    var label = String(name || "This app").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    Quickshell.execDetached([
+      "notify-send", "-a", "OmaDock", "-i", "dialog-error",
+      "App no longer installed",
+      label + " is no longer installed. " + String(detail || "Reinstall the app or unpin it from the dock.")
+    ])
   }
 
   function launchDesktopAction(action, appName) {
@@ -2947,13 +3102,45 @@ Item {
     return Math.min(Math.max(widest, 220), Style.space(280))
   }
 
+  // ------------------------------------- layer-surface recovery (issue #9)
+  // Suspend/resume, monitor unplug and DPMS make Hyprland close every layer
+  // surface (zwlr_layer_surface_v1.closed on output removal); Quickshell
+  // treats that as final and deletes the backing window outright
+  // (WlrLayershell.deleteOnInvisible), and nothing used to bring it back —
+  // the dock vanished until a shell restart. Track the close and rebuild the
+  // surface as soon as a real screen is available again. Fully event-driven.
+  property bool dockSurfaceClosed: false
+
+  Connections {
+    target: dockWindow
+    function onClosed() { root.dockSurfaceClosed = true }
+  }
+
+  Connections {
+    target: Quickshell
+    function onScreensChanged() {
+      if (root.dockSurfaceClosed)
+        // Defer past binding evaluation so dockWindow.screen has adopted
+        // the fresh QuickshellScreenInfo before the window is recreated.
+        Qt.callLater(root.recoverDockSurface)
+    }
+  }
+
+  function recoverDockSurface() {
+    if (!root.dockSurfaceClosed || !root.dockScreen) return
+    root.dockSurfaceClosed = false
+    // Setting visible takes the supported recreate path: setVisibleDirect(true)
+    // builds a new backing window and a fresh wlr-layer-shell surface on the
+    // current screen. Screen reassignment alone cannot revive a deleted one.
+    dockWindow.visible = true
+  }
+
   // ------------------------------------------------- panel window
 
   PanelWindow {
     id: dockWindow
 
     screen: root.dockScreen
-    visible: root.surfaceArmed && root.dockScreen !== null
     color: "transparent"
     WlrLayershell.namespace: "omadock"
     WlrLayershell.layer: WlrLayer.Top

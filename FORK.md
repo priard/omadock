@@ -15,11 +15,12 @@ Sync: `git fetch upstream && git merge upstream/main`
   are left in place (unreachable) to keep upstream merges clean.
 - **Appearance toggles**: `showBackground`, `showShadow`, `showBorder`
   (config keys in `~/.config/omarchy/omadock.json`, default `true`).
-- **Monitor picker**: `screen` can be reset to automatic (key removed).
-- **Resume fix**: the nameless placeholder screen Qt creates while all
-  outputs are gone (DP drops off on DPMS blank / suspend) is never used as
-  the dock screen, and the dock surface is unmapped on every output change
-  and mapped again 1.5 s later, so it always comes back on a live output.
-- **IPC**: `omarchy-shell omadock openSettings | openSettingsPage <page> |
+- **Monitor picker** in Placement, plus upstream's multi-monitor switches
+  (`multiMonitor`, `perMonitorApps`); `screen` can be reset to automatic.
+- **Resume fix**: taken from upstream v3.7.3 (#9, rebuild the surface after
+  the compositor closes it). The fork's own re-arm timer was dropped in the
+  merge; only the `realScreens` helper remains, for the monitor picker.
+- **IPC** (in `DockHost.qml`, acts on the focused monitor's dock):
+  `omarchy-shell omadock openSettings | openSettingsPage <page> |
   closeSettings` (pages: appearance, placement, behavior, effects, size,
   folders, groups).

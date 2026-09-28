@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "omadock",
   "name": "omadock",
-  "version": "3.7.2-priard.1",
+  "version": "3.8.0-priard.1",
   "author": "thepathless",
   "license": "MIT",
   "description": "Clean, modern, high-performance application dock for Omarchy with zero-CPU autohide, tiling window adaptation, and deep customization",
@@ -11,7 +11,7 @@
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "overlay": "Dock.qml"
+    "overlay": "DockHost.qml"
   },
   "tags": [
     "launcher",
