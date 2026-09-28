@@ -39,33 +39,27 @@ Item {
   property bool _savingConfig: false
 
   property string screenName: ""
-  // Connected outputs only (placeholder and "{ NULL SCREEN }" entries
-  // skipped); also feeds the monitor picker in the settings panel.
-  readonly property var realScreens: {
-    var list = Quickshell.screens || []
-    var out = []
-    for (var i = 0; i < list.length; i++) {
-      var s = list[i]
-      if (s && s.name && s.name !== "{ NULL SCREEN }") out.push(s)
-    }
-    return out
-  }
-
   // Real, connected outputs only: Qt keeps placeholder screens (empty name)
   // alive while every output is gone and Quickshell marks destroyed outputs
   // dangling ("{ NULL SCREEN }"). Hosting the dock window on either one
   // breaks revival, so the fallback picks the first genuine screen instead
-  // of blindly trusting screens[0].
+  // of blindly trusting screens[0]. Also feeds the settings panel's monitor
+  // picker.
+  readonly property var realScreens: {
+    var list = Quickshell.screens || []
+    var out = []
+    for (var i = 0; i < list.length; i++) {
+      var cand = list[i]
+      if (cand && cand.name && cand.name !== "{ NULL SCREEN }") out.push(cand)
+    }
+    return out
+  }
+
   function pickScreen() {
     var name = root.forcedScreenName || root.screenName
     var s = name ? root.screenForName(name) : null
     if (s) return s
-    var list = Quickshell.screens
-    for (var i = 0; i < list.length; i++) {
-      var cand = list[i]
-      if (cand && cand.name && cand.name !== "{ NULL SCREEN }") return cand
-    }
-    return null
+    return root.realScreens.length > 0 ? root.realScreens[0] : null
   }
 
   readonly property var dockScreen: root.pickScreen()
@@ -162,7 +156,6 @@ Item {
       if (list[i].name === name) return list[i]
     return null
   }
-
 
   readonly property var appLibrary: (shell && shell.appLibrary) ? shell.appLibrary : localAppLibrary
 

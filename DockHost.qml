@@ -139,7 +139,7 @@ Item {
       for (var i = 0; i < d.length; i++) d[i].dockVisible = false
     }
 
-    // Settings panel opens on the dock of the focused monitor (fork: priard).
+    // The settings panel opens on the focused monitor's dock.
     function openSettings(): void {
       var d = host.orderedDocks()
       if (d.length > 0) d[0].openSettingsPanel()
