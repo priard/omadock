@@ -750,7 +750,6 @@ Item {
   property var _lastProcessedNotifTimestamp: 0
   property int revealDelay: 160
   property int tooltipDelay: 450
-  property string settingsSubmenu: ""
 
   // ------------------------------------------------- autohide state
 
@@ -1862,7 +1861,6 @@ Item {
     root.contextPinned = false
     root.contextX = x
     root.contextY = y
-    root.settingsSubmenu = ""
     root.contextAppId = "__dock_settings__"
   }
 

@@ -238,9 +238,10 @@ Item {
       onClicked: function(mouse) {
         if (!root) return
         if (mouse.button === Qt.RightButton) {
-          // Right-click on the dock background (or the Omarchy button) opens
-          // the full settings panel directly.
-          root.openSettingsPanel()
+          // Right-click on the dock background opens the dock menu too, so it
+          // stays reachable when the Omarchy button is hidden.
+          var pt = root.contentItemRef ? cardArea.mapToItem(root.contentItemRef, mouse.x, 0) : null
+          root.openDockSettingsMenu(pt ? pt.x : mouse.x, 0)
           return
         }
         if (root.contextAppId !== "") root.closeContext()
@@ -276,7 +277,7 @@ Item {
         onMiddleClicked: Quickshell.execDetached(["omarchy-launch-terminal"])
         onWheelScrolled: function(dir) { if (root) root.cycleWorkspace(dir) }
         onMenuRequested: function(cx, cy) {
-          if (root) root.openSettingsPanel()
+          if (root) root.openDockSettingsMenu(cx, cy)
         }
       }
 
