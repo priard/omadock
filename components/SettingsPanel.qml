@@ -569,6 +569,17 @@ PanelWindow {
                 value: root ? (root.blurSize > 0 ? root.blurSize : (panel.currentBlurSize > 0 ? panel.currentBlurSize : 6)) : 6
                 onCommitted: function(v) { root.setBlurSize(v, panel.currentBlurSize) }
               }
+              SliderRow {
+                label: "Grain"
+                hint: "Film grain over the background. Works on solid, translucent and blurred backgrounds alike."
+                minimum: 0
+                maximum: 1
+                step: 0.05
+                displayScale: 100
+                suffix: "%"
+                value: root ? root.grain : 0
+                onCommitted: function(v) { root.setOption("grain", Math.round(v * 100) / 100) }
+              }
 
               SettingRow {
                 label: "Color"

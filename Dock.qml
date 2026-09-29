@@ -754,6 +754,8 @@ Item {
   property string dockShape: "rounded"
   property string dockBgColor: "theme"
   property bool showBackground: true
+  // Static film grain over the background card, 0 (off) .. 1.
+  property real grain: 0
   property bool showShadow: true
   // Shadow opacity, 0..1.
   property real shadowStrength: 0.4
@@ -1848,6 +1850,7 @@ Item {
     root.dockShape = parsed && typeof parsed.shape === "string" ? parsed.shape : "rounded"
     root.dockBgColor = parsed && typeof parsed.bgColor === "string" ? parsed.bgColor : "theme"
     root.showBackground = parsed ? parsed.showBackground !== false : true
+    root.grain = parsed && typeof parsed.grain === "number" ? Math.max(0, Math.min(1, parsed.grain)) : 0
     root.showShadow = parsed ? parsed.showShadow !== false : true
     root.shadowStrength = parsed && typeof parsed.shadowStrength === "number"
       ? Math.max(0, Math.min(1, parsed.shadowStrength))
@@ -3067,6 +3070,7 @@ Item {
     conf.shape = root.dockShape
     conf.bgColor = root.dockBgColor
     conf.showBackground = root.showBackground
+    conf.grain = root.grain
     conf.showShadow = root.showShadow
     conf.shadowStrength = root.shadowStrength
     conf.blur = root.blurMode

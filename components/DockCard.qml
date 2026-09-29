@@ -320,6 +320,22 @@ Item {
     padding: dockCard.devSnap(Style.space(5))
     z: 1
 
+    // Film grain over the background (shaders/grain.frag): one speck per
+    // output pixel, cut to the card's rounded shape. Static, so it costs
+    // nothing between frames; built only while grain is on.
+    Loader {
+      anchors.fill: parent
+      z: 0.5
+      active: root ? (root.showBackground && root.grain > 0) : false
+      sourceComponent: ShaderEffect {
+        property real strength: root ? root.grain * 0.35 : 0
+        property real radius: dockCard.radius
+        property real cellScale: root ? root.outputScale : 1
+        property size size: Qt.size(width, height)
+        fragmentShader: Qt.resolvedUrl("../shaders/grain.frag.qsb")
+      }
+    }
+
     HoverHandler {
       id: cardHover
       onHoveredChanged: if (root) root.syncVisibility()

@@ -362,6 +362,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `showShadow` | `bool` | `true` | Draws the soft drop shadow under the dock. |
 | `showBorder` | `bool` | `true` | Draws the rim around the dock. |
 | `borderWidth` | `number` | `1.5` | Rim width in pixels, `1`–`6`. |
+| `grain` | `number` | `0` | Film grain over the background, `0` (off) – `1`. |
 | `shadowStrength` | `number` | `0.4` | Shadow opacity, `0.0`–`1.0`. |
 | `blur` | `string` | `"system"` | Blur behind the dock: `"system"` (your Hyprland layer rules decide), `"on"` or `"off"` (a runtime layer rule overrides them). |
 | `blurSize` | `int` | unset | With `blur: "on"`, Hyprland's blur size `1`–`20`. Hyprland has one blur size for everything, so this applies globally; the previous value (`systemBlurSize`, recorded automatically) comes back when blur leaves `"on"`. |
