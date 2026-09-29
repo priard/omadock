@@ -24,6 +24,20 @@ Item {
   property alias drivesRepeater: drivesRepeater
   readonly property bool folderDropActive: folderDrop.containsDrag
 
+  // Insert index among the pinned folders for a pointer at row x: before the
+  // first folder whose icon centre lies right of it. The icon sits right of
+  // any open gap, so moving through the gap keeps the same index.
+  function folderInsertIndex(px) {
+    var n = foldersRepeater ? foldersRepeater.count : 0
+    for (var i = 0; i < n; i++) {
+      var it = foldersRepeater.itemAt(i)
+      if (!it) continue
+      var iconCenter = it.x + it.width - (root ? root.iconSlot : it.width) / 2
+      if (px < iconCenter) return i
+    }
+    return n
+  }
+
   function handleDragMoved(aid, mx) {
     if (!root) return
     root.dropBeforeId = ""
@@ -166,14 +180,22 @@ Item {
       onHoveredChanged: if (root) root.syncVisibility()
     }
 
-    // Folders dragged in from a file manager get pinned as stacks.
+    // Folders dragged in from a file manager get pinned as stacks, at the
+    // spot the pointer picks among the pinned folders.
     DropArea {
       id: folderDrop
       anchors.fill: parent
       keys: ["text/uri-list"]
       onEntered: function(drag) {
-        if (root) root.externalDragOver = true
+        if (root) {
+          root.externalDragOver = true
+          root.previewDraggedFolder(drag.urls)
+          root.dropInsertIndex = cardWrapper.folderInsertIndex(folderDrop.mapToItem(row, drag.x, drag.y).x)
+        }
         drag.accept(Qt.LinkAction)
+      }
+      onPositionChanged: function(drag) {
+        if (root) root.dropInsertIndex = cardWrapper.folderInsertIndex(folderDrop.mapToItem(row, drag.x, drag.y).x)
       }
       onExited: if (root) root.externalDragOver = false
       onDropped: function(drop) {
@@ -227,7 +249,7 @@ Item {
       return root.dockBgColor
     }
 
-    readonly property real effectiveBorderWidth: 1.5
+    readonly property real effectiveBorderWidth: root ? root.borderWidth : 1.5
     readonly property color effectiveBorderColor: {
       if (!root) return Util.alpha(Color.menu.border, 0.48)
       // Specular Frosted Glass Rim: Crisp highlight with high alpha for contrast on dark and light surfaces
@@ -458,6 +480,7 @@ Item {
           folderPath: modelData.path
           name: modelData.name || "Folder"
           icon: modelData.icon || DockModel.folderIconFor(modelData.path, "")
+          slotIndex: index
           homeCenter: root ? root.slotHomeCenter(
             root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + index,
             root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index,
@@ -470,6 +493,16 @@ Item {
             if (root) root.openFolderContext(fpath, fname, cx, cy)
           }
         }
+      }
+
+      // Drop gap after the last pinned folder (see DockFolderItem.gapWidth).
+      DropGhost {
+        id: trailingDropGap
+        rootRef: cardWrapper.rootRef
+        readonly property bool open: root ? (root.dropPreviewPath !== "" && root.dropInsertIndex >= foldersRepeater.count) : false
+        width: open && root ? root.iconSlot : 0
+        height: root ? root.iconSlot : 0
+        Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
       }
 
       Repeater {

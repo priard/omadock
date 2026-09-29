@@ -175,7 +175,7 @@ Item {
                 anchors.fill: parent
                 source: miniCell.miniSource
                 renderSize: miniCell.miniSize * 2
-                iconStyle: root ? root.iconStyle : "original"
+                iconStyle: root && root.groupIconEffects !== "none" ? root.iconStyle : "original"
                 tint: root ? root.iconTintColor : Color.bar.text
                 // Same cell size as a full icon, so the minis match it.
                 grid: root ? Math.round(root.iconGrid * miniCell.miniSize / Math.max(1, root.baseIconArt)) : 8

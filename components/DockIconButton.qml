@@ -39,7 +39,9 @@ Item {
   // indicator band and grows upward. The glyph is sized and centred by its
   // painted (tight) bounds, since icon fonts carry uneven side bearings and
   // sit low in their line box.
-  Item {
+  // Drawn through DockIconArt so the dock's icon style (pixel, dot matrix…)
+  // and icon shadow apply to the button like to every other icon.
+  DockIconArt {
     id: glyphBox
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.bottom: parent.bottom
@@ -48,6 +50,11 @@ Item {
     height: width
     scale: btn.magnifyScale * (area.pressed ? 0.92 : 1.0)
     transformOrigin: Item.Bottom
+    iconStyle: root ? root.iconStyle : "original"
+    tint: root ? root.iconTintColor : Color.bar.text
+    grid: root ? root.iconGrid : 16
+    dropShadow: root ? root.iconShadow : false
+    shadowStrength: root ? root.shadowStrength : 0.4
 
     // Probe at a fixed size to learn the glyph's ink-to-em ratio.
     TextMetrics {
@@ -70,7 +77,8 @@ Item {
       textFormat: Text.PlainText
       font.family: "omarchy"
       font.pixelSize: Math.max(1, Math.round(glyphBox.width * btn.glyphFill / inkRatio))
-      color: area.containsMouse ? Color.accent : btn.glyphColor
+      color: area.containsMouse ? Color.accent
+        : ((glyphBox.iconStyle === "mono" || glyphBox.iconStyle === "dots") ? glyphBox.tint : btn.glyphColor)
       x: Math.round(glyphBox.width / 2 - (glyphMetrics.tightBoundingRect.x + glyphMetrics.tightBoundingRect.width / 2))
       y: Math.round(glyphBox.height / 2 - (glyphText.baselineOffset + glyphMetrics.tightBoundingRect.y + glyphMetrics.tightBoundingRect.height / 2))
       Behavior on color { ColorAnimation { duration: 120 } }

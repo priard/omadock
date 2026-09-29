@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """List a folder for a dock stack as JSON.
 
-Usage: list-folder.py FOLDER [SORT]
+Usage: list-folder.py FOLDER [SORT] [LIMIT]
 
 SORT is one of:
   name      natural, case-insensitive name order
@@ -12,18 +12,28 @@ SORT is one of:
             stand-in: moving or downloading a file into a folder sets it
   size      largest first (folders count as 0)
 
-Prints {"count": N, "items": [...first 16...], "folder": FOLDER}. Hidden
-entries are skipped. The output is always valid JSON, even for a missing
-folder.
+LIMIT caps the items returned (default 16, at most 1000).
+
+Prints {"count": N, "items": [...first LIMIT...], "folder": FOLDER}.
+Hidden entries are skipped. Each item may carry "thumb": a preview image
+path, the file itself for images, otherwise a freedesktop thumbnail a file
+manager already rendered (~/.cache/thumbnails). The output is always valid
+JSON, even for a missing folder.
 """
 
+import hashlib
 import json
 import os
 import re
 import sys
 import time
 
-LIMIT = 16
+DEFAULT_LIMIT = 16
+MAX_LIMIT = 1000
+THUMB_DIRS = [
+    os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "thumbnails", size)
+    for size in ("x-large", "large", "normal")
+]
 SORTS = ("name", "kind", "modified", "added", "size")
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif"}
@@ -72,6 +82,23 @@ def icon_for(ext, is_dir):
     return "application-x-executable"
 
 
+def thumbnail_for(path):
+    """A thumbnail some file manager already made, per the freedesktop
+    thumbnail spec: the MD5 of the file URI names it."""
+    uri = "file://" + "/".join(quote_segment(s) for s in path.split("/"))
+    name = hashlib.md5(uri.encode("utf-8")).hexdigest() + ".png"
+    for directory in THUMB_DIRS:
+        candidate = os.path.join(directory, name)
+        if os.path.isfile(candidate):
+            return candidate
+    return ""
+
+
+def quote_segment(segment):
+    from urllib.parse import quote
+    return quote(segment, safe="!$&'()*+,;=:@-._~")
+
+
 def natural_key(name):
     return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", name.casefold())]
 
@@ -79,6 +106,10 @@ def natural_key(name):
 def main():
     folder = os.path.expanduser(sys.argv[1]) if len(sys.argv) > 1 else ""
     sort = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] in SORTS else "modified"
+    try:
+        limit = max(1, min(MAX_LIMIT, int(sys.argv[3]))) if len(sys.argv) > 3 else DEFAULT_LIMIT
+    except ValueError:
+        limit = DEFAULT_LIMIT
 
     entries = []
     if folder and os.path.isdir(folder):
@@ -121,7 +152,12 @@ def main():
     else:
         entries.sort(key=lambda e: e["mtime"], reverse=True)
 
-    items = [{k: v for k, v in e.items() if not k.startswith("_")} for e in entries[:LIMIT]]
+    items = []
+    for e in entries[:limit]:
+        item = {k: v for k, v in e.items() if not k.startswith("_")}
+        if not e["isDir"]:
+            item["thumb"] = e["path"] if e["isImage"] else thumbnail_for(e["path"])
+        items.append(item)
     print(json.dumps({"count": len(entries), "items": items, "folder": folder, "sort": sort}))
 
 

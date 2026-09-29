@@ -339,6 +339,9 @@ Item {
   readonly property real zoomPeak: 1.22
   readonly property real magnifyRange: root.iconSlot * 2.2
   readonly property real baseIconArt: root.iconSize - Style.space(4)
+  // Largest size an icon reaches under either hover effect; icons decode at
+  // this size once instead of on every animation frame.
+  readonly property real maxIconArt: Math.ceil(root.baseIconArt * Math.max(root.zoomPeak, root.magnifyPeak))
 
   // Shared slot geometry. Every item (apps, groups, folders, drives, the
   // Omarchy button) draws its artwork in the same baseIconArt box, centred in
@@ -678,6 +681,13 @@ Item {
   property var pinnedFolders: []
   property string activeStackFolder: ""
   property string activeStackName: ""
+  // Directory the open stack is showing: the pinned folder, or one of its
+  // subfolders after clicking into it. activeStackTrail holds the folders
+  // walked through ({ path, name }), so Back can return step by step.
+  property string activeStackPath: ""
+  property var activeStackTrail: []
+  // "stack" (list) or "grid" (larger icons and previews), per pinned folder.
+  readonly property string activeStackView: root.activeStackFolder !== "" ? root.folderViewFor(root.activeStackFolder) : "stack"
   property var activeStackEntries: []
   property int activeStackTotalCount: 0
   property real activeStackX: 0
@@ -744,9 +754,14 @@ Item {
   // Without a card to cast one, each icon casts its own shadow.
   readonly property bool iconShadow: root.showShadow && !root.showBackground && root.shadowStrength > 0
   property bool showBorder: true
+  // Rim width in logical pixels, 1..6.
+  property real borderWidth: 1.5
   // App group tile look: "rounded" (softly rounded rim), "square" (rim
   // without rounding) or "none" (bare mini-icon grid).
   property string groupStyle: "rounded"
+  // Icons inside group tiles: "theme" follows iconStyle, "none" keeps them
+  // original.
+  property string groupIconEffects: "theme"
   property bool settingsPanelOpen: false
   property string settingsPanelPage: "appearance"
   property int themeVersion: 0
@@ -908,7 +923,7 @@ Item {
     property string targetFolder: ""
     property string sortKey: "modified"
     // scripts/list-folder.py lists, sorts and caps the folder (see its header).
-    command: ["python3", decodeURIComponent(Qt.resolvedUrl("scripts/list-folder.py").toString().replace(/^file:\/\//, "")), folderStackScanner.targetFolder, folderStackScanner.sortKey]
+    command: ["python3", decodeURIComponent(Qt.resolvedUrl("scripts/list-folder.py").toString().replace(/^file:\/\//, "")), folderStackScanner.targetFolder, folderStackScanner.sortKey, "300"]
     running: false
     stdout: StdioCollector {
       onStreamFinished: {
@@ -918,7 +933,7 @@ Item {
           // folder the user currently has open (or any at all). Prevents a
           // slow older scan from painting one folder's files under another's
           // header, or repopulating after the stack was closed.
-          var wanted = String(root.activeStackFolder || "").replace(/^~/, Quickshell.env("HOME"))
+          var wanted = String(root.activeStackPath || "")
           if (parsed.folder !== wanted) return
           root.activeStackTotalCount = parsed.count || 0
           root.activeStackEntries = parsed.items || []
@@ -1345,7 +1360,10 @@ Item {
   onActiveAppGroupIdChanged: root.syncVisibility()
   onDragAppIdChanged: root.syncVisibility()
   onSettingsPanelOpenChanged: root.syncVisibility()
-  onExternalDragOverChanged: root.syncVisibility()
+  onExternalDragOverChanged: {
+    if (!root.externalDragOver) root.dropPreviewPath = ""
+    root.syncVisibility()
+  }
   onAutohideChanged: root.syncVisibility()
   onIntelligentAutohideChanged: {
     if (root.intelligentAutohide) debounceOverlapTimer.restart()
@@ -1814,8 +1832,12 @@ Item {
       : 16
     root.applyBlurRule(false)
     root.showBorder = parsed ? parsed.showBorder !== false : true
+    root.borderWidth = parsed && typeof parsed.borderWidth === "number"
+      ? Math.max(1, Math.min(6, parsed.borderWidth))
+      : 1.5
     // Anything else, including the retired "theme" style, falls back to rounded.
     root.groupStyle = (parsed && ["square", "none"].indexOf(parsed.groupStyle) >= 0) ? parsed.groupStyle : "rounded"
+    root.groupIconEffects = (parsed && parsed.groupIconEffects === "none") ? "none" : "theme"
     root.folderColor = parsed && typeof parsed.folderColor === "string" ? parsed.folderColor : "theme"
     root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" ? parsed.itemSpacing : 4
     if (parsed && typeof parsed.minimizeMode === "string") {
@@ -1923,6 +1945,40 @@ Item {
   // handlers do not fire during a drag, so the drop areas report it here to
   // keep (or bring) the dock in view.
   property bool externalDragOver: false
+  // While a folder is dragged over the dock: its path once confirmed to be a
+  // directory, and where among the pinned folders it would land (0..count).
+  // The folder row opens a gap there, the way the macOS dock does.
+  property string dropPreviewPath: ""
+  property int dropInsertIndex: -1
+
+  // Called on drag enter: finds the first directory among the dragged URLs.
+  function previewDraggedFolder(urls) {
+    root.dropPreviewPath = ""
+    var paths = root.localPathsFromUrls(urls)
+    if (paths.length === 0) return
+    if (dropFolderProbe.running) dropFolderProbe.running = false
+    dropFolderProbe.command = ["sh", "-c", 'for p; do [ -d "$p" ] && { printf "%s\\n" "$p"; exit 0; }; done', "sh"].concat(paths)
+    dropFolderProbe.running = true
+  }
+
+  Process {
+    id: dropFolderProbe
+    running: false
+    stdout: SplitParser {
+      onRead: function(line) {
+        if (root.externalDragOver && line) root.dropPreviewPath = String(line)
+      }
+    }
+  }
+
+  function insertFolderPin(path, name, icon, index) {
+    if (root.isFolderPinned(path)) return
+    var next = (root.pinnedFolders || []).slice()
+    var at = (index >= 0 && index <= next.length) ? index : next.length
+    next.splice(at, 0, { path: path, name: name || "Folder", icon: icon || DockModel.folderIconFor(path, "") })
+    root.pinnedFolders = next
+    root.saveConfig()
+  }
 
   function localPathsFromUrls(urls) {
     var out = []
@@ -1937,6 +1993,9 @@ Item {
 
   function pinDroppedFolders(urls) {
     var paths = root.localPathsFromUrls(urls)
+    dropFolderCheck.insertAt = root.dropInsertIndex
+    root.dropPreviewPath = ""
+    root.dropInsertIndex = -1
     if (paths.length === 0) return
     // Only directories are pinned; the check runs out of process.
     dropFolderCheck.command = ["sh", "-c", 'for p; do [ -d "$p" ] && printf "%s\\n" "$p"; done', "sh"].concat(paths)
@@ -1945,6 +2004,9 @@ Item {
 
   Process {
     id: dropFolderCheck
+    // Where the next confirmed folder goes; -1 appends. Advances per folder
+    // so several dropped at once keep their order.
+    property int insertAt: -1
     running: false
     stdout: SplitParser {
       onRead: function(line) {
@@ -1952,7 +2014,8 @@ Item {
         if (chosen === "" || root.isFolderPinned(chosen)) return
         var home = Quickshell.env("HOME")
         var relPath = (chosen === home || chosen.indexOf(home + "/") === 0) ? "~" + chosen.slice(home.length) : chosen
-        root.toggleFolderPin(relPath, chosen.split("/").pop() || "Folder", DockModel.folderIconFor(relPath, ""))
+        root.insertFolderPin(relPath, chosen.split("/").pop() || "Folder", DockModel.folderIconFor(relPath, ""), dropFolderCheck.insertAt)
+        if (dropFolderCheck.insertAt >= 0) dropFolderCheck.insertAt++
       }
     }
   }
@@ -2830,7 +2893,9 @@ Item {
     conf.iconTint = root.iconTint
     conf.iconGrid = root.iconGrid
     conf.showBorder = root.showBorder
+    conf.borderWidth = root.borderWidth
     conf.groupStyle = root.groupStyle
+    conf.groupIconEffects = root.groupIconEffects
     conf.folderColor = root.folderColor
     conf.itemSpacing = root.itemSpacing
     conf.minimizeMode = root.minimizeMode
@@ -3169,19 +3234,48 @@ Item {
     // older scan race the new one.
     if (folderStackScanner.running) folderStackScanner.running = false
     root.activeStackFolder = path
-    root.activeStackName = name || "Folder"
     root.activeStackX = cx
-    root.activeStackEntries = []
-    folderStackScanner.targetFolder = (path || "").replace(/^~/, Quickshell.env("HOME"))
-    folderStackScanner.sortKey = root.folderSortFor(path)
-    folderStackScanner.running = true
+    root.activeStackTrail = []
+    root.showStackDir((path || "").replace(/^~/, Quickshell.env("HOME")), name || "Folder")
     root.syncVisibility()
+  }
+
+  // Lists dir in the open stack. Kill any in-flight scan first: assigning
+  // running = true while a process is already running is a no-op in
+  // Quickshell, which used to let a slow older scan race the new one.
+  function showStackDir(dir, name) {
+    if (folderStackScanner.running) folderStackScanner.running = false
+    root.activeStackPath = dir
+    root.activeStackName = name
+    root.activeStackEntries = []
+    root.activeStackTotalCount = 0
+    folderStackScanner.targetFolder = dir
+    folderStackScanner.sortKey = root.folderSortFor(root.activeStackFolder)
+    folderStackScanner.running = true
+  }
+
+  // Step into a subfolder of the open stack.
+  function enterStackDir(dir, name) {
+    var trail = root.activeStackTrail.slice()
+    trail.push({ path: root.activeStackPath, name: root.activeStackName })
+    root.activeStackTrail = trail
+    root.showStackDir(dir, name || dir.split("/").pop() || "Folder")
+  }
+
+  function stackBack() {
+    var trail = root.activeStackTrail.slice()
+    if (trail.length === 0) return
+    var prev = trail.pop()
+    root.activeStackTrail = trail
+    root.showStackDir(prev.path, prev.name)
   }
 
   function closeFolderStack() {
     if (folderStackScanner.running) folderStackScanner.running = false
     root.activeStackFolder = ""
     root.activeStackName = ""
+    root.activeStackPath = ""
+    root.activeStackTrail = []
     root.activeStackEntries = []
     root.syncVisibility()
   }
@@ -3215,25 +3309,44 @@ Item {
     return "modified"
   }
 
-  function setFolderSort(path, sort) {
+  function folderViewFor(path) {
+    var norm = (path || "").replace(/^~/, Quickshell.env("HOME"))
+    var list = root.pinnedFolders || []
+    for (var i = 0; i < list.length; i++) {
+      if ((list[i].path || "").replace(/^~/, Quickshell.env("HOME")) === norm)
+        return list[i].view === "grid" ? "grid" : "stack"
+    }
+    return "stack"
+  }
+
+  // Sets one field (sort, view) on a pinned folder's entry and saves.
+  function setFolderOption(path, key, value) {
     var norm = (path || "").replace(/^~/, Quickshell.env("HOME"))
     var next = []
     var list = root.pinnedFolders || []
     for (var i = 0; i < list.length; i++) {
       var f = list[i]
-      if ((f.path || "").replace(/^~/, Quickshell.env("HOME")) === norm)
-        f = Object.assign({}, f, { sort: sort })
+      if ((f.path || "").replace(/^~/, Quickshell.env("HOME")) === norm) {
+        var patch = {}
+        patch[key] = value
+        f = Object.assign({}, f, patch)
+      }
       next.push(f)
     }
     root.pinnedFolders = next
     root.saveConfig()
+  }
+
+  function setFolderSort(path, sort) {
+    root.setFolderOption(path, "sort", sort)
     // Re-list an open stack of this folder in its new order.
     var open = String(root.activeStackFolder || "").replace(/^~/, Quickshell.env("HOME"))
-    if (open === norm) {
-      if (folderStackScanner.running) folderStackScanner.running = false
-      folderStackScanner.sortKey = sort
-      folderStackScanner.running = true
-    }
+    if (open !== "" && open === (path || "").replace(/^~/, Quickshell.env("HOME")))
+      root.showStackDir(root.activeStackPath, root.activeStackName)
+  }
+
+  function setFolderView(path, view) {
+    root.setFolderOption(path, "view", view === "grid" ? "grid" : "stack")
   }
 
   function isFolderPinned(path) {

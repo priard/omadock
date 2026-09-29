@@ -15,12 +15,24 @@ Item {
   property string name: ""
   property string icon: "folder"
   property real homeCenter: 0
+  // Position among the pinned folders; a folder dragged in from outside and
+  // headed for this index opens a gap before this item.
+  property int slotIndex: -1
+  readonly property bool gapOpen: root ? (root.dropPreviewPath !== "" && root.dropInsertIndex === fitem.slotIndex) : false
+  property real gapWidth: gapOpen && root ? root.iconSlot + root.gapWidth : 0
+  Behavior on gapWidth { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
   signal openStackRequested(string path, string name, real cx, real cy)
   signal menuRequested(string path, string name, real cx, real cy)
 
-  width: root ? (root.iconSlot * (root.waveHover ? fitem.magnifyScale : 1)) : 0
+  width: (root ? (root.iconSlot * (root.waveHover ? fitem.magnifyScale : 1)) : 0) + fitem.gapWidth
   height: root ? root.iconSlot : 0
+
+  DropGhost {
+    rootRef: fitem.rootRef
+    width: fitem.gapWidth
+    height: parent.height
+  }
 
   readonly property bool isOpen: root ? root.activeStackFolder === fitem.folderPath : false
 
@@ -50,7 +62,8 @@ Item {
     id: iconSlot
     width: root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
-    anchors.horizontalCenter: parent.horizontalCenter
+    // Centred in the part of the item the drop gap leaves.
+    x: fitem.gapWidth + Math.round((fitem.width - fitem.gapWidth - width) / 2)
     anchors.verticalCenter: parent.verticalCenter
 
     Item {
@@ -72,7 +85,7 @@ Item {
         id: folderIconImg
         anchors.fill: parent
         source: fitem.resolvedSource
-        renderSize: (root ? root.iconSize : 36) * 2
+        renderSize: root ? root.maxIconArt : 64
         visible: !iconContainer.themedSymbolic
         iconStyle: root ? root.iconStyle : "original"
         tint: root ? root.iconTintColor : Color.bar.text
@@ -112,7 +125,7 @@ Item {
     visible: fitem.isOpen
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1)
-    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.horizontalCenter: iconSlot.horizontalCenter
     width: Style.space(4)
     height: Style.space(4)
     radius: width / 2

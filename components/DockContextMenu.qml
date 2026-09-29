@@ -16,7 +16,7 @@ BorderSurface {
 
   property alias appContextMenuColumn: appContextMenuColumn
 
-  // Folder menu page: "" (actions) or "sort" (the Sort By choices).
+  // Folder menu page: "" (actions), "sort" (Sort By) or "view" (View As).
   property string folderPage: ""
   onFolderPageChanged: menuFlickable.contentY = 0
 
@@ -135,6 +135,11 @@ BorderSurface {
       }
 
       ContextRow {
+        text: "View As: " + (root && root.folderViewFor(root.contextFolderPath) === "grid" ? "Folder" : "Stack") + " ›"
+        onTriggered: contextMenu.folderPage = "view"
+      }
+
+      ContextRow {
         text: "Sort By: " + (root ? (root.folderSortLabels[root.folderSortFor(root.contextFolderPath)] || "Date Modified") : "Date Modified") + " ›"
         onTriggered: contextMenu.folderPage = "sort"
       }
@@ -169,6 +174,41 @@ BorderSurface {
         onTriggered: {
           if (root) {
             root.toggleFolderPin(root.contextFolderPath, root.contextFolderName, "")
+            root.closeContext()
+          }
+        }
+      }
+    }
+
+    // Folder menu: View As page. Stack lists entries; Folder shows a grid
+    // of larger icons with previews.
+    Column {
+      spacing: Style.space(2)
+      visible: root ? (root.contextAppId === "__folder_context__" && contextMenu.folderPage === "view") : false
+
+      ContextRow {
+        text: "‹ Back"
+        textColor: Color.accent
+        onTriggered: contextMenu.folderPage = ""
+      }
+
+      ContextRow {
+        text: "View As"
+        isHeader: true
+      }
+
+      Repeater {
+        model: [
+          { value: "stack", label: "Stack" },
+          { value: "grid", label: "Folder" }
+        ]
+        delegate: ContextRow {
+          required property var modelData
+          text: modelData.label
+          checked: root ? root.folderViewFor(root.contextFolderPath) === modelData.value : false
+          onTriggered: {
+            if (!root) return
+            root.setFolderView(root.contextFolderPath, modelData.value)
             root.closeContext()
           }
         }

@@ -190,6 +190,7 @@ Item {
         return Quickshell.iconPath("application-x-executable", true)
       }
       visible: String(source) !== ""
+      renderSize: root ? root.maxIconArt : 64
       opacity: item.starting ? (0.4 + 0.6 * item.pulse) : 1.0
       iconStyle: root ? root.iconStyle : "original"
       tint: root ? root.iconTintColor : Color.bar.text

@@ -63,7 +63,7 @@ Item {
       width: (root ? root.baseIconArt : 32) * ditem.magnifyScale
       height: width
       source: ditem.resolvedSource
-      renderSize: (root ? root.iconSize : 36) * 2
+      renderSize: root ? root.maxIconArt : 64
       visible: String(source) !== ""
       iconStyle: root ? root.iconStyle : "original"
       tint: root ? root.iconTintColor : Color.bar.text

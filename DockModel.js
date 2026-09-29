@@ -401,7 +401,8 @@ function boundPinnedFolders(arr) {
       path: _boundedStr(f.path, MAX_FOLDER_PATH),
       name: _boundedStr(f.name, MAX_FOLDER_NAME) || "Folder",
       icon: _boundedStr(f.icon, MAX_FOLDER_ICON) || "folder",
-      sort: FOLDER_SORTS.indexOf(f.sort) >= 0 ? f.sort : "modified"
+      sort: FOLDER_SORTS.indexOf(f.sort) >= 0 ? f.sort : "modified",
+      view: f.view === "grid" ? "grid" : "stack"
     }
   })
 }

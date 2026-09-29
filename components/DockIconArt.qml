@@ -12,6 +12,11 @@ import qs.Commons
 //
 // dropShadow adds a soft shadow that follows the drawn shape, used when the
 // dock has no background card to cast one.
+//
+// Instead of an image source, the icon can be any item declared inside
+// (e.g. a font glyph). Such content is already one colour, so "mono" shows it
+// as is (the caller colours it with the tint); "pixel" and "dots" work from
+// its rendering.
 Item {
   id: art
 
@@ -22,12 +27,20 @@ Item {
   property int grid: 16
   property bool dropShadow: false
   property real shadowStrength: 0.4
-  // Rasterise at least this many device pixels across, so zoom stays crisp.
-  property real renderSize: width
+  // Size (logical px) the icon is decoded at. Keep it fixed: tying it to the
+  // animated width makes every zoom frame decode the icon again, and with
+  // asynchronous loading the icon blinks out between frames. Callers pass
+  // their largest on-screen size so zoom stays crisp.
+  property real renderSize: 64
 
   readonly property bool usesGrid: art.iconStyle === "pixel" || art.iconStyle === "dots"
   readonly property int cells: Math.max(6, Math.min(48, art.grid))
   readonly property int status: img.status
+
+  default property alias content: custom.data
+  readonly property bool hasCustom: custom.children.length > 0
+  // The item the grid styles read from.
+  readonly property Item styleSource: art.hasCustom ? custom : img
 
   Item {
     id: canvas
@@ -57,14 +70,31 @@ Item {
       smooth: art.iconStyle !== "pixel"
       mipmap: art.iconStyle !== "pixel"
       asynchronous: true
-      visible: art.iconStyle === "original" || art.iconStyle === "pixel"
+      visible: !art.hasCustom && (art.iconStyle === "original" || art.iconStyle === "pixel")
+    }
+
+    Item {
+      id: custom
+      anchors.fill: parent
+      visible: art.iconStyle === "original" || art.iconStyle === "mono"
+    }
+
+    // Declared content has no decode size to shrink, so the pixel style
+    // renders it onto the grid instead and scales that up unsmoothed.
+    ShaderEffectSource {
+      anchors.fill: parent
+      visible: art.hasCustom && art.iconStyle === "pixel"
+      sourceItem: visible ? custom : null
+      textureSize: Qt.size(art.cells, art.cells)
+      smooth: false
+      live: true
     }
 
     // Monochrome and dot matrix share one shader (shaders/iconstyle.frag),
     // built only while one of them is selected.
     Loader {
       anchors.fill: parent
-      active: art.iconStyle === "mono" || art.iconStyle === "dots"
+      active: art.iconStyle === "dots" || (art.iconStyle === "mono" && !art.hasCustom)
       sourceComponent: Item {
         // The dot matrix reads one texel per cell, so the icon is first
         // reduced to two texels per cell with smoothing: each cell then
@@ -72,10 +102,10 @@ Item {
         ShaderEffectSource {
           id: styleTexture
           visible: false
-          sourceItem: img
+          sourceItem: art.styleSource
           textureSize: art.iconStyle === "dots"
             ? Qt.size(art.cells * 2, art.cells * 2)
-            : Qt.size(Math.max(16, art.width * Screen.devicePixelRatio), Math.max(16, art.height * Screen.devicePixelRatio))
+            : Qt.size(Math.max(16, art.renderSize * Screen.devicePixelRatio), Math.max(16, art.renderSize * Screen.devicePixelRatio))
           smooth: true
           live: true
         }

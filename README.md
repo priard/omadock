@@ -154,7 +154,9 @@ $$\text{scale}(d) = 1 + (\text{peak} - 1) \cdot \frac{1 + \cos\left(\frac{\pi \c
 
 Pin directories like `~/Downloads`, `~/Projects`, or custom paths directly to your dock:
 
-- **Files popover** — up to 16 entries with icons, sizes, and relative times.
+- **Files popover** — up to 300 entries with icons, sizes, and relative times.
+- **View As** — right-click the folder: *Stack* (a list) or *Folder* (a grid of larger icons, with previews for images and for anything your file manager has already thumbnailed), saved per folder.
+- **Browse** — click a subfolder to step into it, **‹** to go back; long folders scroll.
 - **Sort By** — right-click the folder: Name, Kind, Date Modified, Date Added or Size, saved per folder.
 - **Direct opening** — click any file to open it in its default app (`xdg-open`), or jump to its folder.
 - **Drag out** — drag a file from the popover into a file manager, browser or chat app.
@@ -347,6 +349,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `showRemovableDrives` | `bool` | `true` | Auto-detect and display removable USB thumb drives and storage. |
 | `appGroups` | `array` | `[]` | App Folders / Groups configuration (name, custom icon, app ID list). |
 | `groupStyle` | `string` | `"rounded"` | Group tile frame: `"rounded"` (softly rounded rim), `"square"` (rim without rounding) or `"none"` (icons only). |
+| `groupIconEffects` | `string` | `"theme"` | Icons inside group tiles: `"theme"` follows `iconStyle`, `"none"` keeps them original. |
 | `minimizeMode` | `string` | `"active"` | `"active"` (FIFO single), `"all"` (batch group), `"off"` (disabled). |
 | `showMinimizedTiles` | `bool` | `true` | Displays live screencopy preview tiles for parked windows. |
 | `opacity` | `number \| str` | `1.0` | Background opacity: `"theme"`, `1.0`, `0.80`, `0.65`, `0.35`, `0.0`. |
@@ -355,6 +358,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `showBackground` | `bool` | `true` | Draws the dock's background fill. `false` leaves the icons floating. |
 | `showShadow` | `bool` | `true` | Draws the soft drop shadow under the dock. |
 | `showBorder` | `bool` | `true` | Draws the rim around the dock. |
+| `borderWidth` | `number` | `1.5` | Rim width in pixels, `1`–`6`. |
 | `shadowStrength` | `number` | `0.4` | Shadow opacity, `0.0`–`1.0`. |
 | `blur` | `string` | `"system"` | Blur behind the dock: `"system"` (your Hyprland layer rules decide), `"on"` or `"off"` (a runtime layer rule overrides them). The strength is Hyprland's global `decoration:blur` size. |
 | `iconStyle` | `string` | `"original"` | `"original"`, `"mono"` (one theme colour, shading kept), `"pixel"` (coarse grid, unsmoothed) or `"dots"` (dithered dot matrix). |
