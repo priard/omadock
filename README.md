@@ -160,7 +160,7 @@ Pin directories like `~/Downloads`, `~/Projects`, or custom paths directly to yo
 - **Sort By** — right-click the folder: Name, Kind, Date Modified, Date Added or Size, saved per folder.
 - **Direct opening** — click any file to open it in its default app (`xdg-open`), or jump to its folder.
 - **Drag out** — drag a file from the popover into a file manager, browser or chat app.
-- **Drop in** — drop a folder from your file manager onto the dock to pin it.
+- **Drop in** — rest a folder from your file manager over the folder section of the dock for a moment, then drop it to pin it (dropping on an app icon opens it with that app instead).
 - **Folder picker** — attach custom folders from Settings through the desktop's file chooser (`omarchy-file-select` / XDG portal).
 
 ---

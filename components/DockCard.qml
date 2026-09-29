@@ -27,6 +27,18 @@ Item {
   // Insert index among the pinned folders for a pointer at row x: before the
   // first folder whose icon centre lies right of it. The icon sits right of
   // any open gap, so moving through the gap keeps the same index.
+  // The folder section of the row: from the folder divider on, or, with no
+  // divider (no folders or drives yet, or nothing before them), the last
+  // three quarters of a slot at the end of the row and beyond.
+  function inPinZone(px) {
+    if (folderSeparator.visible) return px >= folderSeparator.x - (root ? root.gapWidth : 0)
+    if (foldersRepeater.count > 0) {
+      var first = foldersRepeater.itemAt(0)
+      if (first) return px >= first.x
+    }
+    return px >= row.width - (root ? root.iconSlot * 0.75 : 0)
+  }
+
   function folderInsertIndex(px) {
     var n = foldersRepeater ? foldersRepeater.count : 0
     for (var i = 0; i < n; i++) {
@@ -181,30 +193,62 @@ Item {
     }
 
     // Folders dragged in from a file manager get pinned as stacks, at the
-    // spot the pointer picks among the pinned folders.
+    // spot the pointer picks among the pinned folders. Dropping on an app
+    // icon (its own DropArea, above this one) opens the item instead, and
+    // that comes first: pinning only happens in the folder section, after
+    // the pointer has rested there for pinDwell. Anywhere else the drag is
+    // refused, so a folder let go over the apps is never pinned by accident.
     DropArea {
       id: folderDrop
       anchors.fill: parent
       keys: ["text/uri-list"]
+
+      function track(drag) {
+        if (!root) return
+        var rx = folderDrop.mapToItem(row, drag.x, drag.y).x
+        if (cardWrapper.inPinZone(rx)) {
+          root.dropInsertIndex = cardWrapper.folderInsertIndex(rx)
+          if (!root.dropPinArmed && !pinDwell.running) pinDwell.restart()
+          drag.accepted = true
+        } else {
+          pinDwell.stop()
+          root.dropPinArmed = false
+          drag.accepted = false
+        }
+      }
+
       onEntered: function(drag) {
         if (root) {
           root.externalDragOver = true
           root.previewDraggedFolder(drag.urls)
-          root.dropInsertIndex = cardWrapper.folderInsertIndex(folderDrop.mapToItem(row, drag.x, drag.y).x)
         }
-        drag.accept(Qt.LinkAction)
+        folderDrop.track(drag)
       }
-      onPositionChanged: function(drag) {
-        if (root) root.dropInsertIndex = cardWrapper.folderInsertIndex(folderDrop.mapToItem(row, drag.x, drag.y).x)
+      onPositionChanged: function(drag) { folderDrop.track(drag) }
+      onExited: {
+        pinDwell.stop()
+        if (root) root.externalDragOver = false
       }
-      onExited: if (root) root.externalDragOver = false
       onDropped: function(drop) {
-        if (root) {
-          root.externalDragOver = false
+        pinDwell.stop()
+        if (!root) return
+        var armed = root.dropPinArmed && root.dropCandidatePath !== ""
+        root.externalDragOver = false
+        if (armed) {
           root.pinDroppedFolders(drop.urls)
+          drop.accept(Qt.LinkAction)
+        } else {
+          drop.accepted = false
         }
-        drop.accept(Qt.LinkAction)
       }
+    }
+
+    // How long the pointer rests in the folder section before the gap opens
+    // and a drop would pin.
+    Timer {
+      id: pinDwell
+      interval: 450
+      onTriggered: if (root) root.dropPinArmed = true
     }
   }
 

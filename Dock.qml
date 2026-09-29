@@ -1389,7 +1389,7 @@ Item {
   onDragAppIdChanged: root.syncVisibility()
   onSettingsPanelOpenChanged: root.syncVisibility()
   onExternalDragOverChanged: {
-    if (!root.externalDragOver) root.dropPreviewPath = ""
+    if (!root.externalDragOver) root.dropPinArmed = false
     root.syncVisibility()
   }
   onAutohideChanged: root.syncVisibility()
@@ -2014,14 +2014,20 @@ Item {
   // keep (or bring) the dock in view.
   property bool externalDragOver: false
   // While a folder is dragged over the dock: its path once confirmed to be a
-  // directory, and where among the pinned folders it would land (0..count).
-  // The folder row opens a gap there, the way the macOS dock does.
-  property string dropPreviewPath: ""
+  // directory (dropCandidatePath), and where among the pinned folders it
+  // would land (0..count). Opening a dragged item with an app comes first
+  // (see beginAppDrop): pinning only arms once the pointer has rested in the
+  // folder section (DockCard's pinDwell), and only then does the folder row
+  // open a gap there, the way the macOS dock does.
+  property string dropCandidatePath: ""
+  property bool dropPinArmed: false
+  readonly property string dropPreviewPath: (root.dropPinArmed && root.externalDragOver) ? root.dropCandidatePath : ""
   property int dropInsertIndex: -1
 
   // Called on drag enter: finds the first directory among the dragged URLs.
   function previewDraggedFolder(urls) {
-    root.dropPreviewPath = ""
+    root.dropCandidatePath = ""
+    root.dropPinArmed = false
     var paths = root.localPathsFromUrls(urls)
     if (paths.length === 0) return
     if (dropFolderProbe.running) dropFolderProbe.running = false
@@ -2034,7 +2040,7 @@ Item {
     running: false
     stdout: SplitParser {
       onRead: function(line) {
-        if (root.externalDragOver && line) root.dropPreviewPath = String(line)
+        if (root.externalDragOver && line) root.dropCandidatePath = String(line)
       }
     }
   }
@@ -2062,7 +2068,8 @@ Item {
   function pinDroppedFolders(urls) {
     var paths = root.localPathsFromUrls(urls)
     dropFolderCheck.insertAt = root.dropInsertIndex
-    root.dropPreviewPath = ""
+    root.dropPinArmed = false
+    root.dropCandidatePath = ""
     root.dropInsertIndex = -1
     if (paths.length === 0) return
     // Only directories are pinned; the check runs out of process.
