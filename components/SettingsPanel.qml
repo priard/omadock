@@ -963,7 +963,8 @@ PanelWindow {
               visible: root ? (root.iconStyle === "mono" || root.iconStyle === "dots") : false
               options: [
                 { value: "text", label: "Text" },
-                { value: "accent", label: "Accent" }
+                { value: "accent", label: "Accent" },
+                { value: "bw", label: "B/W" }
               ]
               value: root ? root.iconTint : "text"
               onPicked: function(v) { root.setOption("iconTint", v) }

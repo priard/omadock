@@ -823,7 +823,9 @@ Item {
   property string blurMode: "system"
   // Icon style: "original", "mono", "pixel" or "dots" (see DockIconArt).
   property string iconStyle: "original"
-  // Colour for the mono and dots styles: the dock's text colour or the accent.
+  // Colour for the mono and dots styles: the dock's text colour, the accent,
+  // or "bw": near black or near white, whichever contrasts more with the
+  // background behind the icons.
   property string iconTint: "text"
   // Cells across an icon for the pixel and dots styles.
   property int iconGrid: 16
@@ -836,8 +838,20 @@ Item {
   // The mono / dots ink, kept readable against what sits behind the icons
   // (see readableOn): an accent tint over a theme gradient built from that
   // same accent would otherwise vanish into it.
-  readonly property color iconTintColor: root.readableOn(
-    root.iconTint === "accent" ? Color.accent : root.dockForeground, root.iconBackdropColor)
+  readonly property color iconTintColor: root.tintFor(root.iconTint, root.dockForeground, root.iconBackdropColor)
+
+  // Tint for an iconTint mode ("text", "accent", "bw") over a backdrop.
+  function tintFor(mode, textColor, backdrop) {
+    if (mode === "bw") return root.blackOrWhiteOn(backdrop)
+    return root.readableOn(mode === "accent" ? Color.accent : textColor, backdrop)
+  }
+
+  // Near black or near white, whichever contrasts more with the backdrop.
+  function blackOrWhiteOn(backdrop) {
+    var dark = Qt.color("#141414")
+    var light = Qt.color("#f2f2f2")
+    return root.contrastRatio(dark, backdrop) >= root.contrastRatio(light, backdrop) ? dark : light
+  }
 
   // Best guess at the colour behind the icons: the card's fill (for a
   // gradient, its colours averaged and mixed into the base by the strength
@@ -1978,7 +1992,7 @@ Item {
       : 0.4
     root.blurMode = (parsed && (parsed.blur === "on" || parsed.blur === "off")) ? parsed.blur : "system"
     root.iconStyle = (parsed && ["mono", "pixel", "dots"].indexOf(parsed.iconStyle) >= 0) ? parsed.iconStyle : "original"
-    root.iconTint = (parsed && parsed.iconTint === "accent") ? "accent" : "text"
+    root.iconTint = (parsed && (parsed.iconTint === "accent" || parsed.iconTint === "bw")) ? parsed.iconTint : "text"
     root.iconHoverOriginal = parsed ? parsed.iconHoverOriginal === true : false
     root.iconContrast = parsed && typeof parsed.iconContrast === "number" ? Math.max(0, Math.min(1, parsed.iconContrast)) : 0
     root.iconStrength = parsed && typeof parsed.iconStrength === "number" ? Math.max(0, Math.min(1, parsed.iconStrength)) : 1
