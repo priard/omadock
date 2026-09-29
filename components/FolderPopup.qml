@@ -37,17 +37,17 @@ BorderSurface {
   // Grid geometry: up to five columns, never wider than the entries need.
   readonly property real tileWidth: Style.space(92)
   readonly property int gridColumns: Math.max(3, Math.min(5, entries.length))
-  readonly property real gridWidth: gridColumns * tileWidth + (gridColumns - 1) * Style.space(4)
+  readonly property real gridWidth: gridColumns * (tileWidth + Style.space(4))
 
   // List rows size to their widest content; FileStackRow and ContextRow pick
   // this up through their parent chain.
   readonly property real rowWidth: !isOpen ? 0
     : gridView ? gridWidth
-    : Math.max(root.menuContentWidth(listColumn), root.menuContentWidth(headerColumn))
+    : Math.max(root.menuContentWidth(list.contentItem), root.menuContentWidth(headerColumn))
 
   width: isOpen ? rowWidth + contentLeftInset + contentRightInset : 0
   height: isOpen
-    ? Math.min(maxAllowedHeight, headerColumn.implicitHeight + bodyFlick.contentHeight + footerColumn.implicitHeight + contentTopInset + contentBottomInset + Style.space(4))
+    ? Math.min(maxAllowedHeight, headerColumn.implicitHeight + bodyContentHeight + footerColumn.implicitHeight + contentTopInset + contentBottomInset + Style.space(4))
     : 0
 
   anchors.bottom: targetCard ? targetCard.top : undefined
@@ -77,7 +77,10 @@ BorderSurface {
   // A new directory starts at the top.
   Connections {
     target: root
-    function onActiveStackPathChanged() { bodyFlick.contentY = 0 }
+    function onActiveStackPathChanged() {
+      list.contentY = 0
+      grid.contentY = 0
+    }
   }
 
   // ---------------------------------------------------------------- header
@@ -140,8 +143,18 @@ BorderSurface {
   }
 
   // ------------------------------------------------------------------ body
-  Flickable {
-    id: bodyFlick
+  // ListView / GridView create delegates only for what is on screen (plus a
+  // small cache), so a folder of hundreds of photos decodes a screenful of
+  // previews instead of all of them up front.
+  readonly property real listRowHeight: Math.max(28, Style.space(28)) + Style.space(2)
+  readonly property real tileHeight: Style.space(100) + Style.space(4)
+  readonly property var activeView: gridView ? grid : list
+  readonly property real bodyContentHeight: entries.length === 0
+    ? emptyText.implicitHeight
+    : (gridView ? Math.ceil(entries.length / gridColumns) * tileHeight : entries.length * listRowHeight)
+
+  Item {
+    id: body
     anchors.left: parent.left
     anchors.leftMargin: folderStackPopover.contentLeftInset
     anchors.right: parent.right
@@ -150,90 +163,28 @@ BorderSurface {
     anchors.topMargin: Style.space(2)
     anchors.bottom: footerColumn.top
     anchors.bottomMargin: Style.space(2)
-
-    contentWidth: width
-    contentHeight: folderStackPopover.gridView ? grid.implicitHeight : listColumn.implicitHeight
     clip: true
-    boundsBehavior: Flickable.StopAtBounds
-    flickableDirection: Flickable.VerticalFlick
-    // Wheel only: drag-flicking would steal the press that starts a drag out.
-    interactive: false
 
+    // Wheel only: the views do not flick, so pressing an entry can start a
+    // drag out instead of scrolling. Handled here, outside the views, since a
+    // non-interactive Flickable ignores wheel events.
     WheelHandler {
       target: null
       acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
       onWheel: function(event) {
+        var view = folderStackPopover.activeView
         var dy = event.pixelDelta.y !== 0
           ? -event.pixelDelta.y
           : -event.angleDelta.y / 120 * Style.space(40)
-        if (dy === 0) return
-        var maxY = Math.max(0, bodyFlick.contentHeight - bodyFlick.height)
-        bodyFlick.contentY = Math.max(0, Math.min(maxY, bodyFlick.contentY + dy))
-      }
-    }
-
-    Column {
-      id: listColumn
-      visible: !folderStackPopover.gridView
-      width: parent.width
-      spacing: Style.space(2)
-
-      Text {
-        visible: folderStackPopover.entries.length === 0
-        width: parent.width
-        horizontalAlignment: Text.AlignHCenter
-        text: "Folder is empty"
-        textFormat: Text.PlainText
-        color: Util.alpha(Color.menu.text, 0.45)
-        font.family: Style.font.family
-        font.pixelSize: Style.font.body
-        padding: Style.space(8)
-      }
-
-      Repeater {
-        model: folderStackPopover.gridView ? [] : folderStackPopover.entries
-        delegate: FileStackRow {
-          name: modelData.name
-          path: modelData.path
-          icon: modelData.icon
-          subtext: modelData.isDir ? "›" : modelData.size
-          themeVersion: root ? root.themeVersion : 0
-          currentIconThemeName: root ? root.currentIconThemeName : "Yaru"
-          folderColor: root ? root.folderColor : "theme"
-          appLibrary: root ? root.appLibrary : null
-          onTriggered: folderStackPopover.activate(modelData)
-          onDragFinished: function(action) { folderStackPopover.dragDone(action) }
-        }
-      }
-    }
-
-    Grid {
-      id: grid
-      visible: folderStackPopover.gridView
-      columns: folderStackPopover.gridColumns
-      spacing: Style.space(4)
-
-      Repeater {
-        model: folderStackPopover.gridView ? folderStackPopover.entries : []
-        delegate: FileTile {
-          width: folderStackPopover.tileWidth
-          name: modelData.name
-          path: modelData.path
-          icon: modelData.icon
-          thumb: modelData.thumb || ""
-          isDir: modelData.isDir
-          themeVersion: root ? root.themeVersion : 0
-          currentIconThemeName: root ? root.currentIconThemeName : "Yaru"
-          folderColor: root ? root.folderColor : "theme"
-          appLibrary: root ? root.appLibrary : null
-          onTriggered: folderStackPopover.activate(modelData)
-          onDragFinished: function(action) { folderStackPopover.dragDone(action) }
-        }
+        if (dy === 0 || !view) return
+        var maxY = Math.max(0, view.contentHeight - view.height)
+        view.contentY = Math.max(0, Math.min(maxY, view.contentY + dy))
       }
     }
 
     Text {
-      visible: folderStackPopover.gridView && folderStackPopover.entries.length === 0
+      id: emptyText
+      visible: folderStackPopover.entries.length === 0
       width: parent.width
       horizontalAlignment: Text.AlignHCenter
       text: "Folder is empty"
@@ -242,6 +193,55 @@ BorderSurface {
       font.family: Style.font.family
       font.pixelSize: Style.font.body
       padding: Style.space(8)
+    }
+
+    ListView {
+      id: list
+      anchors.fill: parent
+      visible: !folderStackPopover.gridView
+      interactive: false
+      boundsBehavior: Flickable.StopAtBounds
+      spacing: Style.space(2)
+      cacheBuffer: Math.max(0, Math.round(height))
+      model: folderStackPopover.gridView ? [] : folderStackPopover.entries
+      delegate: FileStackRow {
+        name: modelData.name
+        path: modelData.path
+        icon: modelData.icon
+        subtext: modelData.isDir ? "›" : modelData.size
+        themeVersion: root ? root.themeVersion : 0
+        currentIconThemeName: root ? root.currentIconThemeName : "Yaru"
+        folderColor: root ? root.folderColor : "theme"
+        appLibrary: root ? root.appLibrary : null
+        onTriggered: folderStackPopover.activate(modelData)
+        onDragFinished: function(action) { folderStackPopover.dragDone(action) }
+      }
+    }
+
+    GridView {
+      id: grid
+      anchors.fill: parent
+      visible: folderStackPopover.gridView
+      interactive: false
+      boundsBehavior: Flickable.StopAtBounds
+      cellWidth: folderStackPopover.tileWidth + Style.space(4)
+      cellHeight: folderStackPopover.tileHeight
+      cacheBuffer: Math.max(0, Math.round(height))
+      model: folderStackPopover.gridView ? folderStackPopover.entries : []
+      delegate: FileTile {
+        width: folderStackPopover.tileWidth
+        name: modelData.name
+        path: modelData.path
+        icon: modelData.icon
+        thumb: modelData.thumb || ""
+        isDir: modelData.isDir
+        themeVersion: root ? root.themeVersion : 0
+        currentIconThemeName: root ? root.currentIconThemeName : "Yaru"
+        folderColor: root ? root.folderColor : "theme"
+        appLibrary: root ? root.appLibrary : null
+        onTriggered: folderStackPopover.activate(modelData)
+        onDragFinished: function(action) { folderStackPopover.dragDone(action) }
+      }
     }
   }
 

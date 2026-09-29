@@ -106,7 +106,9 @@ Item {
     Drag.supportedActions: Qt.CopyAction | Qt.MoveAction | Qt.LinkAction
     Drag.proposedAction: Qt.CopyAction
     Drag.mimeData: ({ "text/uri-list": tile.fileUri + "\r\n", "text/plain": tile.path })
-    Drag.imageSource: tile.hasPreview ? preview.source : tile.resolvedIconSource
+    // Only while dragging: the drag image loads synchronously, and for a
+    // photo that would mean decoding the full file for every tile up front.
+    Drag.imageSource: area.drag.active ? (tile.hasPreview ? preview.source : tile.resolvedIconSource) : ""
     Drag.imageSourceSize: Qt.size(48, 48)
     Drag.active: area.drag.active
     Drag.onDragFinished: function(action) {

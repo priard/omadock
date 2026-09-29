@@ -151,7 +151,8 @@ Item {
     Drag.supportedActions: Qt.CopyAction | Qt.MoveAction | Qt.LinkAction
     Drag.proposedAction: Qt.CopyAction
     Drag.mimeData: ({ "text/uri-list": frow.fileUri + "\r\n", "text/plain": frow.path })
-    Drag.imageSource: frow.resolvedIconSource
+    // Only while dragging: the drag image loads synchronously on assignment.
+    Drag.imageSource: area.drag.active ? frow.resolvedIconSource : ""
     Drag.imageSourceSize: Qt.size(32, 32)
     Drag.active: area.drag.active
     Drag.onDragFinished: function(action) {

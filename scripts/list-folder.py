@@ -15,10 +15,10 @@ SORT is one of:
 LIMIT caps the items returned (default 16, at most 1000).
 
 Prints {"count": N, "items": [...first LIMIT...], "folder": FOLDER}.
-Hidden entries are skipped. Each item may carry "thumb": a preview image
-path, the file itself for images, otherwise a freedesktop thumbnail a file
-manager already rendered (~/.cache/thumbnails). The output is always valid
-JSON, even for a missing folder.
+Hidden entries are skipped. Each file carries "thumb": a preview image
+path, preferring a freedesktop thumbnail a file manager already rendered
+(~/.cache/thumbnails), then the file itself for images, else "". The
+output is always valid JSON, even for a missing folder.
 """
 
 import hashlib
@@ -32,7 +32,8 @@ DEFAULT_LIMIT = 16
 MAX_LIMIT = 1000
 THUMB_DIRS = [
     os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "thumbnails", size)
-    for size in ("x-large", "large", "normal")
+    # Smallest that still looks sharp in a grid tile first.
+    for size in ("large", "normal", "x-large", "xx-large")
 ]
 SORTS = ("name", "kind", "modified", "added", "size")
 
@@ -156,7 +157,9 @@ def main():
     for e in entries[:limit]:
         item = {k: v for k, v in e.items() if not k.startswith("_")}
         if not e["isDir"]:
-            item["thumb"] = e["path"] if e["isImage"] else thumbnail_for(e["path"])
+            # A cached thumbnail is a small PNG; decoding the original photo
+            # (often megabytes) is the fallback.
+            item["thumb"] = thumbnail_for(e["path"]) or (e["path"] if e["isImage"] else "")
         items.append(item)
     print(json.dumps({"count": len(entries), "items": items, "folder": folder, "sort": sort}))
 
