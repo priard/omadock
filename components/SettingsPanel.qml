@@ -16,6 +16,10 @@ PanelWindow {
 
   property string page: root ? root.settingsPanelPage : "appearance"
 
+  // Id of the app group whose name is being edited; Esc then cancels the
+  // edit instead of closing the panel.
+  property string editingGroupId: ""
+
   // Update channel as reported by `omadock-switch status`; probed on open.
   property string channel: ""
 
@@ -269,6 +273,7 @@ PanelWindow {
   Shortcut {
     sequence: "Escape"
     context: Qt.WindowShortcut
+    enabled: panel.editingGroupId === ""
     onActivated: panel.close()
   }
 
@@ -284,10 +289,16 @@ PanelWindow {
     borderSpec: Border.surfaceSpec("menu", "border", Color.menu.border, 1)
     radius: Style.cornerRadius
 
-    // Swallow clicks so they never reach the scrim.
+    // Swallow clicks so they never reach the scrim. A click on empty space
+    // also cancels a group rename, since it would not move focus by itself.
     MouseArea {
       anchors.fill: parent
       acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+      onPressed: {
+        if (panel.editingGroupId === "") return
+        panel.editingGroupId = ""
+        keyCatcher.forceActiveFocus()
+      }
     }
 
     // ---------------------------------------------------------- sidebar
@@ -936,6 +947,7 @@ PanelWindow {
             options: [
               { value: "theme", label: "Theme" },
               { value: "rounded", label: "Rounded" },
+              { value: "square", label: "Square" },
               { value: "none", label: "None" }
             ]
             value: root ? root.groupStyle : "theme"
@@ -958,47 +970,124 @@ PanelWindow {
 
           Repeater {
             model: root ? root.appGroups : []
-            delegate: SettingRow {
+            // The group name reads as plain text; clicking it turns it into
+            // a field. Enter saves, Esc or clicking elsewhere cancels.
+            delegate: Item {
               id: groupRow
               required property var modelData
               readonly property int appCount: modelData.apps ? modelData.apps.length : 0
-              label: groupRow.appCount + (groupRow.appCount === 1 ? " app" : " apps")
-              hint: {
-                var names = []
-                var apps = modelData.apps || []
-                for (var i = 0; i < apps.length; i++) {
-                  var entry = root ? root.entryForId(apps[i]) : null
-                  names.push(entry && entry.name ? entry.name : String(apps[i]))
-                }
-                return names.join(", ")
+              readonly property bool editing: panel.editingGroupId === modelData.id
+
+              function startEdit() {
+                panel.editingGroupId = groupRow.modelData.id
+                nameField.text = groupRow.modelData.name || ""
+                nameField.forceActiveFocus()
+                nameField.selectAll()
               }
 
-              Row {
-                spacing: Style.spacing.md
+              function finishEdit(save) {
+                if (!groupRow.editing) return
+                var next = nameField.text.trim()
+                panel.editingGroupId = ""
+                keyCatcher.forceActiveFocus()
+                if (save && next !== "" && next !== groupRow.modelData.name)
+                  root.renameAppGroup(groupRow.modelData.id, next)
+              }
 
-                // The name is saved when editing ends (Enter, Tab or focus
-                // leaving the field); an empty name keeps the old one.
-                TextField {
-                  id: groupName
-                  anchors.verticalCenter: parent.verticalCenter
-                  width: Style.space(180)
-                  text: groupRow.modelData.name || ""
-                  placeholderText: "Group name"
-                  foreground: Color.menu.text
-                  onEditingFinished: {
-                    var next = text.trim()
-                    if (next === "") text = groupRow.modelData.name || ""
-                    else if (next !== groupRow.modelData.name) root.renameAppGroup(groupRow.modelData.id, next)
+              width: parent ? parent.width : Style.space(420)
+              implicitHeight: Math.max(Style.space(52), groupTexts.implicitHeight + Style.spacing.lg * 2)
+
+              Column {
+                id: groupTexts
+                anchors.left: parent.left
+                anchors.right: removeButton.left
+                anchors.rightMargin: Style.spacing.xxl
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Style.spacing.xxs
+
+                Item {
+                  width: parent.width
+                  height: Math.max(nameLabel.implicitHeight, groupRow.editing ? nameField.implicitHeight : 0)
+
+                  Row {
+                    id: nameLabel
+                    visible: !groupRow.editing
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Style.spacing.md
+
+                    Text {
+                      text: groupRow.modelData.name || "Group"
+                      color: nameMouse.containsMouse ? Color.accent : Color.menu.text
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.subtitle
+                    }
+                    Text {
+                      anchors.verticalCenter: parent.verticalCenter
+                      visible: nameMouse.containsMouse
+                      text: "󰏫"
+                      color: Color.accent
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.body
+                    }
+                  }
+
+                  MouseArea {
+                    id: nameMouse
+                    visible: !groupRow.editing
+                    anchors.fill: nameLabel
+                    hoverEnabled: true
+                    cursorShape: Qt.IBeamCursor
+                    onClicked: groupRow.startEdit()
+                  }
+
+                  TextField {
+                    id: nameField
+                    visible: groupRow.editing
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.min(parent.width, Style.space(260))
+                    placeholderText: "Group name"
+                    foreground: Color.menu.text
+                    Keys.onReturnPressed: groupRow.finishEdit(true)
+                    Keys.onEnterPressed: groupRow.finishEdit(true)
+                    Keys.onEscapePressed: groupRow.finishEdit(false)
+                    onActiveFocusChanged: if (!activeFocus) groupRow.finishEdit(false)
                   }
                 }
 
-                Button {
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: "Remove"
-                  foreground: Color.menu.text
-                  bordered: true
-                  onClicked: root.removeAppGroup(groupRow.modelData.id)
+                Text {
+                  width: parent.width
+                  text: {
+                    var names = []
+                    var apps = groupRow.modelData.apps || []
+                    for (var i = 0; i < apps.length; i++) {
+                      var entry = root ? root.entryForId(apps[i]) : null
+                      names.push(entry && entry.name ? entry.name : String(apps[i]))
+                    }
+                    var count = groupRow.appCount + (groupRow.appCount === 1 ? " app" : " apps")
+                    return names.length > 0 ? count + " · " + names.join(", ") : count
+                  }
+                  color: Util.alpha(Color.menu.text, 0.55)
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.caption
+                  wrapMode: Text.WordWrap
                 }
+              }
+
+              Button {
+                id: removeButton
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Remove"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: root.removeAppGroup(groupRow.modelData.id)
+              }
+
+              Rectangle {
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: Util.alpha(Color.menu.text, 0.10)
               }
             }
           }

@@ -343,7 +343,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `intelligentAutohide` | `bool` | `true` | Hides dock only when windows overlap its bounding box (AABB). |
 | `showRemovableDrives` | `bool` | `true` | Auto-detect and display removable USB thumb drives and storage. |
 | `appGroups` | `array` | `[]` | App Folders / Groups configuration (name, custom icon, app ID list). |
-| `groupStyle` | `string` | `"theme"` | Group tile frame: `"theme"`, `"rounded"` (softly rounded rim) or `"none"` (icons only). |
+| `groupStyle` | `string` | `"theme"` | Group tile frame: `"theme"`, `"rounded"` (softly rounded rim), `"square"` (rim without rounding) or `"none"` (icons only). |
 | `minimizeMode` | `string` | `"active"` | `"active"` (FIFO single), `"all"` (batch group), `"off"` (disabled). |
 | `showMinimizedTiles` | `bool` | `true` | Displays live screencopy preview tiles for parked windows. |
 | `opacity` | `number \| str` | `1.0` | Background opacity: `"theme"`, `1.0`, `0.80`, `0.65`, `0.35`, `0.0`. |
