@@ -55,11 +55,13 @@ Item {
   }
 
   readonly property bool isDropTarget: (root && root.dropTargetAppId === item.appId && root.dragAppId !== item.appId)
+  // Files from outside hover this icon and the app can open them.
+  readonly property bool isFileDropTarget: root ? (root.appDropTargetId === item.appId && root.appDropState === "yes") : false
   property real magnifyScale: {
     if (!root) return 1
     if (root.waveHover) return root.magnifyScaleAt(item.homeCenter)
     if (root.hoverEffect === "off") return 1
-    return (area.containsMouse && !item.isDragging) ? root.zoomPeak : 1
+    return ((area.containsMouse && !item.isDragging) || item.isFileDropTarget) ? root.zoomPeak : 1
   }
 
   Behavior on magnifyScale {
@@ -156,9 +158,9 @@ Item {
       y: item.bounceY
     }
 
-    // Drop target halo for creating an App Folder
+    // Drop target halo: creating an App Folder, or files the app can open
     Rectangle {
-      visible: item.isDropTarget
+      visible: item.isDropTarget || item.isFileDropTarget
       anchors.centerIn: iconImg
       width: (root ? root.baseIconArt : 32) * item.magnifyScale + Style.space(8)
       height: width
@@ -168,7 +170,7 @@ Item {
       border.width: 1.5
       z: -1
       SequentialAnimation on opacity {
-        running: item.isDropTarget
+        running: item.isDropTarget || item.isFileDropTarget
         loops: Animation.Infinite
         NumberAnimation { from: 0.5; to: 1.0; duration: 350; easing.type: Easing.InOutQuad }
         NumberAnimation { from: 1.0; to: 0.5; duration: 350; easing.type: Easing.InOutQuad }
@@ -290,6 +292,26 @@ Item {
         font.pixelSize: Math.max(7, Style.font.caption - 4)
         font.bold: true
       }
+    }
+  }
+
+  // Files dragged in from outside: opened with this app when it declares
+  // their types (see Dock.beginAppDrop). Refusing the drag lets a folder
+  // fall through to the dock's own drop area, which pins it.
+  DropArea {
+    anchors.fill: parent
+    keys: ["text/uri-list"]
+    onEntered: function(drag) {
+      if (root) root.beginAppDrop(item.appId, drag.urls)
+      drag.accept(Qt.CopyAction)
+    }
+    onPositionChanged: function(drag) {
+      drag.accepted = !root || root.appDropState !== "no"
+    }
+    onExited: if (root) root.endAppDrop(item.appId)
+    onDropped: function(drop) {
+      if (root && root.dropOnApp(item.appId)) drop.accept(Qt.CopyAction)
+      else drop.accepted = false
     }
   }
 

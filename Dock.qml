@@ -1358,7 +1358,7 @@ Item {
       return
     }
 
-    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (revealHover && revealHover.hovered) || root.contextAppId !== "" || root.dragAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen || root.externalDragOver
+    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (revealHover && revealHover.hovered) || root.contextAppId !== "" || root.dragAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen || root.externalDragOver || root.appDropTargetId !== ""
 
     // Hovered, Context Menu Open, or Dragging: keep visible
     if (isHovered) {
@@ -2113,6 +2113,86 @@ Item {
 
   // Player for the app whose context menu is open, if any.
   readonly property var contextPlayer: root.mediaPlayerFor(root.contextAppId)
+
+  // ------------------------------------------------- files dropped on apps
+  // Dragging files onto an app icon opens them with that app, as the macOS
+  // dock does, when its desktop entry declares every dropped file's MIME type
+  // (scripts/drop-check.py). The check runs once per icon entered; files let
+  // go before it answers open as soon as it says yes.
+  property string appDropTargetId: ""
+  property string appDropState: ""    // "", "pending", "yes", "no"
+  property var appDropPaths: []
+  property string _appDropOpenId: ""  // dropped while pending: open on "yes"
+  onAppDropTargetIdChanged: root.syncVisibility()
+
+  // The desktop entry id an app launches through (same lookup as launchApp).
+  function desktopIdFor(appId) {
+    var deskEntry = DockModel.entryFor(root.appRows, appId)
+    if (!deskEntry && typeof DesktopEntries !== "undefined" && DesktopEntries)
+      deskEntry = DesktopEntries.heuristicLookup(appId) || DesktopEntries.byId(appId)
+    return (deskEntry && deskEntry.id) ? deskEntry.id : appId
+  }
+
+  function beginAppDrop(appId, urls) {
+    root.appDropTargetId = appId
+    root._appDropOpenId = ""
+    root.appDropPaths = root.localPathsFromUrls(urls)
+    if (root.appDropPaths.length === 0) {
+      root.appDropState = "no"
+      return
+    }
+    root.appDropState = "pending"
+    if (appDropCheck.running) appDropCheck.running = false
+    appDropCheck.command = ["python3",
+      decodeURIComponent(Qt.resolvedUrl("scripts/drop-check.py").toString().replace(/^file:\/\//, "")),
+      root.desktopIdFor(appId)].concat(root.appDropPaths)
+    appDropCheck.running = true
+  }
+
+  function endAppDrop(appId) {
+    if (root.appDropTargetId !== appId) return
+    root.appDropTargetId = ""
+    // A drop still waiting on the check keeps its state until it answers.
+    if (root._appDropOpenId === "") root.appDropState = ""
+  }
+
+  // Returns false when the app cannot take the files (the drop is refused).
+  function dropOnApp(appId) {
+    root.appDropTargetId = ""
+    if (root.appDropState === "yes") {
+      root.openFilesWith(appId, root.appDropPaths)
+      root.appDropState = ""
+      return true
+    }
+    if (root.appDropState === "pending") {
+      root._appDropOpenId = appId
+      return true
+    }
+    root.appDropState = ""
+    return false
+  }
+
+  function openFilesWith(appId, paths) {
+    if (!paths || paths.length === 0) return
+    Quickshell.execDetached(["uwsm-app", "--", "gtk-launch", "--", root.desktopIdFor(appId) + ".desktop"].concat(paths))
+  }
+
+  Process {
+    id: appDropCheck
+    running: false
+    stdout: SplitParser {
+      onRead: function(line) {
+        var ok = String(line).trim() === "yes"
+        if (root._appDropOpenId !== "") {
+          if (ok) root.openFilesWith(root._appDropOpenId, root.appDropPaths)
+          root._appDropOpenId = ""
+          root.appDropState = ""
+          return
+        }
+        if (root.appDropTargetId !== "") root.appDropState = ok ? "yes" : "no"
+      }
+    }
+  }
 
   function setBlurMode(mode) {
     root.blurMode = mode
