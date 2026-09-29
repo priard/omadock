@@ -421,6 +421,118 @@ BorderSurface {
 
         property int selectedWindowIdx: -1
 
+        // 0. Now Playing: media controls for apps that expose an MPRIS
+        // player (Spotify and the like, or a browser playing a video), as
+        // the macOS dock does. The buttons leave the menu open, so several
+        // tracks can be skipped in a row.
+        Column {
+          id: mediaSection
+          readonly property var player: root ? root.contextPlayer : null
+          spacing: Style.space(2)
+          visible: player !== null
+          width: parent.width
+
+          ContextRow {
+            text: "Now Playing"
+            isHeader: true
+          }
+
+          Item {
+            readonly property bool isMenuContent: true
+            readonly property string title: mediaSection.player ? (mediaSection.player.trackTitle || mediaSection.player.identity || "") : ""
+            readonly property string artist: mediaSection.player ? (mediaSection.player.trackArtist || "") : ""
+            implicitWidth: Math.min(Style.space(260), Math.max(titleLabel.implicitWidth, artistLabel.implicitWidth) + Style.space(16))
+            implicitHeight: trackColumn.implicitHeight + Style.space(4)
+            width: parent.width
+            height: implicitHeight
+
+            Column {
+              id: trackColumn
+              x: Style.space(8)
+              width: parent.width - Style.space(16)
+              spacing: Style.space(1)
+
+              Text {
+                id: titleLabel
+                width: parent.width
+                text: parent.parent.title
+                textFormat: Text.PlainText
+                color: Color.menu.text
+                font.family: Style.font.family
+                font.pixelSize: Style.font.body
+                font.bold: true
+                elide: Text.ElideRight
+              }
+              Text {
+                id: artistLabel
+                visible: text !== ""
+                width: parent.width
+                text: parent.parent.artist
+                textFormat: Text.PlainText
+                color: Util.alpha(Color.menu.text, 0.6)
+                font.family: Style.font.family
+                font.pixelSize: Style.font.caption
+                elide: Text.ElideRight
+              }
+            }
+          }
+
+          Row {
+            id: mediaButtons
+            readonly property bool isMenuContent: true
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: Style.space(6)
+
+            Repeater {
+              model: [
+                { id: "previous", glyph: "󰒮", label: "Previous" },
+                { id: "toggle", glyph: "", label: "Play / Pause" },
+                { id: "next", glyph: "󰒭", label: "Next" }
+              ]
+              delegate: Rectangle {
+                id: mediaButton
+                required property var modelData
+                readonly property var player: mediaSection.player
+                readonly property bool enabledAction: !player ? false
+                  : modelData.id === "previous" ? player.canGoPrevious
+                  : modelData.id === "next" ? player.canGoNext
+                  : player.canTogglePlaying
+                width: Style.space(34)
+                height: Style.space(28)
+                radius: Style.cornerRadius > 0 ? Style.space(6) : 0
+                color: mediaMouse.containsMouse && enabledAction ? Color.menu.selectedBackground : "transparent"
+                opacity: enabledAction ? 1 : 0.35
+
+                Text {
+                  anchors.centerIn: parent
+                  text: mediaButton.modelData.id === "toggle"
+                    ? (mediaButton.player && mediaButton.player.isPlaying ? "󰏤" : "󰐊")
+                    : mediaButton.modelData.glyph
+                  color: mediaButton.modelData.id === "toggle" ? Color.accent : Color.menu.text
+                  font.family: Style.font.family
+                  font.pixelSize: Style.font.iconLarge
+                }
+
+                MouseArea {
+                  id: mediaMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: mediaButton.enabledAction ? Qt.PointingHandCursor : Qt.ArrowCursor
+                  onClicked: {
+                    var p = mediaButton.player
+                    if (!p || !mediaButton.enabledAction) return
+                    if (mediaButton.modelData.id === "previous") p.previous()
+                    else if (mediaButton.modelData.id === "next") p.next()
+                    else p.togglePlaying()
+                  }
+                }
+              }
+            }
+          }
+
+          MenuDivider {}
+        }
+
         // 1. Multi-window / Active Window instance list
         Column {
           id: windowListSection
@@ -482,10 +594,12 @@ BorderSurface {
           MenuDivider {}
         }
 
-        // Fallback Default Action Row when no custom desktop actions exist
+        // Fallback Default Action Row when no custom desktop actions exist.
+        // A running media app gets playback controls above instead of a
+        // second window it rarely supports.
         ContextRow {
           text: (root && root.contextWindows > 0) ? "New Window" : "Launch"
-          visible: root ? (root.contextDesktopActions.length === 0) : true
+          visible: root ? (root.contextDesktopActions.length === 0 && !(root.contextWindows > 0 && mediaSection.player !== null)) : true
           onTriggered: {
             if (root) {
               root.launchApp(root.contextAppId, null)

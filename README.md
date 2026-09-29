@@ -207,6 +207,7 @@ Enable **Settings → Placement & Alignment → Show on All Monitors** (or `"mul
 Deep Linux desktop and compositor integration:
 
 - **FreeDesktop jump lists** — native quick actions straight from `.desktop` files.
+- **Media controls** — right-click an app that plays media (Spotify, a browser playing a video…) for *Now Playing* with previous / play-pause / next, through MPRIS.
 - **Intelligent autohide** — 2D AABB overlap tests on Hyprland events only. **0.00% CPU**, always.
 
 ---

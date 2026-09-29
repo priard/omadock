@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
@@ -2086,6 +2087,32 @@ Item {
       }
     }
   }
+
+  // ------------------------------------------------- media controls
+  // The MPRIS player an app exposes, matched on the player's DesktopEntry
+  // (or, failing that, its Identity) against the dock app id. Proxies such as
+  // playerctld name no app, so they never match. A playing instance wins
+  // when an app exposes several (e.g. browser tabs).
+  function mediaPlayerFor(appId) {
+    if (!appId || appId.indexOf("__") === 0) return null
+    var list = (Mpris.players && Mpris.players.values) ? Mpris.players.values : []
+    var fallback = null
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i]
+      if (!p) continue
+      var entry = String(p.desktopEntry || "").replace(/\.desktop$/, "")
+      var ident = String(p.identity || "")
+      var matches = (entry !== "" && DockModel.isAppMatch(appId, entry))
+        || (entry === "" && ident !== "" && DockModel.isAppMatch(appId, ident))
+      if (!matches) continue
+      if (p.isPlaying) return p
+      if (!fallback) fallback = p
+    }
+    return fallback
+  }
+
+  // Player for the app whose context menu is open, if any.
+  readonly property var contextPlayer: root.mediaPlayerFor(root.contextAppId)
 
   function setBlurMode(mode) {
     root.blurMode = mode
