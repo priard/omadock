@@ -101,9 +101,14 @@ BorderSurface {
         currentIconThemeName: root ? root.currentIconThemeName : "Yaru"
         folderColor: root ? root.folderColor : "theme"
         appLibrary: root ? root.appLibrary : null
+        // xdg-open hands the file to its default application (a folder to
+        // the default file manager). argv form: names are never re-parsed.
         onTriggered: {
-          Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote(modelData.path))
+          Util.execArgv(["uwsm-app", "--", "xdg-open", modelData.path])
           if (root) root.closeFolderStack()
+        }
+        onDragFinished: function(action) {
+          if (action !== Qt.IgnoreAction && root) root.closeFolderStack()
         }
       }
     }

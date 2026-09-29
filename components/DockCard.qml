@@ -22,6 +22,7 @@ Item {
   property alias runningRepeater: runningRepeater
   property alias foldersRepeater: foldersRepeater
   property alias drivesRepeater: drivesRepeater
+  readonly property bool folderDropActive: folderDrop.containsDrag
 
   function handleDragMoved(aid, mx) {
     if (!root) return
@@ -164,29 +165,55 @@ Item {
       id: hitboxHover
       onHoveredChanged: if (root) root.syncVisibility()
     }
+
+    // Folders dragged in from a file manager get pinned as stacks.
+    DropArea {
+      id: folderDrop
+      anchors.fill: parent
+      keys: ["text/uri-list"]
+      onEntered: function(drag) {
+        if (root) root.externalDragOver = true
+        drag.accept(Qt.LinkAction)
+      }
+      onExited: if (root) root.externalDragOver = false
+      onDropped: function(drop) {
+        if (root) {
+          root.externalDragOver = false
+          root.pinDroppedFolders(drop.urls)
+        }
+        drop.accept(Qt.LinkAction)
+      }
+    }
   }
 
+  // Card shadow: the card's own shape (same radius), blurred and dropped a
+  // little, so a square card casts a square-ish shadow instead of a soft
+  // oval. Only drawn under a visible background; without one, each icon
+  // casts its own shadow instead (see DockIconArt).
   Item {
     id: cardShadow
-    visible: root ? root.showShadow : true
+    readonly property real spread: Style.space(12)
+    visible: root ? (root.showShadow && root.showBackground && root.shadowStrength > 0) : true
     // Follows the card out of view; a blur left behind would hang on screen
     // after the dock has gone.
     opacity: cardWrapper.opacity
     anchors.fill: dockCard
-    anchors.margins: -Style.space(16)
+    anchors.margins: -spread
+    anchors.topMargin: -spread + Style.space(3)
+    anchors.bottomMargin: -spread - Style.space(3)
     z: 0
     layer.enabled: true
     layer.effect: MultiEffect {
       blurEnabled: true
       blur: 1.0
-      blurMax: 36
+      blurMax: 20
     }
 
     Rectangle {
       anchors.fill: parent
-      anchors.margins: Style.space(16)
+      anchors.margins: cardShadow.spread
       radius: dockCard.radius
-      color: Qt.rgba(0, 0, 0, (root && root.dockBgColor === "none") ? 0.52 : 0.40)
+      color: Qt.rgba(0, 0, 0, root ? root.shadowStrength : 0.4)
     }
   }
 
@@ -470,6 +497,17 @@ Item {
           }
         }
       }
+    }
+
+    // Outline while a drag from outside hovers the dock (see folderDrop).
+    Rectangle {
+      anchors.fill: parent
+      visible: root ? root.externalDragOver : false
+      color: Util.alpha(Color.accent, 0.08)
+      radius: dockCard.radius
+      border.color: Color.accent
+      border.width: 2
+      z: 20
     }
 
     // Drop indicator line

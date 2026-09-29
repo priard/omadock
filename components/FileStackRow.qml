@@ -13,6 +13,13 @@ Item {
   property string icon: "folder"
   property string subtext: ""
   signal triggered()
+  // Drag-and-drop out of the stack finished (action is the Qt.DropAction the
+  // target chose, Qt.IgnoreAction when it was dropped nowhere).
+  signal dragFinished(int action)
+
+  // file:// URI for drag-and-drop. Each path segment is percent-encoded so
+  // spaces, #, ? and non-ASCII names survive the trip through text/uri-list.
+  readonly property string fileUri: "file://" + frow.path.split("/").map(encodeURIComponent).join("/")
 
   property int themeVersion: 0
   property string currentIconThemeName: "Yaru"
@@ -133,11 +140,33 @@ Item {
     }
   }
 
+  // Invisible drag proxy: moving it past the drag threshold starts a
+  // platform drag (Drag.Automatic) carrying the file as text/uri-list, the
+  // format file managers, browsers and chat apps accept.
+  Item {
+    id: dragProxy
+    width: 1
+    height: 1
+    Drag.dragType: Drag.Automatic
+    Drag.supportedActions: Qt.CopyAction | Qt.MoveAction | Qt.LinkAction
+    Drag.proposedAction: Qt.CopyAction
+    Drag.mimeData: ({ "text/uri-list": frow.fileUri + "\r\n", "text/plain": frow.path })
+    Drag.imageSource: frow.resolvedIconSource
+    Drag.imageSourceSize: Qt.size(32, 32)
+    Drag.active: area.drag.active
+    Drag.onDragFinished: function(action) {
+      dragProxy.x = 0
+      dragProxy.y = 0
+      frow.dragFinished(action)
+    }
+  }
+
   MouseArea {
     id: area
     anchors.fill: parent
     hoverEnabled: true
-    cursorShape: Qt.PointingHandCursor
+    cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+    drag.target: frow.path !== "" ? dragProxy : null
     onClicked: frow.triggered()
   }
 }

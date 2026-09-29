@@ -16,6 +16,10 @@ BorderSurface {
 
   property alias appContextMenuColumn: appContextMenuColumn
 
+  // Folder menu page: "" (actions) or "sort" (the Sort By choices).
+  property string folderPage: ""
+  onFolderPageChanged: menuFlickable.contentY = 0
+
   visible: root ? (root.contextAppId !== "") : false
   z: 100
   color: Color.menu.background
@@ -44,7 +48,10 @@ BorderSurface {
 
   Connections {
     target: root
-    function onContextAppIdChanged() { menuFlickable.contentY = 0 }
+    function onContextAppIdChanged() {
+      menuFlickable.contentY = 0
+      contextMenu.folderPage = ""
+    }
   }
 
   Flickable {
@@ -120,12 +127,19 @@ BorderSurface {
     // Folder Context Menu
     Column {
       spacing: Style.space(2)
-      visible: root ? root.contextAppId === "__folder_context__" : false
+      visible: root ? (root.contextAppId === "__folder_context__" && contextMenu.folderPage === "") : false
 
       ContextRow {
         text: (root ? root.contextFolderName : "") || "Folder"
         isHeader: true
       }
+
+      ContextRow {
+        text: "Sort By: " + (root ? (root.folderSortLabels[root.folderSortFor(root.contextFolderPath)] || "Date Modified") : "Date Modified") + " ›"
+        onTriggered: contextMenu.folderPage = "sort"
+      }
+
+      MenuDivider {}
 
       ContextRow {
         text: "Open in File Manager"
@@ -155,6 +169,37 @@ BorderSurface {
         onTriggered: {
           if (root) {
             root.toggleFolderPin(root.contextFolderPath, root.contextFolderName, "")
+            root.closeContext()
+          }
+        }
+      }
+    }
+
+    // Folder menu: Sort By page
+    Column {
+      spacing: Style.space(2)
+      visible: root ? (root.contextAppId === "__folder_context__" && contextMenu.folderPage === "sort") : false
+
+      ContextRow {
+        text: "‹ Back"
+        textColor: Color.accent
+        onTriggered: contextMenu.folderPage = ""
+      }
+
+      ContextRow {
+        text: "Sort By"
+        isHeader: true
+      }
+
+      Repeater {
+        model: ["name", "kind", "modified", "added", "size"]
+        delegate: ContextRow {
+          required property string modelData
+          text: root ? root.folderSortLabels[modelData] : modelData
+          checked: root ? root.folderSortFor(root.contextFolderPath) === modelData : false
+          onTriggered: {
+            if (!root) return
+            root.setFolderSort(root.contextFolderPath, modelData)
             root.closeContext()
           }
         }

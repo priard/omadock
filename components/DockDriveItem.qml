@@ -55,7 +55,7 @@ Item {
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.verticalCenter: parent.verticalCenter
 
-    Image {
+    DockIconArt {
       id: driveIconImg
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.bottom: parent.bottom
@@ -63,15 +63,13 @@ Item {
       width: (root ? root.baseIconArt : 32) * ditem.magnifyScale
       height: width
       source: ditem.resolvedSource
-      sourceSize: Qt.size(
-        Math.max(32, Math.round((root ? root.iconSize : 36) * 4)),
-        Math.max(32, Math.round((root ? root.iconSize : 36) * 4))
-      )
-      fillMode: Image.PreserveAspectFit
-      asynchronous: true
-      smooth: true
-      mipmap: true
-      visible: source !== ""
+      renderSize: (root ? root.iconSize : 36) * 2
+      visible: String(source) !== ""
+      iconStyle: root ? root.iconStyle : "original"
+      tint: root ? root.iconTintColor : Color.bar.text
+      grid: root ? root.iconGrid : 16
+      dropShadow: root ? root.iconShadow : false
+      shadowStrength: root ? root.shadowStrength : 0.4
     }
   }
 

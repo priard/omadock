@@ -154,9 +154,12 @@ $$\text{scale}(d) = 1 + (\text{peak} - 1) \cdot \frac{1 + \cos\left(\frac{\pi \c
 
 Pin directories like `~/Downloads`, `~/Projects`, or custom paths directly to your dock:
 
-- **Recent files popover** — up to 16 newest files with icons, sizes, and relative times.
-- **Direct opening** — click any file (`xdg-open`) or jump to its folder.
-- **GTK folder dialog** — attach custom folders from Settings.
+- **Files popover** — up to 16 entries with icons, sizes, and relative times.
+- **Sort By** — right-click the folder: Name, Kind, Date Modified, Date Added or Size, saved per folder.
+- **Direct opening** — click any file to open it in its default app (`xdg-open`), or jump to its folder.
+- **Drag out** — drag a file from the popover into a file manager, browser or chat app.
+- **Drop in** — drop a folder from your file manager onto the dock to pin it.
+- **Folder picker** — attach custom folders from Settings through the desktop's file chooser (`omarchy-file-select` / XDG portal).
 
 ---
 
@@ -305,7 +308,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "showShadow": true,
   "showBorder": true,
   "borderOpacity": "theme",
-  "groupStyle": "theme",
+  "groupStyle": "rounded",
   "itemSpacing": 4,
   "iconSize": 0,
   "hoverEffect": "zoom",
@@ -343,7 +346,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `intelligentAutohide` | `bool` | `true` | Hides dock only when windows overlap its bounding box (AABB). |
 | `showRemovableDrives` | `bool` | `true` | Auto-detect and display removable USB thumb drives and storage. |
 | `appGroups` | `array` | `[]` | App Folders / Groups configuration (name, custom icon, app ID list). |
-| `groupStyle` | `string` | `"theme"` | Group tile frame: `"theme"`, `"rounded"` (softly rounded rim), `"square"` (rim without rounding) or `"none"` (icons only). |
+| `groupStyle` | `string` | `"rounded"` | Group tile frame: `"rounded"` (softly rounded rim), `"square"` (rim without rounding) or `"none"` (icons only). |
 | `minimizeMode` | `string` | `"active"` | `"active"` (FIFO single), `"all"` (batch group), `"off"` (disabled). |
 | `showMinimizedTiles` | `bool` | `true` | Displays live screencopy preview tiles for parked windows. |
 | `opacity` | `number \| str` | `1.0` | Background opacity: `"theme"`, `1.0`, `0.80`, `0.65`, `0.35`, `0.0`. |
@@ -352,6 +355,11 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `showBackground` | `bool` | `true` | Draws the dock's background fill. `false` leaves the icons floating. |
 | `showShadow` | `bool` | `true` | Draws the soft drop shadow under the dock. |
 | `showBorder` | `bool` | `true` | Draws the rim around the dock. |
+| `shadowStrength` | `number` | `0.4` | Shadow opacity, `0.0`–`1.0`. |
+| `blur` | `string` | `"system"` | Blur behind the dock: `"system"` (your Hyprland layer rules decide), `"on"` or `"off"` (a runtime layer rule overrides them). The strength is Hyprland's global `decoration:blur` size. |
+| `iconStyle` | `string` | `"original"` | `"original"`, `"mono"` (one theme colour, shading kept), `"pixel"` (coarse grid, unsmoothed) or `"dots"` (dithered dot matrix). |
+| `iconTint` | `string` | `"text"` | Colour for `mono` and `dots`: the dock's `"text"` colour or the theme `"accent"`. |
+| `iconGrid` | `int` | `16` | Pixels / dots across an icon for `pixel` and `dots` (`8`–`32`). |
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
 | `hoverEffect` | `string` | `"zoom"` | Hover growth mode: `"zoom"`, `"wave"`, or `"off"`. |
 | `revealDelay` | `int` | `160` | Edge dwell time in milliseconds before unhiding ($0$–$2000$). |

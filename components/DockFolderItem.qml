@@ -64,21 +64,26 @@ Item {
       // Grows upward like the app icons, never over the indicator band.
       transformOrigin: Item.Bottom
 
-      Image {
+      // Symbolic icons keep their own recolouring in the original style;
+      // every other case goes through the dock's icon style.
+      readonly property bool themedSymbolic: fitem.isSymbolic && (!root || root.iconStyle === "original")
+
+      DockIconArt {
         id: folderIconImg
         anchors.fill: parent
         source: fitem.resolvedSource
-        sourceSize: Qt.size((root ? root.iconSize : 36) * 4, (root ? root.iconSize : 36) * 4)
-        fillMode: Image.PreserveAspectFit
-        asynchronous: true
-        smooth: true
-        mipmap: true
-        visible: !fitem.isSymbolic
+        renderSize: (root ? root.iconSize : 36) * 2
+        visible: !iconContainer.themedSymbolic
+        iconStyle: root ? root.iconStyle : "original"
+        tint: root ? root.iconTintColor : Color.bar.text
+        grid: root ? root.iconGrid : 16
+        dropShadow: root ? root.iconShadow : false
+        shadowStrength: root ? root.shadowStrength : 0.4
       }
 
       Item {
         anchors.fill: parent
-        visible: fitem.isSymbolic
+        visible: iconContainer.themedSymbolic
 
         Image {
           id: symbolicImg

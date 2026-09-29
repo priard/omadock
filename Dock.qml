@@ -729,11 +729,24 @@ Item {
   property string dockBgColor: "theme"
   property bool showBackground: true
   property bool showShadow: true
+  // Shadow opacity, 0..1.
+  property real shadowStrength: 0.4
+  // Compositor blur behind the dock: "system" leaves it to the user's own
+  // Hyprland layer rules; "on"/"off" add a runtime rule that overrides them.
+  property string blurMode: "system"
+  // Icon style: "original", "mono", "pixel" or "dots" (see DockIconArt).
+  property string iconStyle: "original"
+  // Colour for the mono and dots styles: the dock's text colour or the accent.
+  property string iconTint: "text"
+  // Cells across an icon for the pixel and dots styles.
+  property int iconGrid: 16
+  readonly property color iconTintColor: root.iconTint === "accent" ? Color.accent : root.dockForeground
+  // Without a card to cast one, each icon casts its own shadow.
+  readonly property bool iconShadow: root.showShadow && !root.showBackground && root.shadowStrength > 0
   property bool showBorder: true
-  // App group tile look: "theme" (card radius, frosted fill, rim),
-  // "rounded" (softly rounded rim), "square" (rim without rounding) or
-  // "none" (bare mini-icon grid).
-  property string groupStyle: "theme"
+  // App group tile look: "rounded" (softly rounded rim), "square" (rim
+  // without rounding) or "none" (bare mini-icon grid).
+  property string groupStyle: "rounded"
   property bool settingsPanelOpen: false
   property string settingsPanelPage: "appearance"
   property int themeVersion: 0
@@ -893,7 +906,9 @@ Item {
   Process {
     id: folderStackScanner
     property string targetFolder: ""
-    command: ["python3", "-c", "import os, json, time, sys\nfolder = os.path.expanduser(sys.argv[1]) if len(sys.argv) > 1 else ''\nif not folder or not os.path.exists(folder):\n    print(json.dumps({'count':0,'items':[],'folder':folder}))\n    sys.exit(0)\nentries = []\ntry:\n    for entry in os.scandir(folder):\n        try:\n            if entry.name.startswith('.'):\n                continue\n            stat = entry.stat()\n            is_dir = entry.is_dir()\n            size_bytes = stat.st_size if not is_dir else 0\n            if size_bytes < 1024:\n                size_str = f'{size_bytes} B'\n            elif size_bytes < 1024 * 1024:\n                size_str = f'{size_bytes / 1024:.1f} KB'\n            elif size_bytes < 1024 * 1024 * 1024:\n                size_str = f'{size_bytes / (1024 * 1024):.1f} MB'\n            else:\n                size_str = f'{size_bytes / (1024 * 1024 * 1024):.1f} GB'\n            diff = time.time() - stat.st_mtime\n            if diff < 60:\n                time_str = 'Just now'\n            elif diff < 3600:\n                time_str = f'{int(diff // 60)}m ago'\n            elif diff < 86400:\n                time_str = f'{int(diff // 3600)}h ago'\n            else:\n                time_str = f'{int(diff // 86400)}d ago'\n            ext = os.path.splitext(entry.name)[1].lower()\n            is_img = ext in ['.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif']\n            if is_dir:\n                icon = 'folder'\n            elif is_img:\n                icon = 'image-x-generic'\n            elif ext in ['.mp4', '.mkv', '.webm', '.mov', '.avi']:\n                icon = 'video-x-generic'\n            elif ext in ['.mp3', '.flac', '.wav', '.ogg', '.m4a']:\n                icon = 'audio-x-generic'\n            elif ext in ['.zip', '.tar', '.gz', '.xz', '.7z', '.rar']:\n                icon = 'package-x-generic'\n            elif ext in ['.pdf']:\n                icon = 'application-pdf'\n            elif ext in ['.txt', '.md', '.json', '.qml', '.py', '.cpp', '.js', '.lua', '.rs', '.go', '.html', '.css']:\n                icon = 'text-x-generic'\n            else:\n                icon = 'application-x-executable'\n            entries.append({'name': entry.name, 'path': entry.path, 'isDir': is_dir, 'isImage': is_img, 'size': size_str, 'time': time_str, 'mtime': stat.st_mtime, 'icon': icon})\n        except Exception:\n            pass\nexcept Exception:\n    pass\nentries.sort(key=lambda x: x['mtime'], reverse=True)\nprint(json.dumps({'count': len(entries), 'items': entries[:16], 'folder': folder}))\n", folderStackScanner.targetFolder]
+    property string sortKey: "modified"
+    // scripts/list-folder.py lists, sorts and caps the folder (see its header).
+    command: ["python3", decodeURIComponent(Qt.resolvedUrl("scripts/list-folder.py").toString().replace(/^file:\/\//, "")), folderStackScanner.targetFolder, folderStackScanner.sortKey]
     running: false
     stdout: StdioCollector {
       onStreamFinished: {
@@ -1300,7 +1315,7 @@ Item {
       return
     }
 
-    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (revealHover && revealHover.hovered) || root.contextAppId !== "" || root.dragAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen
+    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (revealHover && revealHover.hovered) || root.contextAppId !== "" || root.dragAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen || root.externalDragOver
 
     // Hovered, Context Menu Open, or Dragging: keep visible
     if (isHovered) {
@@ -1330,6 +1345,7 @@ Item {
   onActiveAppGroupIdChanged: root.syncVisibility()
   onDragAppIdChanged: root.syncVisibility()
   onSettingsPanelOpenChanged: root.syncVisibility()
+  onExternalDragOverChanged: root.syncVisibility()
   onAutohideChanged: root.syncVisibility()
   onIntelligentAutohideChanged: {
     if (root.intelligentAutohide) debounceOverlapTimer.restart()
@@ -1514,6 +1530,11 @@ Item {
     }
     function onRawEvent(event) {
       var n = String((event && event.name) || "")
+      // A config reload drops runtime layer rules along with the Lua state.
+      if (n === "configreloaded") {
+        root.applyBlurRule(true)
+        return
+      }
       if (n === "openwindow") {
         var rawAddr = String(event.data || "").split(",")[0].trim()
         if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
@@ -1782,8 +1803,19 @@ Item {
     root.dockBgColor = parsed && typeof parsed.bgColor === "string" ? parsed.bgColor : "theme"
     root.showBackground = parsed ? parsed.showBackground !== false : true
     root.showShadow = parsed ? parsed.showShadow !== false : true
+    root.shadowStrength = parsed && typeof parsed.shadowStrength === "number"
+      ? Math.max(0, Math.min(1, parsed.shadowStrength))
+      : 0.4
+    root.blurMode = (parsed && (parsed.blur === "on" || parsed.blur === "off")) ? parsed.blur : "system"
+    root.iconStyle = (parsed && ["mono", "pixel", "dots"].indexOf(parsed.iconStyle) >= 0) ? parsed.iconStyle : "original"
+    root.iconTint = (parsed && parsed.iconTint === "accent") ? "accent" : "text"
+    root.iconGrid = parsed && typeof parsed.iconGrid === "number"
+      ? Math.max(8, Math.min(32, Math.round(parsed.iconGrid)))
+      : 16
+    root.applyBlurRule(false)
     root.showBorder = parsed ? parsed.showBorder !== false : true
-    root.groupStyle = (parsed && ["rounded", "square", "none"].indexOf(parsed.groupStyle) >= 0) ? parsed.groupStyle : "theme"
+    // Anything else, including the retired "theme" style, falls back to rounded.
+    root.groupStyle = (parsed && ["square", "none"].indexOf(parsed.groupStyle) >= 0) ? parsed.groupStyle : "rounded"
     root.folderColor = parsed && typeof parsed.folderColor === "string" ? parsed.folderColor : "theme"
     root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" ? parsed.itemSpacing : 4
     if (parsed && typeof parsed.minimizeMode === "string") {
@@ -1862,6 +1894,73 @@ Item {
     root.contextX = x
     root.contextY = y
     root.contextAppId = "__dock_settings__"
+  }
+
+  // ------------------------------------------------- compositor blur
+  // Hyprland blurs layers through layer rules, and only globally sized
+  // (decoration.blur), so the dock can switch blur on or off but not set its
+  // strength. The rule lives in a Lua global so a later change (or "system")
+  // can disable it again without reloading the user's config. One dock applies
+  // it: every dock shares the "omadock" namespace.
+  // "" until the first apply, so a rule left behind by an earlier shell
+  // session (the Lua state outlives the shell) is always reconciled.
+  property string _appliedBlurMode: ""
+
+  function applyBlurRule(force) {
+    if (!root.isPrimary) return
+    if (!force && root.blurMode === root._appliedBlurMode) return
+    var lua = "if _G.omadock_blur_rule then _G.omadock_blur_rule:set_enabled(false) end"
+    if (root.blurMode !== "system") {
+      lua += " _G.omadock_blur_rule = hl.layer_rule({ match = { namespace = \"^omadock$\" }, blur = "
+        + (root.blurMode === "on" ? "true" : "false") + ", ignore_alpha = 0.05 })"
+    }
+    Quickshell.execDetached(["hyprctl", "eval", lua])
+    root._appliedBlurMode = root.blurMode
+  }
+
+  // ------------------------------------------------- drops from outside
+  // Folders dragged in from a file manager are pinned as stacks. Hover
+  // handlers do not fire during a drag, so the drop areas report it here to
+  // keep (or bring) the dock in view.
+  property bool externalDragOver: false
+
+  function localPathsFromUrls(urls) {
+    var out = []
+    for (var i = 0; i < (urls ? urls.length : 0); i++) {
+      var u = String(urls[i])
+      if (u.indexOf("file://") !== 0) continue
+      var p = decodeURIComponent(u.slice(7))
+      if (p.charAt(0) === "/") out.push(p)
+    }
+    return out
+  }
+
+  function pinDroppedFolders(urls) {
+    var paths = root.localPathsFromUrls(urls)
+    if (paths.length === 0) return
+    // Only directories are pinned; the check runs out of process.
+    dropFolderCheck.command = ["sh", "-c", 'for p; do [ -d "$p" ] && printf "%s\\n" "$p"; done', "sh"].concat(paths)
+    dropFolderCheck.running = true
+  }
+
+  Process {
+    id: dropFolderCheck
+    running: false
+    stdout: SplitParser {
+      onRead: function(line) {
+        var chosen = String(line || "").replace(/\/+$/, "")
+        if (chosen === "" || root.isFolderPinned(chosen)) return
+        var home = Quickshell.env("HOME")
+        var relPath = (chosen === home || chosen.indexOf(home + "/") === 0) ? "~" + chosen.slice(home.length) : chosen
+        root.toggleFolderPin(relPath, chosen.split("/").pop() || "Folder", DockModel.folderIconFor(relPath, ""))
+      }
+    }
+  }
+
+  function setBlurMode(mode) {
+    root.blurMode = mode
+    root.applyBlurRule(false)
+    root.saveConfig()
   }
 
   function openSettingsPanel() {
@@ -2725,6 +2824,11 @@ Item {
     conf.bgColor = root.dockBgColor
     conf.showBackground = root.showBackground
     conf.showShadow = root.showShadow
+    conf.shadowStrength = root.shadowStrength
+    conf.blur = root.blurMode
+    conf.iconStyle = root.iconStyle
+    conf.iconTint = root.iconTint
+    conf.iconGrid = root.iconGrid
     conf.showBorder = root.showBorder
     conf.groupStyle = root.groupStyle
     conf.folderColor = root.folderColor
@@ -3069,6 +3173,7 @@ Item {
     root.activeStackX = cx
     root.activeStackEntries = []
     folderStackScanner.targetFolder = (path || "").replace(/^~/, Quickshell.env("HOME"))
+    folderStackScanner.sortKey = root.folderSortFor(path)
     folderStackScanner.running = true
     root.syncVisibility()
   }
@@ -3089,6 +3194,46 @@ Item {
     root.contextY = cy
     root.contextAppId = "__folder_context__"
     root.syncVisibility()
+  }
+
+  // Per-folder stack order, stored on the pinned entry (see list-folder.py).
+  readonly property var folderSortLabels: ({
+    name: "Name",
+    kind: "Kind",
+    modified: "Date Modified",
+    added: "Date Added",
+    size: "Size"
+  })
+
+  function folderSortFor(path) {
+    var norm = (path || "").replace(/^~/, Quickshell.env("HOME"))
+    var list = root.pinnedFolders || []
+    for (var i = 0; i < list.length; i++) {
+      if ((list[i].path || "").replace(/^~/, Quickshell.env("HOME")) === norm)
+        return list[i].sort || "modified"
+    }
+    return "modified"
+  }
+
+  function setFolderSort(path, sort) {
+    var norm = (path || "").replace(/^~/, Quickshell.env("HOME"))
+    var next = []
+    var list = root.pinnedFolders || []
+    for (var i = 0; i < list.length; i++) {
+      var f = list[i]
+      if ((f.path || "").replace(/^~/, Quickshell.env("HOME")) === norm)
+        f = Object.assign({}, f, { sort: sort })
+      next.push(f)
+    }
+    root.pinnedFolders = next
+    root.saveConfig()
+    // Re-list an open stack of this folder in its new order.
+    var open = String(root.activeStackFolder || "").replace(/^~/, Quickshell.env("HOME"))
+    if (open === norm) {
+      if (folderStackScanner.running) folderStackScanner.running = false
+      folderStackScanner.sortKey = sort
+      folderStackScanner.running = true
+    }
   }
 
   function isFolderPinned(path) {
@@ -3225,6 +3370,14 @@ Item {
       HoverHandler {
         id: revealHover
         onHoveredChanged: root.syncVisibility()
+      }
+
+      // A drag reaching the edge reveals a hidden dock, like hovering does.
+      DropArea {
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+        onEntered: root.externalDragOver = true
+        onExited: if (!dockCardComp.folderDropActive) root.externalDragOver = false
       }
 
       Rectangle {

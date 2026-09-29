@@ -389,6 +389,9 @@ function boundAppGroups(arr) {
 }
 
 // Persisted pinned folders: drop malformed entries, cap counts and lengths.
+// Stack orders a pinned folder may carry (scripts/list-folder.py).
+var FOLDER_SORTS = ["name", "kind", "modified", "added", "size"]
+
 function boundPinnedFolders(arr) {
   return boundList(arr, MAX_PINNED_FOLDERS, function(f) {
     if (!f || typeof f !== "object" || isList(f)) return false
@@ -397,7 +400,8 @@ function boundPinnedFolders(arr) {
     return {
       path: _boundedStr(f.path, MAX_FOLDER_PATH),
       name: _boundedStr(f.name, MAX_FOLDER_NAME) || "Folder",
-      icon: _boundedStr(f.icon, MAX_FOLDER_ICON) || "folder"
+      icon: _boundedStr(f.icon, MAX_FOLDER_ICON) || "folder",
+      sort: FOLDER_SORTS.indexOf(f.sort) >= 0 ? f.sort : "modified"
     }
   })
 }

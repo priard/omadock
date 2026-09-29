@@ -23,6 +23,10 @@ PanelWindow {
   // Update channel as reported by `omadock-switch status`; probed on open.
   property string channel: ""
 
+  // Whether Hyprland blur is on at all (decoration:blur:enabled); probed on
+  // open so the Blur switch can say when it cannot show anything.
+  property bool systemBlurEnabled: true
+
   readonly property var pages: [
     { id: "appearance", label: "Appearance", glyph: "󰏘" },
     { id: "placement", label: "Placement", glyph: "󰍹" },
@@ -254,6 +258,7 @@ PanelWindow {
   Component.onCompleted: {
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
     channelProbe.running = true
+    blurProbe.running = true
   }
 
   // One-shot channel probe (event-driven, zero idle CPU): reads which profile
@@ -266,6 +271,20 @@ PanelWindow {
         if (line.indexOf("Active Mode:") < 0) return
         if (line.indexOf("EXPERIMENT") >= 0) panel.channel = "experiment"
         else if (line.indexOf("STABLE") >= 0) panel.channel = "stable"
+      }
+    }
+  }
+
+  Process {
+    id: blurProbe
+    command: ["hyprctl", "getoption", "decoration:blur:enabled", "-j"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          var opt = JSON.parse(this.text)
+          // Newer Hyprland reports booleans as "bool", older ones as "int".
+          panel.systemBlurEnabled = typeof opt.bool === "boolean" ? opt.bool : opt.int !== 0
+        } catch (e) {}
       }
     }
   }
@@ -476,7 +495,7 @@ PanelWindow {
             width: parent.width
             visible: panel.page === "appearance"
 
-            SectionLabel { text: "Surface" }
+            SectionLabel { text: "Background" }
 
             SwitchRow {
               label: "Background"
@@ -484,12 +503,112 @@ PanelWindow {
               checked: root ? root.showBackground : true
               onToggled: root.setOption("showBackground", !root.showBackground)
             }
+
+            Column {
+              width: parent.width
+              visible: root ? root.showBackground : true
+
+              SwitchRow {
+                label: "Opacity from theme"
+                hint: "Follow the bar opacity of the current Omarchy theme."
+                checked: root ? root.dockOpacity < 0 : true
+                onToggled: root.setDockOpacity(root.dockOpacity < 0 ? 1.0 : -1.0)
+              }
+              SliderRow {
+                label: "Opacity"
+                visible: root ? root.dockOpacity >= 0 : false
+                minimum: 0
+                maximum: 1
+                step: 0.05
+                displayScale: 100
+                suffix: "%"
+                value: root ? Math.max(0, root.dockOpacity) : 1
+                onCommitted: function(v) { root.setDockOpacity(Math.round(v * 100) / 100) }
+              }
+
+              SwitchRow {
+                label: "Blur from system"
+                hint: "Leave blur behind the dock to your Hyprland layer rules."
+                checked: root ? root.blurMode === "system" : true
+                onToggled: root.setBlurMode(root.blurMode === "system" ? "on" : "system")
+              }
+              SwitchRow {
+                label: "Blur"
+                hint: panel.systemBlurEnabled
+                  ? "Frosted glass behind the dock. Its strength is Hyprland's global blur size."
+                  : "Hyprland blur is off (decoration:blur:enabled), so this has no visible effect."
+                visible: root ? root.blurMode !== "system" : false
+                checked: root ? root.blurMode === "on" : false
+                onToggled: root.setBlurMode(root.blurMode === "on" ? "off" : "on")
+              }
+
+              SettingRow {
+                label: "Color"
+                hint: "Theme, none, or a fixed preset."
+
+                Row {
+                  spacing: Style.spacing.sm
+
+                  Button {
+                    text: "Theme"
+                    foreground: Color.menu.text
+                    bordered: true
+                    selected: root ? (root.dockBgColor === "theme" || !root.dockBgColor) : true
+                    onClicked: root.setDockBgColor("theme")
+                  }
+                  Button {
+                    text: "None"
+                    foreground: Color.menu.text
+                    bordered: true
+                    selected: root ? root.dockBgColor === "none" : false
+                    onClicked: root.setDockBgColor("none")
+                  }
+                }
+              }
+
+              Flow {
+                width: parent.width
+                spacing: Style.spacing.md
+                topPadding: Style.spacing.lg
+                bottomPadding: Style.spacing.lg
+
+                Repeater {
+                  model: [
+                    "#000000", "#181825", "#1e1e2e", "#0f172a", "#111827",
+                    "#062e24", "#1c1917", "#2c0b16", "#1e102d", "#334155"
+                  ]
+                  delegate: Swatch {
+                    required property string modelData
+                    color: modelData
+                    selected: root ? root.dockBgColor === modelData : false
+                    onPicked: root.setDockBgColor(modelData)
+                  }
+                }
+              }
+            }
+
+            SectionLabel { text: "Shadow" }
+
             SwitchRow {
               label: "Shadow"
-              hint: "Soft drop shadow under the dock."
+              hint: "Under the dock; with the background off, under each icon."
               checked: root ? root.showShadow : true
               onToggled: root.setOption("showShadow", !root.showShadow)
             }
+            SliderRow {
+              label: "Strength"
+              visible: root ? root.showShadow : true
+              minimum: 0
+              maximum: 1
+              step: 0.05
+              displayScale: 100
+              suffix: "%"
+              value: root ? root.shadowStrength : 0.4
+              onCommitted: function(v) { root.setOption("shadowStrength", Math.round(v * 100) / 100) }
+            }
+
+            SectionLabel { text: "Border" }
+
             SwitchRow {
               label: "Border"
               hint: "Thin rim around the dock."
@@ -533,70 +652,6 @@ PanelWindow {
                 return s
               }
               onPicked: function(v) { root.setDockShape(v) }
-            }
-
-            SectionLabel { text: "Background" }
-
-            SwitchRow {
-              label: "Opacity from theme"
-              hint: "Follow the bar opacity of the current Omarchy theme."
-              checked: root ? root.dockOpacity < 0 : true
-              onToggled: root.setDockOpacity(root.dockOpacity < 0 ? 1.0 : -1.0)
-            }
-            SliderRow {
-              label: "Opacity"
-              visible: root ? root.dockOpacity >= 0 : false
-              minimum: 0
-              maximum: 1
-              step: 0.05
-              displayScale: 100
-              suffix: "%"
-              value: root ? Math.max(0, root.dockOpacity) : 1
-              onCommitted: function(v) { root.setDockOpacity(Math.round(v * 100) / 100) }
-            }
-
-            SettingRow {
-              label: "Color"
-              hint: "Theme, none, or a fixed preset."
-
-              Row {
-                spacing: Style.spacing.sm
-
-                Button {
-                  text: "Theme"
-                  foreground: Color.menu.text
-                  bordered: true
-                  selected: root ? (root.dockBgColor === "theme" || !root.dockBgColor) : true
-                  onClicked: root.setDockBgColor("theme")
-                }
-                Button {
-                  text: "None"
-                  foreground: Color.menu.text
-                  bordered: true
-                  selected: root ? root.dockBgColor === "none" : false
-                  onClicked: root.setDockBgColor("none")
-                }
-              }
-            }
-
-            Flow {
-              width: parent.width
-              spacing: Style.spacing.md
-              topPadding: Style.spacing.lg
-              bottomPadding: Style.spacing.lg
-
-              Repeater {
-                model: [
-                  "#000000", "#181825", "#1e1e2e", "#0f172a", "#111827",
-                  "#062e24", "#1c1917", "#2c0b16", "#1e102d", "#334155"
-                ]
-                delegate: Swatch {
-                  required property string modelData
-                  color: modelData
-                  selected: root ? root.dockBgColor === modelData : false
-                  onPicked: root.setDockBgColor(modelData)
-                }
-              }
             }
           }
 
@@ -742,6 +797,41 @@ PanelWindow {
           Column {
             width: parent.width
             visible: panel.page === "effects"
+
+            SectionLabel { text: "Icons" }
+
+            ChoiceRow {
+              label: "Icon style"
+              hint: "Monochrome and dot matrix take one colour from the theme."
+              options: [
+                { value: "original", label: "Original" },
+                { value: "mono", label: "Monochrome" },
+                { value: "pixel", label: "Pixel" },
+                { value: "dots", label: "Dot matrix" }
+              ]
+              value: root ? root.iconStyle : "original"
+              onPicked: function(v) { root.setOption("iconStyle", v) }
+            }
+            ChoiceRow {
+              label: "Icon colour"
+              visible: root ? (root.iconStyle === "mono" || root.iconStyle === "dots") : false
+              options: [
+                { value: "text", label: "Text" },
+                { value: "accent", label: "Accent" }
+              ]
+              value: root ? root.iconTint : "text"
+              onPicked: function(v) { root.setOption("iconTint", v) }
+            }
+            SliderRow {
+              label: root && root.iconStyle === "dots" ? "Dots across" : "Pixels across"
+              hint: "Fewer is chunkier."
+              visible: root ? (root.iconStyle === "pixel" || root.iconStyle === "dots") : false
+              minimum: 8
+              maximum: 32
+              step: 1
+              value: root ? root.iconGrid : 16
+              onCommitted: function(v) { root.setOption("iconGrid", Math.round(v)) }
+            }
 
             SectionLabel { text: "Motion" }
 
@@ -958,12 +1048,11 @@ PanelWindow {
               label: "Tile style"
               hint: "Frame drawn around a group's icons in the dock."
               options: [
-                { value: "theme", label: "Theme" },
                 { value: "rounded", label: "Rounded" },
                 { value: "square", label: "Square" },
                 { value: "none", label: "None" }
               ]
-              value: root ? root.groupStyle : "theme"
+              value: root ? root.groupStyle : "rounded"
               onPicked: function(v) { root.setOption("groupStyle", v) }
             }
 

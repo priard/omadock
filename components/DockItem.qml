@@ -177,7 +177,7 @@ Item {
 
     // Sits on the dock floor and grows upward, so a magnified icon never
     // reaches down over the running dot beneath it.
-    Image {
+    DockIconArt {
       id: iconImg
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.bottom: parent.bottom
@@ -189,11 +189,13 @@ Item {
         if (item.icon !== "") return item.icon
         return Quickshell.iconPath("application-x-executable", true)
       }
-      sourceSize: Qt.size(width * Screen.devicePixelRatio, height * Screen.devicePixelRatio)
-      visible: source !== ""
+      visible: String(source) !== ""
       opacity: item.starting ? (0.4 + 0.6 * item.pulse) : 1.0
-      mipmap: true
-      smooth: true
+      iconStyle: root ? root.iconStyle : "original"
+      tint: root ? root.iconTintColor : Color.bar.text
+      grid: root ? root.iconGrid : 16
+      dropShadow: root ? root.iconShadow : false
+      shadowStrength: root ? root.shadowStrength : 0.4
     }
   }
 

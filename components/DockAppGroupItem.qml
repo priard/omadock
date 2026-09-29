@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import qs.Commons
 import qs.Ui
@@ -82,6 +83,18 @@ Item {
       scale: gitem.magnifyScale
       transformOrigin: Item.Bottom
 
+      // Without a dock card, the tile casts its own shadow like the icons.
+      layer.enabled: root ? root.iconShadow : false
+      layer.smooth: true
+      layer.effect: MultiEffect {
+        shadowEnabled: true
+        shadowColor: "#000000"
+        shadowOpacity: root ? root.shadowStrength : 0.4
+        shadowBlur: 0.45
+        shadowVerticalOffset: Math.max(1, Math.round(iconContainer.height * 0.05))
+        autoPaddingEnabled: true
+      }
+
       // Drop target halo
       Rectangle {
         visible: gitem.isDropTarget
@@ -102,20 +115,16 @@ Item {
         }
       }
 
-      // Frosted Folder Tile Container (macOS / iOS Launchpad Folder style).
-      // groupStyle picks the frame: the theme's card look, a softly rounded
-      // rim, a square rim, or none at all (just the mini-icon grid).
+      // Folder tile (macOS / iOS Launchpad folder style). groupStyle picks
+      // the frame: a softly rounded rim, a square rim, or none at all (just
+      // the mini-icon grid).
       Rectangle {
         id: folderTile
-        readonly property string tileStyle: root ? root.groupStyle : "theme"
+        readonly property string tileStyle: root ? root.groupStyle : "rounded"
         anchors.fill: parent
-        readonly property bool lightRim: tileStyle === "rounded" || tileStyle === "square"
-        radius: tileStyle === "rounded" ? Math.round(width * 0.18)
-          : tileStyle === "square" ? 0
-          : (root ? Math.min(root.effectiveCardRadius, width / 2) : Style.cornerRadius)
-        color: tileStyle === "none" ? "transparent"
-          : Util.alpha(Color.bar.background, lightRim ? 0.4 : 0.65)
-        border.color: Util.alpha(Color.menu.border, lightRim ? 0.45 : 0.65)
+        radius: tileStyle === "rounded" ? Math.round(width * 0.18) : 0
+        color: tileStyle === "none" ? "transparent" : Util.alpha(Color.bar.background, 0.4)
+        border.color: Util.alpha(Color.menu.border, 0.45)
         border.width: tileStyle === "none" ? 0 : 1
 
         // Empty folder fallback icon
@@ -162,14 +171,14 @@ Item {
                 return Quickshell.iconPath("application-x-executable", true)
               }
 
-              Image {
+              DockIconArt {
                 anchors.fill: parent
                 source: miniCell.miniSource
-                sourceSize: Qt.size(miniCell.miniSize * 2, miniCell.miniSize * 2)
-                fillMode: Image.PreserveAspectFit
-                asynchronous: true
-                smooth: true
-                mipmap: true
+                renderSize: miniCell.miniSize * 2
+                iconStyle: root ? root.iconStyle : "original"
+                tint: root ? root.iconTintColor : Color.bar.text
+                // Same cell size as a full icon, so the minis match it.
+                grid: root ? Math.round(root.iconGrid * miniCell.miniSize / Math.max(1, root.baseIconArt)) : 8
               }
             }
           }
