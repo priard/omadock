@@ -978,6 +978,30 @@ PanelWindow {
               value: root ? root.iconGrid : 16
               onCommitted: function(v) { root.setOption("iconGrid", Math.round(v)) }
             }
+            SliderRow {
+              label: "Contrast"
+              hint: "Separates the symbol from its backdrop; high values flatten icons to a simple, poster-like shape."
+              visible: root ? (root.iconStyle === "mono" || root.iconStyle === "dots") : false
+              minimum: 0
+              maximum: 1
+              step: 0.05
+              displayScale: 100
+              suffix: "%"
+              value: root ? root.iconContrast : 0
+              onCommitted: function(v) { root.setOption("iconContrast", Math.round(v * 100) / 100) }
+            }
+            SliderRow {
+              label: "Strength"
+              hint: "How much of the effect covers the original icon."
+              visible: root ? (root.iconStyle === "mono" || root.iconStyle === "dots") : false
+              minimum: 0
+              maximum: 1
+              step: 0.05
+              displayScale: 100
+              suffix: "%"
+              value: root ? root.iconStrength : 1
+              onCommitted: function(v) { root.setOption("iconStrength", Math.round(v * 100) / 100) }
+            }
             SwitchRow {
               label: "Show original on hover"
               hint: "The icon under the pointer drops the style and shows as shipped. Icons in an opened group follow this too."

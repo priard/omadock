@@ -194,6 +194,8 @@ BorderSurface {
                 // The popup sits on the menu surface, not the dock card.
                 tint: root && root.iconTint === "accent" ? Color.accent : Color.menu.text
                 grid: root ? root.iconGrid : 16
+                contrast: root ? root.iconContrast : 0
+                strength: root ? root.iconStrength : 1
                 showOriginal: root ? (root.iconHoverOriginal && cellMouseArea.containsMouse) : false
               }
 

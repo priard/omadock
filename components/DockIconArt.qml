@@ -32,6 +32,10 @@ Item {
   property color tint: Color.bar.text
   // Cells across the icon for the pixel and dots styles.
   property int grid: 16
+  // mono / dots: adaptive contrast 0..1, and how much of the effect covers
+  // the original icon (1 = effect only, 0 = original).
+  property real contrast: 0
+  property real strength: 1
   property bool dropShadow: false
   property real shadowStrength: 0.4
   // Size (logical px) the icon is decoded at. Keep it fixed: tying it to the
@@ -78,13 +82,17 @@ Item {
       smooth: true
       mipmap: true
       asynchronous: true
-      visible: !art.hasCustom && art.shownStyle === "original"
+      // Also shows under a mono / dots effect that is not at full strength.
+      readonly property bool underEffect: (art.shownStyle === "mono" || art.shownStyle === "dots") && art.strength < 1
+      visible: !art.hasCustom && (art.shownStyle === "original" || underEffect)
+      opacity: underEffect ? 1 - art.strength : 1
     }
 
     Item {
       id: custom
       anchors.fill: parent
-      visible: art.shownStyle === "original" || art.shownStyle === "mono"
+      visible: art.shownStyle === "original" || art.shownStyle === "mono" || (art.shownStyle === "dots" && art.strength < 1)
+      opacity: art.shownStyle === "dots" ? 1 - art.strength : 1
     }
 
     // Pixel style: the icon rendered onto its grid (averaging each cell) and
@@ -120,6 +128,7 @@ Item {
         }
 
         ShaderEffect {
+          opacity: art.strength
           anchors.fill: parent
           property variant source: styleTexture
           property color tint: art.tint
@@ -130,6 +139,7 @@ Item {
           property real dots: art.iconStyle === "dots" ? 1.0 : 0.0
           // Thin glyph strokes cover only part of a cell; count them in.
           property real alphaCut: art.hasCustom ? 0.12 : 0.35
+          property real contrast: art.contrast
           fragmentShader: Qt.resolvedUrl("../shaders/iconstyle.frag.qsb")
         }
       }

@@ -197,6 +197,8 @@ Item {
       iconStyle: root ? root.iconStyle : "original"
       tint: root ? root.iconTintColor : Color.bar.text
       grid: root ? root.iconGrid : 16
+      contrast: root ? root.iconContrast : 0
+      strength: root ? root.iconStrength : 1
       dropShadow: root ? root.iconShadow : false
       shadowStrength: root ? root.shadowStrength : 0.4
       showOriginal: root ? (root.iconHoverOriginal && area.containsMouse) : false

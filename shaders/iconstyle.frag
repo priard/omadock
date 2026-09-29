@@ -12,6 +12,11 @@
 // dark one (invert = 1), so the ink always lands on the parts that contrast
 // with the dock behind it.
 //
+// contrast (0..1) stretches the tone around the icon's own average (a 4x4
+// grid of samples weighted by coverage), so the symbol separates from
+// its backdrop whether the icon is light or dark overall, and fades the
+// faint parts out; near 1 an icon reduces to a flat, poster-like shape.
+//
 // Rebuild after editing:
 //   /usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 \
 //     -o iconstyle.frag.qsb iconstyle.frag
@@ -29,6 +34,7 @@ layout(std140, binding = 0) uniform buf {
     float invert;   // 1 when the tint is dark
     float dots;     // 1 for the dot matrix, 0 for monochrome
     float alphaCut; // cell coverage below which a cell is outside the shape
+    float contrast; // 0..1, adaptive contrast (see above)
 };
 
 layout(binding = 1) uniform sampler2D source;
@@ -52,10 +58,33 @@ float toneOf(vec4 c) {
     return clamp(pow(t, 0.8) * 1.15, 0.0, 1.0);
 }
 
+// The tone after contrast: stretched around the icon's average tone.
+float contrasted(float tone, float meanTone) {
+    float gain = mix(1.0, 5.0, contrast);
+    float stretched = clamp((tone - meanTone) * gain + 0.5, 0.0, 1.0);
+    return mix(tone, stretched, contrast);
+}
+
+// The icon's average colour: 16 samples across it, weighted by coverage
+// (the texture is premultiplied, so summing and dividing by alpha works).
+vec4 iconAverage() {
+    vec4 sum = vec4(0.0);
+    for (int y = 0; y < 4; y++) {
+        for (int x = 0; x < 4; x++) {
+            sum += texture(source, (vec2(float(x), float(y)) + 0.5) / 4.0);
+        }
+    }
+    return sum / 16.0;
+}
+
 void main() {
+    vec4 avg = iconAverage();
+    float meanTone = avg.a > 0.01 ? toneOf(avg) : 0.5;
+    float dim = mix(dimLevel, dots < 0.5 ? 0.06 : 0.0, contrast);
+
     if (dots < 0.5) {
         vec4 c = texture(source, qt_TexCoord0);
-        float ink = c.a * mix(dimLevel, 1.0, toneOf(c)) * tint.a * qt_Opacity;
+        float ink = c.a * mix(dim, 1.0, contrasted(toneOf(c), meanTone)) * tint.a * qt_Opacity;
         fragColor = vec4(tint.rgb * ink, ink);
         return;
     }
@@ -71,8 +100,8 @@ void main() {
 
     // Extra contrast before dithering: mid-tones would otherwise dither into
     // noise at this resolution, where a poster-like split reads as a shape.
-    float tone = smoothstep(0.2, 0.8, toneOf(c));
-    float level = tone > bayer4(cell) ? 1.0 : dimLevel;
+    float tone = contrasted(smoothstep(0.2, 0.8, toneOf(c)), smoothstep(0.2, 0.8, meanTone));
+    float level = tone > bayer4(cell) ? 1.0 : dim;
 
     float r = length(fract(cellPos) - 0.5);
     float radius = dotFill * 0.5;

@@ -179,6 +179,8 @@ Item {
                 tint: root ? root.iconTintColor : Color.bar.text
                 // Same cell size as a full icon, so the minis match it.
                 grid: root ? Math.round(root.iconGrid * miniCell.miniSize / Math.max(1, root.baseIconArt)) : 8
+                contrast: root ? root.iconContrast : 0
+                strength: root ? root.iconStrength : 1
                 showOriginal: root ? (root.iconHoverOriginal && groupArea.containsMouse) : false
               }
             }

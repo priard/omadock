@@ -827,6 +827,10 @@ Item {
   property string iconTint: "text"
   // Cells across an icon for the pixel and dots styles.
   property int iconGrid: 16
+  // mono / dots: adaptive contrast (0..1) and effect strength over the
+  // original icon (0..1).
+  property real iconContrast: 0
+  property real iconStrength: 1
   // With an icon style on: show the hovered icon as shipped.
   property bool iconHoverOriginal: false
   readonly property color iconTintColor: root.iconTint === "accent" ? Color.accent : root.dockForeground
@@ -1921,6 +1925,8 @@ Item {
     root.iconStyle = (parsed && ["mono", "pixel", "dots"].indexOf(parsed.iconStyle) >= 0) ? parsed.iconStyle : "original"
     root.iconTint = (parsed && parsed.iconTint === "accent") ? "accent" : "text"
     root.iconHoverOriginal = parsed ? parsed.iconHoverOriginal === true : false
+    root.iconContrast = parsed && typeof parsed.iconContrast === "number" ? Math.max(0, Math.min(1, parsed.iconContrast)) : 0
+    root.iconStrength = parsed && typeof parsed.iconStrength === "number" ? Math.max(0, Math.min(1, parsed.iconStrength)) : 1
     root.iconGrid = parsed && typeof parsed.iconGrid === "number"
       ? Math.max(8, Math.min(32, Math.round(parsed.iconGrid)))
       : 16
@@ -3145,6 +3151,8 @@ Item {
     conf.iconStyle = root.iconStyle
     conf.iconTint = root.iconTint
     conf.iconHoverOriginal = root.iconHoverOriginal
+    conf.iconContrast = root.iconContrast
+    conf.iconStrength = root.iconStrength
     conf.iconGrid = root.iconGrid
     conf.showBorder = root.showBorder
     conf.indicatorShape = root.indicatorShape
