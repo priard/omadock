@@ -204,8 +204,12 @@ Item {
     readonly property color effectiveBorderColor: {
       if (!root) return Util.alpha(Color.menu.border, 0.48)
       // Specular Frosted Glass Rim: Crisp highlight with high alpha for contrast on dark and light surfaces
-      if (root.effectiveDockOpacity < 0.25 || root.dockBgColor === "none") return Util.alpha(root.dockForeground, 0.48)
-      return Util.alpha(root.dockForeground, Math.max(0.24, root.effectiveDockOpacity * 0.35))
+      var autoAlpha = (root.effectiveDockOpacity < 0.25 || root.dockBgColor === "none")
+        ? 0.48
+        : Math.max(0.24, root.effectiveDockOpacity * 0.35)
+      // Manual override from Settings → Appearance → Border opacity.
+      var rimAlpha = root.borderOpacity < 0 ? autoAlpha : Math.max(0.0, Math.min(1.0, root.borderOpacity))
+      return Util.alpha(root.dockForeground, rimAlpha)
     }
 
     color: (root && !root.showBackground) ? "transparent"
@@ -234,10 +238,9 @@ Item {
       onClicked: function(mouse) {
         if (!root) return
         if (mouse.button === Qt.RightButton) {
-          // Right-click on the dock background reaches the settings even
-          // when the Omarchy button is hidden.
-          var pt = root.contentItemRef ? cardArea.mapToItem(root.contentItemRef, mouse.x, 0) : null
-          root.openDockSettingsMenu(pt ? pt.x : mouse.x, 0)
+          // Right-click on the dock background (or the Omarchy button) opens
+          // the full settings panel directly.
+          root.openSettingsPanel()
           return
         }
         if (root.contextAppId !== "") root.closeContext()
@@ -273,7 +276,7 @@ Item {
         onMiddleClicked: Quickshell.execDetached(["omarchy-launch-terminal"])
         onWheelScrolled: function(dir) { if (root) root.cycleWorkspace(dir) }
         onMenuRequested: function(cx, cy) {
-          if (root) root.openDockSettingsMenu(cx, cy)
+          if (root) root.openSettingsPanel()
         }
       }
 

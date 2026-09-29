@@ -705,6 +705,7 @@ Item {
   readonly property bool waveHover: root.hoverEffect === "wave"
   property bool launchBounce: true
   property bool advancedTooltips: true
+  property real borderOpacity: -1.0
   property real dockOpacity: 1.0
   readonly property real effectiveDockOpacity: {
     if (root.dockOpacity < 0) {
@@ -1741,6 +1742,13 @@ Item {
     } else {
       root.dockOpacity = 1.0
     }
+    if (parsed && (parsed.borderOpacity === "theme" || parsed.borderOpacity === "auto" || parsed.borderOpacity === -1)) {
+      root.borderOpacity = -1.0
+    } else if (parsed && typeof parsed.borderOpacity === "number") {
+      root.borderOpacity = Math.max(0.0, Math.min(1.0, parsed.borderOpacity))
+    } else {
+      root.borderOpacity = -1.0
+    }
     root.dockShape = parsed && typeof parsed.shape === "string" ? parsed.shape : "rounded"
     root.dockBgColor = parsed && typeof parsed.bgColor === "string" ? parsed.bgColor : "theme"
     root.showBackground = parsed ? parsed.showBackground !== false : true
@@ -1867,6 +1875,11 @@ Item {
 
   function setDockOpacity(val) {
     root.dockOpacity = val
+    root.saveConfig()
+  }
+
+  function setBorderOpacity(val) {
+    root.borderOpacity = val
     root.saveConfig()
   }
 
@@ -2678,6 +2691,7 @@ Item {
     if (root.configuredIconSize > 0) conf.iconSize = root.configuredIconSize
     else delete conf.iconSize
     conf.opacity = root.dockOpacity < 0 ? "theme" : root.dockOpacity
+    conf.borderOpacity = root.borderOpacity < 0 ? "theme" : root.borderOpacity
     conf.shape = root.dockShape
     conf.bgColor = root.dockBgColor
     conf.showBackground = root.showBackground

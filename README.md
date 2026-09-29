@@ -24,18 +24,41 @@
   <a href="#%EF%B8%8F-controls-cheat-sheet"><b>Controls</b></a> •
   <a href="#%EF%B8%8F-configuration-reference"><b>Configuration</b></a> •
   <a href="#-keyboard-shortcuts-via-ipc"><b>Keybindings</b></a> •
-  <a href="#-faq"><b>FAQ</b></a>
+  <a href="#-faq"><b>FAQ</b></a> •
+  <a href="https://github.com/sponsors/thepathless"><b>Sponsor ❤️</b></a>
 </p>
 
 </div>
 
 ---
 
+## ❤️ Support the project
+
+Omadock is built by one person — **suva ([@thepathless](https://github.com/thepathless))**, a medical student in India who codes between classes and clinics. It's free, and it always will be — but building it costs money I don't quite have: monthly AI coding tokens, and a laptop that's falling apart (dead WiFi, sticky keys, a trackpad with a mind of its own) — so I'm saving for a **[Dell XPS 13 (2026)](https://www.dell.com/en-us/blog/year-of-the-linux-laptop-omarchy-on-xps/)**.
+
+If Omadock earns a place on your desktop, [**sponsoring me**](https://github.com/sponsors/thepathless) keeps the AI lights on and the laptop fund growing. Every supporter is honored on the [**supporters wall**](SPONSORS.md) 💝 — with love, no tiers, no perks.
+
+### 💻 Laptop fund
+
+<img src="assets/laptop-fund.svg" alt="Laptop fund: $0 of $1,000" width="480" />
+
+### 📊 Where donations went
+
+| Month | AI tokens | Laptop fund | Notes |
+| :--- | :--- | :--- | :--- |
+| — | — | — | Just launched — be the first! 🙏 |
+
+*(running total so far: **−₹499** for my coding-agent subscription — borrowed from my mom 😅. Updated monthly; honesty is the least I can offer)*
+
+To everyone who donates — really, truly, thank you. 🙏
+
+---
+
 ## ⚡ Overview
 
-**Omadock (オマドック)** is an ultra-fast, lightweight shell overlay plugin built natively for **[Omarchy](https://omarchy.org/)** (Arch Linux + Hyprland + Quickshell).
+**Omadock (オマドック)** is a fluid, zero-CPU application dock for **[Omarchy](https://omarchy.org/)** — Arch, Hyprland, Quickshell.
 
-Crafted in the spirit of **Omakase (おまかせ)** — curated elegance and effortless flow — Omadock bridges the gap between dynamic tiling compositors and tactile desktop ergonomics. It delivers fluid wave magnification, live screencopy preview cards, and multi-instance window management with strictly **0.00% background CPU consumption**.
+Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live window previews, app groups, multi-monitor docks. Beautiful, opinionated, and strictly **0.00% background CPU**.
 
 <p align="center">
   <img src="assets/screenshot-transparent.png" alt="Omadock Close-up View" width="700" />
@@ -43,19 +66,14 @@ Crafted in the spirit of **Omakase (おまかせ)** — curated elegance and eff
 
 ### ✨ Key Highlights
 
-- **🔘 3-State Window Dots**: Instant visual indicator dots for active, visible, and minimized windows.
-- **🌊 Continuous Wave Physics**: Fluid cosine-falloff cursor wave dynamics alongside classic zoom mode with zero coordinate jumping.
-- **🪟 Visual Window Previews**: Minimized windows park directly on the dock as visual thumbnail cards.
-- **📁 App Group Folders**: 2x2 live preview grid, popover tray, drag-to-group, in-place title editing, drag-to-pin, and drag-out extraction to ungroup/unpin.
-- **💾 Removable Media Auto-Docking**: USB and removable drive detection with mountpoint badges, storage tooltips, and contextual eject/unmount actions.
-- **📐 Dock Alignment Options**: Bottom alignment support (`center`, `left`, `right`) with dynamic coordinate compensation and Hyprland workspace integration.
-- **🖥️ Multi-Monitor Docks**: One dock per monitor, each listing only the windows open on that monitor — like the Windows taskbar on every display.
-- **⚡ FreeDesktop Jump Lists**: Contextual quick actions for supported desktop applications.
-- **📂 Folder Stacks & Popovers**: 1-click popovers for recent files with automatic theme sync and color presets.
-- **🔔 Attention Glow & Canberra Chimes**: Bouncing alerts and audio chimes for background notifications.
-- **🎯 Intelligent Zero-CPU Autohide**: Event-driven 2D Axis-Aligned Bounding Box (AABB) window overlap detection aware of all tiled and floating windows.
-- **🔄 Fluid Drag-and-Drop**: Drag pinned items to reorder with live real-time insertion markers.
-- **⌨️ Desktop Keybindings**: Automated `bind-keys.sh` integration with `~/.config/hypr/bindings.lua` (`SUPER + D`, `SUPER + M`, `SUPER + SHIFT + M`).
+- **🌊 Wave magnification** — cosine-falloff dock physics, or classic zoom. Zero coordinate jumping.
+- **🪟 Live window previews** — minimized windows park on the dock as thumbnail cards.
+- **🔘 3-state window dots** — active, visible, and minimized at a glance.
+- **📁 Folders & groups** — folder stacks with recent files, smart app collections, drag-to-group.
+- **🖥️ Multi-monitor** — one dock per monitor, each showing its own monitor's windows.
+- **💾 Removable media** — USB drives dock themselves; safe eject included.
+- **🔔 Attention glow & chimes** — bouncing alerts and audio pings.
+- **⌨️ Keybindings & IPC** — wired for `~/.config/hypr/bindings.lua` out of the box.
 
 ---
 
@@ -85,16 +103,7 @@ omarchy plugin remove omadock --yes
 
 ### 🔘 1. 3-State Window Indicators
 
-Every running application icon features micro-indicators communicating the exact state of all open instances:
-
-```
-  ┌─────────────────────────────────────────────────────────────┐
-  │  INDICATOR LEGEND:                                          │
-  │   [ ▬ ] Active / Focused Window   (Illuminated Theme Bar)   │
-  │   [ ● ] Open / Visible Window     (Solid High-Contrast Dot) │
-  │   [ ○ ] Minimized / Parked Window (Hollow Circle Ring)      │
-  └─────────────────────────────────────────────────────────────┘
-```
+Every icon shows all its windows at a glance: **▬** active · **●** open · **○** minimized.
 
 | Window Count | Indicator Visual | Behavior |
 | :--- | :--- | :--- |
@@ -112,28 +121,16 @@ When a window is parked on `special:minimized`, Omadock generates a live visual 
   <img src="assets/preview-dock.png" alt="Omadock Preview Tiles" width="700" style="border-radius: 8px;" />
 </div>
 
-- **📸 Visual Window Previews**: Displays a clean, static thumbnail of the window upon minimization.
-- **🎯 1-Click Restore**: Left-clicking any preview tile restores the window directly onto your **currently active workspace**.
-- **📍 Origin Restoration**: Right-click any tile to choose between **Restore Here**, **Restore to Original Workspace**, or **Close**.
-- **📦 Stacked Group Cards**: In `"all"` mode, multiple windows from the same application bundle into a stacked visual card with count badge.
-- **🧩 Space-Saving Icon Collapse**: Unpinned apps collapse into their preview tile when all windows are minimized, keeping the dock uncluttered.
+- **📸→🖱️** Thumbnails appear on minimize; **left-click restores** to the active workspace.
+- **📍** Right-click a tile: *Restore Here*, *Restore to Original Workspace*, or *Close*.
+- **📦** In `"all"` mode, same-app windows stack into one card with a count badge.
+- **🧩** Unpinned apps collapse into their tile — the dock stays uncluttered.
 
 ---
 
 ### 🔄 3. Minimize on Click Modes
 
-Configure how clicking an active application icon behaves in `omadock.json` or via the Settings menu:
-
-```
-                         ┌─────────────────────────────────┐
-                         │   Click On Focused Dock Icon    │
-                         └──────────────┬──────────────────┘
-                                        │
-             ┌──────────────────────────┼──────────────────────────┐
-             ▼                          ▼                          ▼
-     [ Active Window ]           [ All Windows ]             [ Disabled ]
-  (Sequential FIFO — default)  (Group Batch / Hide)        (Standard / Classic)
-```
+Configure how clicking a focused app icon behaves (`omadock.json` or the Settings menu):
 
 1. **`"active"` (Default)**: Minimizes the active window and passes focus to the next instance.
 2. **`"all"` (Group Batch)**: Simultaneously minimizes all instances of the application in an atomic batch.
@@ -143,13 +140,13 @@ Configure how clicking an active application icon behaves in `omadock.json` or v
 
 ### 🌊 4. Wave & Zoom Magnification
 
-Omadock features Juan Pablo Zamora's raised-cosine falloff equation for fluid, Apple-style wave magnification:
+Juan Pablo Zamora's raised-cosine falloff, in three modes:
 
 $$\text{scale}(d) = 1 + (\text{peak} - 1) \cdot \frac{1 + \cos\left(\frac{\pi \cdot d}{R}\right)}{2} \quad \text{for } d \le R$$
 
-- **Wave Mode (`"wave"`)**: Dynamic slot growth where neighbor items smoothly expand with constant unmagnified home coordinates (zero feedback drift).
-- **Zoom Mode (`"zoom"`)**: Scales only the hovered icon in-place without shifting surrounding slots.
-- **Off (`"off"`)**: Clean, static dock geometry for minimal distraction.
+- **`"wave"`** — the dock ripples under the cursor; zero feedback drift.
+- **`"zoom"`** — only the hovered icon grows.
+- **`"off"`** — calm, static geometry.
 
 ---
 
@@ -157,9 +154,9 @@ $$\text{scale}(d) = 1 + (\text{peak} - 1) \cdot \frac{1 + \cos\left(\frac{\pi \c
 
 Pin directories like `~/Downloads`, `~/Projects`, or custom paths directly to your dock:
 
-- **Recent Files Popover**: 1-click reveals up to 16 newest files sorted chronologically with mimetype icons, file sizes, and relative times (`Just now`, `5m ago`).
-- **Direct Opening**: Click any file to launch with `xdg-open` or open the containing folder in your file manager.
-- **GTK Folder Dialog**: Easily browse and attach custom folders from the Settings menu.
+- **Recent files popover** — up to 16 newest files with icons, sizes, and relative times.
+- **Direct opening** — click any file (`xdg-open`) or jump to its folder.
+- **GTK folder dialog** — attach custom folders from Settings.
 
 ---
 
@@ -167,11 +164,10 @@ Pin directories like `~/Downloads`, `~/Projects`, or custom paths directly to yo
 
 Organize applications into intelligent macOS / iOS-style folders directly on your dock:
 
-- **2x2 Live Preview Grid**: Folder icons render a dynamic micro-grid of contained application icons with live window indicator dots.
-- **Fluid Popover Tray**: Clicking a folder opens a sleek, floating app tray with columns automatically scaled to content (2 to 4 columns).
-- **Drag-to-Group & Drag-to-Pin**: Drag any dock icon onto another pinned app to instantly create a folder. Drag running unpinned apps to pin them directly into folders or dock slots.
-- **In-Place Title Editing**: Click the folder title in the header to rename inline with instant configuration persistence.
-- **Drag-Out Extraction & Auto-Dissolution**: Drag an icon out of the folder popover back onto the dock to unpin or extract. When only 1 app remains, the folder automatically dissolves back into a standard dock pin.
+- **2×2 live preview grid** with window dots; the popover tray scales 2–4 columns.
+- **Drag-to-group, drag-to-pin** — drop one icon on another to make a folder.
+- **Inline renaming**, saved instantly.
+- **Drag-out extraction** — folders auto-dissolve when one app remains.
 
 ---
 
@@ -179,9 +175,8 @@ Organize applications into intelligent macOS / iOS-style folders directly on you
 
 Zero-CPU hardware integration for removable media and USB storage:
 
-- **Kernel Udev Integration**: Detects USB flash drives, SD cards, and external storage reactively via Linux udev and udisks2.
-- **Mountpoint & Storage Tooltips**: Displays drive capacity, filesystem label, and mount status on hover.
-- **Contextual Eject & Unmount**: 1-click or right-click context menu to safely unmount and eject removable drives with native desktop notifications.
+- **udev + udisks2** detection of USB drives, SD cards, and external storage.
+- **Tooltips** with capacity, label, and mount status; safe eject/unmount with notifications.
 
 ---
 
@@ -189,18 +184,16 @@ Zero-CPU hardware integration for removable media and USB storage:
 
 Flexible screen placement tailored to your workflow:
 
-- **Bottom Alignment Modes**: Position the dock at `"center"`, `"left"`, or `"right"` along the bottom edge.
-- **Dynamic Coordinate Compensation**: Popovers, tooltips, and context menus automatically measure available screen margins and reposition themselves to prevent clipping against display boundaries.
-- **Smooth Cubic Transitions**: Position shifts glide smoothly via hardware-accelerated cubic bezier animations.
+- **`"center"`, `"left"`, `"right"`** along the bottom edge, with smooth cubic transitions.
+- **Popovers, tooltips, and menus** self-reposition so nothing clips at screen edges.
 
 #### 🖥️ Multi-Monitor Docks
 
 Enable **Settings → Placement & Alignment → Show on All Monitors** (or `"multiMonitor": true`) to run a dock on every connected monitor:
 
-- **Per-Monitor Apps**: Each dock shows the windows open on its own monitor, with pinned apps on every dock. A window dragged, or a workspace moved, to another monitor moves its icon to that monitor's dock. Turn off **Only This Monitor's Apps** (`"perMonitorApps": false`) to list every window on every dock.
-- **Minimized Tiles Follow Their Origin**: A parked window's preview tile appears on the dock of the monitor it was minimized from, whichever dock minimized it.
-- **Hotplug Aware**: Docks appear and disappear as monitors are connected or removed.
-- **Keybindings Act Where You Are**: `minimizeActive` and `restoreLast` target the focused monitor's dock first; `toggleVisibility`, `reveal` and `hide` apply to every dock.
+- **Per-monitor apps** — each dock lists its own monitor's windows (pinned apps everywhere); `"perMonitorApps": false` mirrors everything.
+- **Minimized tiles follow their origin** monitor, whichever dock parked them.
+- **Hotplug aware**; keybinds act on the focused monitor first.
 
 ---
 
@@ -208,8 +201,8 @@ Enable **Settings → Placement & Alignment → Show on All Monitors** (or `"mul
 
 Deep Linux desktop and compositor integration:
 
-- **FreeDesktop Jump Lists**: Right-click applications to access native quick actions parsed directly from `.desktop` files (e.g. New Incognito Window, New Document, Open Profile).
-- **Intelligent Zero-CPU Autohide**: Employs mathematical 2D Axis-Aligned Bounding Box (AABB) intersection tests triggered strictly on Hyprland window movement events, keeping background CPU consumption at **0.00%**.
+- **FreeDesktop jump lists** — native quick actions straight from `.desktop` files.
+- **Intelligent autohide** — 2D AABB overlap tests on Hyprland events only. **0.00% CPU**, always.
 
 ---
 
@@ -219,9 +212,9 @@ Right-click the Omarchy logo or empty dock space to access deep customization.
 
 ### 🎛️ Settings Panel
 
-Choose **Dock Settings…** at the top of that menu to open the full settings panel: a sidebar with *Appearance*, *Placement*, *Behavior*, *Effects*, *Size & Spacing*, *Folders* and *App Groups*, with switches, sliders and dropdowns for every option. Changes apply live, so the dock underneath previews them. Close it with <kbd>Esc</kbd>, the close button, or a click outside. The panel can also be opened from a keybind: `omarchy-shell omadock openSettings`.
+Right-clicking either one opens the full settings panel directly: a sidebar with *Appearance*, *Placement*, *Behavior*, *Effects*, *Size & Spacing*, *Folders* and *App Groups*, with switches, sliders and dropdowns for every option. Changes apply live, so the dock underneath previews them. Close it with <kbd>Esc</kbd>, the close button, or a click outside. The panel can also be opened from a keybind: `omarchy-shell omadock openSettings`.
 
-The quick context-menu pages below remain available:
+The settings at a glance:
 
 <div align="center">
   <table>
@@ -311,6 +304,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "showBackground": true,
   "showShadow": true,
   "showBorder": true,
+  "borderOpacity": "theme",
   "itemSpacing": 4,
   "iconSize": 0,
   "hoverEffect": "zoom",
@@ -443,14 +437,6 @@ journalctl --user -xeu omarchy-shell -n 50 --no-pager
 qs -p /usr/share/omarchy/shell ipc call omadock minimizeActive
 qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 ```
-
----
-
-## ❤️ Support the project
-
-Enjoying OmaDock for Omarchy? Sponsoring its development is a lovely way to say thanks and help keep the project growing.
-
-<a href="https://github.com/sponsors/thepathless"><img src="https://img.shields.io/badge/Sponsor_on_GitHub-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub"></a>
 
 ---
 

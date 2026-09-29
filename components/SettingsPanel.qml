@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
@@ -15,6 +16,9 @@ PanelWindow {
 
   property string page: root ? root.settingsPanelPage : "appearance"
 
+  // Update channel as reported by `omadock-switch status`; probed on open.
+  property string channel: ""
+
   readonly property var pages: [
     { id: "appearance", label: "Appearance", glyph: "󰏘" },
     { id: "placement", label: "Placement", glyph: "󰍹" },
@@ -22,7 +26,9 @@ PanelWindow {
     { id: "effects", label: "Effects", glyph: "󰨙" },
     { id: "size", label: "Size & Spacing", glyph: "󰩨" },
     { id: "folders", label: "Folders", glyph: "󰉋" },
-    { id: "groups", label: "App Groups", glyph: "󰀻" }
+    { id: "groups", label: "App Groups", glyph: "󰀻" },
+    { id: "supporters", label: "Supporters", glyph: "󰆔" },
+    { id: "about", label: "About", glyph: "󰋼" }
   ]
 
 
@@ -141,6 +147,10 @@ PanelWindow {
   component SliderRow: SettingRow {
     id: sliderRow
     property real value: 0
+
+    // A hidden row can lose its mouse grab mid-drag without ever getting a
+    // release; drop the drag state so the knob cannot stick to the cursor.
+    onVisibleChanged: if (!visible && slider.dragging) slider.dragging = false
     property real minimum: 0
     property real maximum: 1
     property real step: 1
@@ -168,7 +178,13 @@ PanelWindow {
         step: sliderRow.step
         integer: sliderRow.step >= 1
         value: sliderRow.value
-        onReleased: function(v) { sliderRow.committed(v) }
+        onReleased: function(v) {
+          sliderRow.committed(v)
+          // Belt and braces: if the press was ever canceled (grab stolen or the
+          // row hidden mid-drag), PanelSlider never resets its drag state and the
+          // knob follows the cursor. Re-assert it on every release/commit.
+          slider.dragging = false
+        }
       }
       Text {
         anchors.verticalCenter: parent.verticalCenter
@@ -231,7 +247,24 @@ PanelWindow {
 
   // Focus has to be taken again once the surface is actually mapped.
   onVisibleChanged: if (visible) Qt.callLater(function() { keyCatcher.forceActiveFocus() })
-  Component.onCompleted: Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+  Component.onCompleted: {
+    Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+    channelProbe.running = true
+  }
+
+  // One-shot channel probe (event-driven, zero idle CPU): reads which profile
+  // `omadock-switch` has live so the About page can show the real state.
+  Process {
+    id: channelProbe
+    command: ["omadock-switch", "status"]
+    stdout: SplitParser {
+      onRead: function(line) {
+        if (line.indexOf("Active Mode:") < 0) return
+        if (line.indexOf("EXPERIMENT") >= 0) panel.channel = "experiment"
+        else if (line.indexOf("STABLE") >= 0) panel.channel = "stable"
+      }
+    }
+  }
 
   Shortcut {
     sequence: "Escape"
@@ -397,6 +430,9 @@ PanelWindow {
       contentHeight: pageColumn.implicitHeight
       clip: true
       boundsBehavior: Flickable.StopAtBounds
+      // Scrolling is wheel-only (WheelHandler below). Drag-flicking is off so the
+      // Flickable never steals the grab from slider/toggle drags mid-gesture.
+      interactive: false
 
       WheelHandler {
         target: pageFlick
@@ -435,6 +471,24 @@ PanelWindow {
             hint: "Thin rim around the dock."
             checked: root ? root.showBorder : true
             onToggled: root.setOption("showBorder", !root.showBorder)
+          }
+          SwitchRow {
+            label: "Border opacity from theme"
+            hint: "Derive the rim opacity from the dock's opacity, as themes expect. Turn off to set it by hand."
+            checked: root ? root.borderOpacity < 0 : true
+            visible: root ? root.showBorder : true
+            onToggled: root.setBorderOpacity(root.borderOpacity < 0 ? 1.0 : -1.0)
+          }
+          SliderRow {
+            label: "Border opacity"
+            visible: root ? (root.showBorder && root.borderOpacity >= 0) : false
+            minimum: 0
+            maximum: 1
+            step: 0.05
+            displayScale: 100
+            suffix: "%"
+            value: root ? Math.max(0, root.borderOpacity) : 1
+            onCommitted: function(v) { root.setBorderOpacity(Math.round(v * 100) / 100) }
           }
 
           SectionLabel { text: "Shape" }
@@ -911,6 +965,85 @@ PanelWindow {
             foreground: Color.menu.text
             bordered: true
             onClicked: root.createAppGroupFromRunning()
+          }
+        }
+
+        // ================================================= Supporters
+        Column {
+          width: parent.width
+          visible: panel.page === "supporters"
+
+          SectionLabel { text: "Made with love" }
+
+          Text {
+            width: parent.width
+            topPadding: Style.spacing.lg
+            bottomPadding: Style.spacing.lg
+            text: "Omadock is built with love by suva — a medical student, between classes and clinics. It is free, and it always will be.\n\nIf it earns a place on your desktop, you can give some love back to its maker. No tiers, no perks — just support returned."
+            color: Color.menu.text
+            wrapMode: Text.WordWrap
+            font.family: Style.font.family
+            font.pixelSize: Style.font.body
+          }
+
+          SettingRow {
+            label: "Supporter #1 — suva"
+            hint: "The maker. Its first and forever supporter."
+
+            Button {
+              text: "Support ❤"
+              foreground: Color.menu.text
+              bordered: true
+              onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/sponsors/thepathless"))
+            }
+          }
+
+          SettingRow {
+            label: "Supporters wall"
+            hint: "Everyone who has supported Omadock, honored in the repository."
+
+            Button {
+              text: "View wall"
+              foreground: Color.menu.text
+              bordered: true
+              onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/thepathless/omadock/blob/main/SPONSORS.md"))
+            }
+          }
+        }
+
+        // ================================================= About
+        Column {
+          width: parent.width
+          visible: panel.page === "about"
+
+          SectionLabel { text: "Updates" }
+
+          ChoiceRow {
+            label: "Update channel"
+            hint: "Stable receives verified releases; Experimental gets features early. Switching reloads the shell immediately."
+            options: [
+              { value: "stable", label: "Stable" },
+              { value: "experiment", label: "Experimental" }
+            ]
+            value: panel.channel !== "" ? panel.channel : "stable"
+            onPicked: function(v) {
+              if (panel.channel === "" || v === panel.channel) return
+              Quickshell.execDetached(["omadock-switch", v === "stable" ? "stable" : "experiment"])
+            }
+          }
+
+          SectionLabel { text: "Project" }
+
+          SettingRow {
+            label: "Omadock"
+            hint: "A fluid, zero-CPU dock for Omarchy. Report bugs, follow development, or star the repository."
+
+            Button {
+              text: "GitHub"
+              foreground: Color.menu.text
+              bordered: true
+              onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/thepathless/omadock"))
+            }
           }
         }
       }
