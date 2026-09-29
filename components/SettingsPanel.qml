@@ -866,7 +866,7 @@ PanelWindow {
               bordered: true
               onClicked: {
                 panel.close()
-                if (root.customFolderPickerProc) root.customFolderPickerProc.running = true
+                root.pickCustomFolder()
               }
             }
           }
@@ -928,6 +928,20 @@ PanelWindow {
           width: parent.width
           visible: panel.page === "groups"
 
+          SectionLabel { text: "Look" }
+
+          ChoiceRow {
+            label: "Tile style"
+            hint: "Frame drawn around a group's icons in the dock."
+            options: [
+              { value: "theme", label: "Theme" },
+              { value: "rounded", label: "Rounded" },
+              { value: "none", label: "None" }
+            ]
+            value: root ? root.groupStyle : "theme"
+            onPicked: function(v) { root.setOption("groupStyle", v) }
+          }
+
           SectionLabel { text: "Groups" }
 
           Text {
@@ -945,15 +959,46 @@ PanelWindow {
           Repeater {
             model: root ? root.appGroups : []
             delegate: SettingRow {
+              id: groupRow
               required property var modelData
-              label: modelData.name || "Group"
-              hint: (modelData.apps ? modelData.apps.length : 0) + " apps"
+              readonly property int appCount: modelData.apps ? modelData.apps.length : 0
+              label: groupRow.appCount + (groupRow.appCount === 1 ? " app" : " apps")
+              hint: {
+                var names = []
+                var apps = modelData.apps || []
+                for (var i = 0; i < apps.length; i++) {
+                  var entry = root ? root.entryForId(apps[i]) : null
+                  names.push(entry && entry.name ? entry.name : String(apps[i]))
+                }
+                return names.join(", ")
+              }
 
-              Button {
-                text: "Remove"
-                foreground: Color.menu.text
-                bordered: true
-                onClicked: root.removeAppGroup(modelData.id)
+              Row {
+                spacing: Style.spacing.md
+
+                // The name is saved when editing ends (Enter, Tab or focus
+                // leaving the field); an empty name keeps the old one.
+                TextField {
+                  id: groupName
+                  anchors.verticalCenter: parent.verticalCenter
+                  width: Style.space(180)
+                  text: groupRow.modelData.name || ""
+                  placeholderText: "Group name"
+                  foreground: Color.menu.text
+                  onEditingFinished: {
+                    var next = text.trim()
+                    if (next === "") text = groupRow.modelData.name || ""
+                    else if (next !== groupRow.modelData.name) root.renameAppGroup(groupRow.modelData.id, next)
+                  }
+                }
+
+                Button {
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: "Remove"
+                  foreground: Color.menu.text
+                  bordered: true
+                  onClicked: root.removeAppGroup(groupRow.modelData.id)
+                }
               }
             }
           }

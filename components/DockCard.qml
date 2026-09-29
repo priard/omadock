@@ -334,6 +334,7 @@ Item {
       Rectangle {
         visible: root ? root.hasLeftTileSeparator : false
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: root ? root.iconCenterOffset : 0
         width: Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
         color: Util.alpha(root ? root.dockForeground : Color.bar.text, 0.25)
@@ -357,6 +358,7 @@ Item {
         id: separator
         visible: root ? root.hasSeparator : false
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: root ? root.iconCenterOffset : 0
         width: Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
         color: Util.alpha(root ? root.dockForeground : Color.bar.text, 0.25)
@@ -414,6 +416,7 @@ Item {
         id: folderSeparator
         visible: root ? root.hasFolderSeparator : false
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: root ? root.iconCenterOffset : 0
         width: Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
         color: Util.alpha(root ? root.dockForeground : Color.bar.text, 0.25)

@@ -59,7 +59,7 @@ Item {
       id: driveIconImg
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.bottom: parent.bottom
-      anchors.bottomMargin: Math.round((iconSlot.height - (root ? root.baseIconArt : 32)) / 2)
+      anchors.bottomMargin: root ? root.iconArtBottom : 0
       width: (root ? root.baseIconArt : 32) * ditem.magnifyScale
       height: width
       source: ditem.resolvedSource

@@ -55,10 +55,14 @@ Item {
 
     Item {
       id: iconContainer
-      width: root ? root.iconSize : 0
-      height: root ? root.iconSize : 0
-      anchors.centerIn: parent
+      width: root ? root.baseIconArt : 0
+      height: width
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.bottom: parent.bottom
+      anchors.bottomMargin: root ? root.iconArtBottom : 0
       scale: fitem.magnifyScale
+      // Grows upward like the app icons, never over the indicator band.
+      transformOrigin: Item.Bottom
 
       Image {
         id: folderIconImg

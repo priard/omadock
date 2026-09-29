@@ -13,7 +13,8 @@ Item {
   property string glyph: ""
   property string tooltip: ""
   property color glyphColor: root ? root.dockForeground : Color.bar.text
-  property real glyphSize: root ? root.iconSize * 0.42 : 16
+  // Share of the icon box the glyph's larger side fills.
+  property real glyphFill: 0.62
   signal pressed()
   signal middleClicked()
   signal wheelScrolled(int dir)
@@ -34,15 +35,46 @@ Item {
   width: root ? (root.iconSlot * (root.waveHover ? btn.magnifyScale : 1)) : 0
   height: root ? root.iconSlot : 0
 
-  Text {
-    anchors.centerIn: parent
-    text: btn.glyph
-    textFormat: Text.PlainText
-    font.family: "omarchy"
-    font.pixelSize: btn.glyphSize
-    color: area.containsMouse ? Color.accent : btn.glyphColor
+  // Same artwork box as the app icons: sits on the icon line above the
+  // indicator band and grows upward. The glyph is sized and centred by its
+  // painted (tight) bounds, since icon fonts carry uneven side bearings and
+  // sit low in their line box.
+  Item {
+    id: glyphBox
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.bottom: parent.bottom
+    anchors.bottomMargin: root ? root.iconArtBottom : 0
+    width: root ? root.baseIconArt : 28
+    height: width
     scale: btn.magnifyScale * (area.pressed ? 0.92 : 1.0)
-    Behavior on color { ColorAnimation { duration: 120 } }
+    transformOrigin: Item.Bottom
+
+    // Probe at a fixed size to learn the glyph's ink-to-em ratio.
+    TextMetrics {
+      id: probeMetrics
+      font.family: "omarchy"
+      font.pixelSize: 100
+      text: btn.glyph
+    }
+
+    TextMetrics {
+      id: glyphMetrics
+      font: glyphText.font
+      text: btn.glyph
+    }
+
+    Text {
+      id: glyphText
+      readonly property real inkRatio: Math.max(0.01, Math.max(probeMetrics.tightBoundingRect.width, probeMetrics.tightBoundingRect.height) / 100)
+      text: btn.glyph
+      textFormat: Text.PlainText
+      font.family: "omarchy"
+      font.pixelSize: Math.max(1, Math.round(glyphBox.width * btn.glyphFill / inkRatio))
+      color: area.containsMouse ? Color.accent : btn.glyphColor
+      x: Math.round(glyphBox.width / 2 - (glyphMetrics.tightBoundingRect.x + glyphMetrics.tightBoundingRect.width / 2))
+      y: Math.round(glyphBox.height / 2 - (glyphText.baselineOffset + glyphMetrics.tightBoundingRect.y + glyphMetrics.tightBoundingRect.height / 2))
+      Behavior on color { ColorAnimation { duration: 120 } }
+    }
   }
 
   MouseArea {

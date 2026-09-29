@@ -340,6 +340,17 @@ Item {
   readonly property real magnifyRange: root.iconSlot * 2.2
   readonly property real baseIconArt: root.iconSize - Style.space(4)
 
+  // Shared slot geometry. Every item (apps, groups, folders, drives, the
+  // Omarchy button) draws its artwork in the same baseIconArt box, centred in
+  // the part of the slot above a fixed indicator band. The box never moves with
+  // running state, so icons stay level whether or not they carry dots.
+  readonly property real indicatorBand: Style.space(6)
+  // Distance from the slot's bottom edge to the bottom of the artwork.
+  readonly property real iconArtBottom: Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2)
+  // Vertical offset of the artwork's centre from the slot's centre, for
+  // things centred on the row (separators, preview tiles).
+  readonly property real iconCenterOffset: -root.indicatorBand / 2
+
   // The card's own handler in dockCard-local coordinates.
   readonly property real pointerX: cardHover.hovered
     ? cardHover.point.position.x
@@ -719,6 +730,9 @@ Item {
   property bool showBackground: true
   property bool showShadow: true
   property bool showBorder: true
+  // App group tile look: "theme" (card radius, frosted fill, rim),
+  // "rounded" (softly rounded rim) or "none" (bare mini-icon grid).
+  property string groupStyle: "theme"
   property bool settingsPanelOpen: false
   property string settingsPanelPage: "appearance"
   property int themeVersion: 0
@@ -903,7 +917,10 @@ Item {
 
   Process {
     id: customFolderPickerProc
-    command: ["python3", "-c", "import sys, subprocess, shutil\ntry:\n    import gi\n    gi.require_version('Gtk', '3.0')\n    from gi.repository import Gtk\n    dialog = Gtk.FileChooserDialog(title='Select Folder to Pin to Dock', action=Gtk.FileChooserAction.SELECT_FOLDER)\n    dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.OK)\n    res = dialog.run()\n    if res == Gtk.ResponseType.OK:\n        print(dialog.get_filename())\n    dialog.destroy()\nexcept Exception:\n    if shutil.which('zenity'):\n        res = subprocess.run(['zenity', '--file-selection', '--directory', '--title=Select Folder to Pin to Dock'], capture_output=True, text=True)\n        if res.returncode == 0 and res.stdout.strip():\n            print(res.stdout.strip())\n    elif shutil.which('kdialog'):\n        res = subprocess.run(['kdialog', '--getexistingdirectory', '--title', 'Select Folder to Pin to Dock'], capture_output=True, text=True)\n        if res.returncode == 0 and res.stdout.strip():\n            print(res.stdout.strip())\n"]
+    // Goes through the XDG FileChooser portal, so the picker is whatever the
+    // desktop routes FileChooser to (the default file manager when it ships a
+    // portal backend); a GTK dialog, zenity or kdialog are fallbacks.
+    command: ["python3", decodeURIComponent(Qt.resolvedUrl("scripts/pick-folder.py").toString().replace(/^file:\/\//, ""))]
     running: false
     stdout: StdioCollector {
       onStreamFinished: {
@@ -966,6 +983,18 @@ Item {
         root.scanRemovableDrives()
       }
     }
+  }
+
+  // A chooser closed by the compositor rather than through its own Cancel may
+  // never answer the portal, which would leave the picker process waiting and
+  // swallow every later click. Asking again restarts it instead.
+  function pickCustomFolder() {
+    if (customFolderPickerProc.running) {
+      customFolderPickerProc.running = false
+      Qt.callLater(function() { customFolderPickerProc.running = true })
+      return
+    }
+    customFolderPickerProc.running = true
   }
 
   function scanRemovableDrives() {
@@ -1754,6 +1783,7 @@ Item {
     root.showBackground = parsed ? parsed.showBackground !== false : true
     root.showShadow = parsed ? parsed.showShadow !== false : true
     root.showBorder = parsed ? parsed.showBorder !== false : true
+    root.groupStyle = (parsed && (parsed.groupStyle === "rounded" || parsed.groupStyle === "none")) ? parsed.groupStyle : "theme"
     root.folderColor = parsed && typeof parsed.folderColor === "string" ? parsed.folderColor : "theme"
     root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" ? parsed.itemSpacing : 4
     if (parsed && typeof parsed.minimizeMode === "string") {
@@ -2697,6 +2727,7 @@ Item {
     conf.showBackground = root.showBackground
     conf.showShadow = root.showShadow
     conf.showBorder = root.showBorder
+    conf.groupStyle = root.groupStyle
     conf.folderColor = root.folderColor
     conf.itemSpacing = root.itemSpacing
     conf.minimizeMode = root.minimizeMode

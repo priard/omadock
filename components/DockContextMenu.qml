@@ -274,7 +274,7 @@ BorderSurface {
           text: "+ Add Custom Folder..."
           textColor: Color.accent
           onTriggered: {
-            if (root && root.customFolderPickerProc) root.customFolderPickerProc.running = true
+            if (root) root.pickCustomFolder()
             if (root) root.closeContext()
           }
         }

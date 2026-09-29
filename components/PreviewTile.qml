@@ -74,6 +74,7 @@ Item {
   width: root ? root.tileWidth * (root.waveHover ? tile.magnifyScale : 1) : 0
   height: root ? root.tileHeight : 0
   anchors.verticalCenter: parent ? parent.verticalCenter : undefined
+  anchors.verticalCenterOffset: root ? root.iconCenterOffset : 0
   opacity: (root && root.dockVisible) ? 1 : 0
 
   // Zoom mode scales this visual stack in place (the preview overlaps

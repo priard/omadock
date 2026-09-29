@@ -147,7 +147,6 @@ Item {
   Item {
     id: iconBox
     anchors.fill: parent
-    anchors.bottomMargin: item.running ? Style.space(5) : 0
 
     scale: area.pressed ? 0.92 : 1.0
     transformOrigin: Item.Bottom
@@ -182,7 +181,7 @@ Item {
       id: iconImg
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.bottom: parent.bottom
-      anchors.bottomMargin: Math.round((iconBox.height - (root ? root.baseIconArt : 32)) / 2)
+      anchors.bottomMargin: root ? root.iconArtBottom : 0
       width: (root ? root.baseIconArt : 32) * item.magnifyScale
       height: width
       source: {
