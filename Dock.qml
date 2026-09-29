@@ -833,7 +833,62 @@ Item {
   property real iconStrength: 1
   // With an icon style on: show the hovered icon as shipped.
   property bool iconHoverOriginal: false
-  readonly property color iconTintColor: root.iconTint === "accent" ? Color.accent : root.dockForeground
+  // The mono / dots ink, kept readable against what sits behind the icons
+  // (see readableOn): an accent tint over a theme gradient built from that
+  // same accent would otherwise vanish into it.
+  readonly property color iconTintColor: root.readableOn(
+    root.iconTint === "accent" ? Color.accent : root.dockForeground, root.iconBackdropColor)
+
+  // Best guess at the colour behind the icons: the card's fill (for a
+  // gradient, its colours averaged and mixed into the base by the strength
+  // they cover it with), or the theme background when the card is off.
+  readonly property color iconBackdropColor: {
+    var base = Color.bar.background
+    if (!root.showBackground) return Color.background
+    if (root.bgFill === "gradient") {
+      var cols = root.gradientColors || []
+      if (cols.length === 0) return base
+      var r = 0, g = 0, b = 0
+      for (var i = 0; i < cols.length; i++) {
+        var c = Qt.color(cols[i])
+        r += c.r; g += c.g; b += c.b
+      }
+      r /= cols.length; g /= cols.length; b /= cols.length
+      var k = Math.min(1, root.gradientStrength * 0.75)
+      return Qt.rgba(base.r + (r - base.r) * k, base.g + (g - base.g) * k, base.b + (b - base.b) * k, 1)
+    }
+    var custom = String(root.dockBgColor || "")
+    return custom.charAt(0) === "#" ? Qt.color(custom) : base
+  }
+
+  // WCAG relative luminance and contrast ratio.
+  function luminance(c) {
+    function lin(v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+    return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b)
+  }
+  function contrastRatio(a, b) {
+    var la = root.luminance(a), lb = root.luminance(b)
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+  }
+
+  // A colour with the given hue and saturation, moved in lightness away
+  // from the backdrop (darker on a light one, lighter on a dark one) until
+  // it reaches a 3:1 contrast ratio, the WCAG minimum for graphics.
+  function readableOn(color, backdrop) {
+    var c = Qt.color(color)
+    var bg = Qt.color(backdrop)
+    if (root.contrastRatio(c, bg) >= 3) return c
+    var darker = root.luminance(bg) > 0.18
+    var h = c.hslHue < 0 ? 0 : c.hslHue
+    var sat = c.hslSaturation
+    var best = c
+    for (var step = 1; step <= 20; step++) {
+      var l = darker ? Math.max(0, c.hslLightness - step * 0.05) : Math.min(1, c.hslLightness + step * 0.05)
+      best = Qt.hsla(h, sat, l, c.a)
+      if (root.contrastRatio(best, bg) >= 3) break
+    }
+    return best
+  }
   // Without a card to cast one, each icon casts its own shadow.
   readonly property bool iconShadow: root.showShadow && !root.showBackground && root.shadowStrength > 0
   property bool showBorder: true

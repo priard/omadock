@@ -192,7 +192,7 @@ BorderSurface {
                 renderSize: Style.space(36)
                 iconStyle: root && root.groupIconEffects !== "none" ? root.iconStyle : "original"
                 // The popup sits on the menu surface, not the dock card.
-                tint: root && root.iconTint === "accent" ? Color.accent : Color.menu.text
+                tint: root ? root.readableOn(root.iconTint === "accent" ? Color.accent : Color.menu.text, Color.menu.background) : Color.menu.text
                 grid: root ? root.iconGrid : 16
                 contrast: root ? root.iconContrast : 0
                 strength: root ? root.iconStrength : 1
