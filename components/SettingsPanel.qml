@@ -526,6 +526,134 @@ PanelWindow {
               width: parent.width
               visible: root ? root.showBackground : true
 
+              ChoiceRow {
+                label: "Fill"
+                hint: "A solid colour, or colours melting into each other like Zen / Arc themes."
+                options: [
+                  { value: "solid", label: "Solid" },
+                  { value: "gradient", label: "Gradient" }
+                ]
+                value: root ? root.bgFill : "solid"
+                onPicked: function(v) { root.setOption("bgFill", v) }
+              }
+
+              Column {
+                width: parent.width
+                visible: root ? root.bgFill !== "gradient" : true
+
+                SettingRow {
+                  label: "Color"
+                  hint: "Theme, none, or a fixed preset."
+
+                  Row {
+                    spacing: Style.spacing.sm
+
+                    Button {
+                      text: "Theme"
+                      foreground: Color.menu.text
+                      bordered: true
+                      selected: root ? (root.dockBgColor === "theme" || !root.dockBgColor) : true
+                      onClicked: root.setDockBgColor("theme")
+                    }
+                    Button {
+                      text: "None"
+                      foreground: Color.menu.text
+                      bordered: true
+                      selected: root ? root.dockBgColor === "none" : false
+                      onClicked: root.setDockBgColor("none")
+                    }
+                  }
+                }
+
+                Flow {
+                  width: parent.width
+                  spacing: Style.spacing.md
+                  topPadding: Style.spacing.lg
+                  bottomPadding: Style.spacing.lg
+
+                  Repeater {
+                    model: [
+                      "#000000", "#181825", "#1e1e2e", "#0f172a", "#111827",
+                      "#062e24", "#1c1917", "#2c0b16", "#1e102d", "#334155"
+                    ]
+                    delegate: Swatch {
+                      required property string modelData
+                      color: modelData
+                      selected: root ? root.dockBgColor === modelData : false
+                      onPicked: root.setDockBgColor(modelData)
+                    }
+                  }
+                }
+              }
+
+              Column {
+                width: parent.width
+                visible: root ? root.bgFill === "gradient" : false
+
+                SettingRow {
+                  label: "Palette"
+                  hint: "Theme builds one from the Omarchy theme's accent and palette."
+                }
+
+                Flow {
+                  width: parent.width
+                  spacing: Style.spacing.md
+                  topPadding: Style.spacing.sm
+                  bottomPadding: Style.spacing.lg
+
+                  Repeater {
+                    model: root ? [{ id: "theme", name: "Theme", colors: root.themeGradientColors }].concat(root.gradientPresets) : []
+                    delegate: Column {
+                      id: paletteTile
+                      required property var modelData
+                      readonly property bool current: root ? root.gradientPreset === modelData.id : false
+                      spacing: Style.spacing.xs
+
+                      Rectangle {
+                        width: Style.space(64)
+                        height: Style.space(30)
+                        radius: Math.min(Style.space(6), Style.cornerRadius > 0 ? Style.space(6) : 0)
+                        border.width: paletteTile.current ? 2 : 1
+                        border.color: paletteTile.current ? Color.accent : Util.alpha(Color.menu.text, 0.3)
+                        gradient: Gradient {
+                          orientation: Gradient.Horizontal
+                          GradientStop { position: 0.0; color: paletteTile.modelData.colors[0] }
+                          GradientStop { position: 0.5; color: paletteTile.modelData.colors[1] }
+                          GradientStop { position: 1.0; color: paletteTile.modelData.colors[2] }
+                        }
+
+                        MouseArea {
+                          anchors.fill: parent
+                          cursorShape: Qt.PointingHandCursor
+                          onClicked: root.setOption("gradientPreset", paletteTile.modelData.id)
+                        }
+                      }
+
+                      Text {
+                        width: Style.space(64)
+                        horizontalAlignment: Text.AlignHCenter
+                        text: paletteTile.modelData.name
+                        color: paletteTile.current ? Color.accent : Util.alpha(Color.menu.text, 0.7)
+                        font.family: Style.font.family
+                        font.pixelSize: Style.font.caption
+                      }
+                    }
+                  }
+                }
+
+                SliderRow {
+                  label: "Strength"
+                  hint: "How strongly the colours show over the theme background."
+                  minimum: 0
+                  maximum: 1
+                  step: 0.05
+                  displayScale: 100
+                  suffix: "%"
+                  value: root ? root.gradientStrength : 0.6
+                  onCommitted: function(v) { root.setOption("gradientStrength", Math.round(v * 100) / 100) }
+                }
+              }
+
               SwitchRow {
                 label: "Opacity from theme"
                 hint: "Follow the bar opacity of the current Omarchy theme."
@@ -581,49 +709,6 @@ PanelWindow {
                 onCommitted: function(v) { root.setOption("grain", Math.round(v * 100) / 100) }
               }
 
-              SettingRow {
-                label: "Color"
-                hint: "Theme, none, or a fixed preset."
-
-                Row {
-                  spacing: Style.spacing.sm
-
-                  Button {
-                    text: "Theme"
-                    foreground: Color.menu.text
-                    bordered: true
-                    selected: root ? (root.dockBgColor === "theme" || !root.dockBgColor) : true
-                    onClicked: root.setDockBgColor("theme")
-                  }
-                  Button {
-                    text: "None"
-                    foreground: Color.menu.text
-                    bordered: true
-                    selected: root ? root.dockBgColor === "none" : false
-                    onClicked: root.setDockBgColor("none")
-                  }
-                }
-              }
-
-              Flow {
-                width: parent.width
-                spacing: Style.spacing.md
-                topPadding: Style.spacing.lg
-                bottomPadding: Style.spacing.lg
-
-                Repeater {
-                  model: [
-                    "#000000", "#181825", "#1e1e2e", "#0f172a", "#111827",
-                    "#062e24", "#1c1917", "#2c0b16", "#1e102d", "#334155"
-                  ]
-                  delegate: Swatch {
-                    required property string modelData
-                    color: modelData
-                    selected: root ? root.dockBgColor === modelData : false
-                    onPicked: root.setDockBgColor(modelData)
-                  }
-                }
-              }
             }
 
             SectionLabel { text: "Shadow" }

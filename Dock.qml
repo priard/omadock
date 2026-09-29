@@ -754,6 +754,65 @@ Item {
   property string dockShape: "rounded"
   property string dockBgColor: "theme"
   property bool showBackground: true
+  // Background fill: "solid" (dockBgColor) or "gradient" (below).
+  property string bgFill: "solid"
+  // Gradient palette: "theme" (built from the Omarchy theme's colours) or
+  // one of gradientPresets. gradientStrength: how strongly the colours cover
+  // the base background, 0..1.
+  property string gradientPreset: "theme"
+  property real gradientStrength: 0.6
+  readonly property var gradientPresets: [
+    { id: "aurora", name: "Aurora", colors: ["#5dffb0", "#7fc4ff", "#c99cff"] },
+    { id: "sunset", name: "Sunset", colors: ["#ff7a59", "#ff4f8b", "#ffc15e"] },
+    { id: "ocean", name: "Ocean", colors: ["#1e90ff", "#00c2c7", "#6a5cff"] },
+    { id: "forest", name: "Forest", colors: ["#2e8b57", "#a3c95a", "#1f6f5c"] },
+    { id: "rose", name: "Rose", colors: ["#ff9ac1", "#c86bfa", "#ffd1dc"] },
+    { id: "lavender", name: "Lavender", colors: ["#b8a1ff", "#7aa2ff", "#f0b3ff"] },
+    { id: "ember", name: "Ember", colors: ["#ff5e3a", "#ff9f1c", "#8b1e3f"] },
+    { id: "citrus", name: "Citrus", colors: ["#ffd43b", "#94d82d", "#ff922b"] },
+    { id: "mono", name: "Mono", colors: ["#9aa0a6", "#5f6368", "#d0d4d8"] }
+  ]
+
+  // Three colours from the current theme: its accent, then the two named
+  // palette colours (colors.toml) that sit furthest enough in hue from the
+  // accent and from each other, so the gradient never collapses into one
+  // hue. Falls back to the accent alone when the theme names no colours.
+  readonly property var themeGradientColors: {
+    var _tv = root.themeVersion
+    var text = ""
+    try { text = DockModel.readCapped(themeColorsFile.text(), DockModel.MAX_COLORS_TOML_BYTES) } catch (e) {}
+    var named = {}
+    var re = /^\s*([a-z_]+)\s*=\s*"(#[0-9a-fA-F]{6})"/gm
+    var m
+    while ((m = re.exec(text)) !== null) named[m[1]] = m[2]
+    var accent = named.accent || String(Color.accent)
+    var picked = [accent]
+    var order = ["magenta", "blue", "cyan", "red", "green", "orange", "yellow"]
+    function hueGap(a, b) {
+      var ha = Qt.color(a).hslHue, hb = Qt.color(b).hslHue
+      if (ha < 0 || hb < 0) return 1
+      var d = Math.abs(ha - hb)
+      return Math.min(d, 1 - d)
+    }
+    for (var i = 0; i < order.length && picked.length < 3; i++) {
+      var c = named[order[i]]
+      if (!c) continue
+      var ok = true
+      for (var j = 0; j < picked.length; j++) if (hueGap(c, picked[j]) < 0.07) ok = false
+      if (ok) picked.push(c)
+    }
+    while (picked.length < 3) picked.push(accent)
+    return picked
+  }
+
+  readonly property var gradientColors: {
+    if (root.gradientPreset !== "theme") {
+      for (var i = 0; i < root.gradientPresets.length; i++)
+        if (root.gradientPresets[i].id === root.gradientPreset) return root.gradientPresets[i].colors
+    }
+    return root.themeGradientColors
+  }
+
   // Static film grain over the background card, 0 (off) .. 1.
   property real grain: 0
   property bool showShadow: true
@@ -1850,6 +1909,9 @@ Item {
     root.dockShape = parsed && typeof parsed.shape === "string" ? parsed.shape : "rounded"
     root.dockBgColor = parsed && typeof parsed.bgColor === "string" ? parsed.bgColor : "theme"
     root.showBackground = parsed ? parsed.showBackground !== false : true
+    root.bgFill = (parsed && parsed.bgFill === "gradient") ? "gradient" : "solid"
+    root.gradientPreset = parsed && typeof parsed.gradientPreset === "string" ? parsed.gradientPreset : "theme"
+    root.gradientStrength = parsed && typeof parsed.gradientStrength === "number" ? Math.max(0, Math.min(1, parsed.gradientStrength)) : 0.6
     root.grain = parsed && typeof parsed.grain === "number" ? Math.max(0, Math.min(1, parsed.grain)) : 0
     root.showShadow = parsed ? parsed.showShadow !== false : true
     root.shadowStrength = parsed && typeof parsed.shadowStrength === "number"
@@ -3070,6 +3132,9 @@ Item {
     conf.shape = root.dockShape
     conf.bgColor = root.dockBgColor
     conf.showBackground = root.showBackground
+    conf.bgFill = root.bgFill
+    conf.gradientPreset = root.gradientPreset
+    conf.gradientStrength = root.gradientStrength
     conf.grain = root.grain
     conf.showShadow = root.showShadow
     conf.shadowStrength = root.shadowStrength

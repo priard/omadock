@@ -362,6 +362,9 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `showShadow` | `bool` | `true` | Draws the soft drop shadow under the dock. |
 | `showBorder` | `bool` | `true` | Draws the rim around the dock. |
 | `borderWidth` | `number` | `1.5` | Rim width in pixels, `1`–`6`. |
+| `bgFill` | `string` | `"solid"` | Background fill: `"solid"` (`bgColor`) or `"gradient"`. |
+| `gradientPreset` | `string` | `"theme"` | Gradient palette: `"theme"` (accent plus two theme palette colours) or `aurora`, `sunset`, `ocean`, `forest`, `rose`, `lavender`, `ember`, `citrus`, `mono`. |
+| `gradientStrength` | `number` | `0.6` | How strongly the gradient colours cover the theme background, `0`–`1`. |
 | `grain` | `number` | `0` | Film grain over the background, `0` (off) – `1`. |
 | `shadowStrength` | `number` | `0.4` | Shadow opacity, `0.0`–`1.0`. |
 | `blur` | `string` | `"system"` | Blur behind the dock: `"system"` (your Hyprland layer rules decide), `"on"` or `"off"` (a runtime layer rule overrides them). |

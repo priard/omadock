@@ -311,7 +311,9 @@ Item {
       return Util.alpha(root.dockForeground, rimAlpha)
     }
 
-    color: (root && !root.showBackground) ? "transparent"
+    // A gradient fill is drawn by the layer below instead of the card colour.
+    readonly property bool gradientFill: root ? (root.showBackground && root.bgFill === "gradient") : false
+    color: (root && (!root.showBackground || dockCard.gradientFill)) ? "transparent"
       : ((root && root.dockBgColor === "none") ? effectiveBgColor : Util.alpha(effectiveBgColor, root ? root.effectiveDockOpacity : 1.0))
     borderSpec: (root && !root.showBorder)
       ? Border.none()
@@ -319,6 +321,27 @@ Item {
     radius: root ? root.cardRadius(height) : Style.cornerRadius
     padding: dockCard.devSnap(Style.space(5))
     z: 1
+
+    // Gradient fill (shaders/gradient.frag): the palette's colours fading
+    // into each other over the theme background, at the dock's opacity. Under
+    // the grain and the icons; built only while the gradient is on.
+    Loader {
+      anchors.fill: parent
+      z: 0.25
+      active: dockCard.gradientFill
+      sourceComponent: ShaderEffect {
+        readonly property var palette: root ? root.gradientColors : []
+        property color base: Util.alpha(Color.bar.background, root ? root.effectiveDockOpacity : 1.0)
+        property color c1: palette.length > 0 ? palette[0] : "transparent"
+        property color c2: palette.length > 1 ? palette[1] : c1
+        property color c3: palette.length > 2 ? palette[2] : c2
+        property real count: palette.length > 2 ? 3 : 2
+        property real strength: root ? root.gradientStrength : 0.6
+        property real radius: dockCard.radius
+        property size size: Qt.size(width, height)
+        fragmentShader: Qt.resolvedUrl("../shaders/gradient.frag.qsb")
+      }
+    }
 
     // Film grain over the background (shaders/grain.frag), in the style of
     // Zen / Arc browser themes: soft grey specks at low opacity, cut to the
