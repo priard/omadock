@@ -229,6 +229,19 @@ Item {
   readonly property real dynamicActiveWidth: totalWindowCount >= 5 ? Style.space(9) : Style.space(12)
   readonly property real dynamicSpacing: totalWindowCount >= 5 ? Style.space(2) : Style.space(3)
 
+  // An app with no window whose media player is still up (closed to the
+  // tray, playing in the background): a faint dot instead of none.
+  readonly property bool backgroundMedia: !item.running && root ? root.mediaPlayerFor(item.appId) !== null : false
+
+  DockIndicator {
+    rootRef: item.rootRef
+    visible: item.backgroundMedia
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.bottom: parent.bottom
+    anchors.bottomMargin: Style.space(1)
+    kind: "background"
+  }
+
   // Fixed at the slot bottom, never scaled or pushed out of the dock.
   Row {
     id: indicatorRow

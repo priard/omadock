@@ -8,6 +8,8 @@ import qs.Commons
 //   window     a window that is open: a solid dot
 //   active     the focused window, or an open stack: an accent bar
 //   minimized  a parked window: a hollow dot
+//   background running with no window (e.g. a media player closed to the
+//              tray that still exposes MPRIS): a faint dot
 //
 // Shape follows the dock's indicatorShape (see Dock.indicatorSquare): round
 // dots and pills, or square dots and bars.
@@ -77,8 +79,13 @@ Rectangle {
   height: dotSize
   radius: (root && root.indicatorSquare) ? 0 : height / 2
 
-  color: kind === "active" ? Color.accent : (kind === "minimized" ? "transparent" : mark.ink)
-  border.color: kind === "minimized" ? mark.ink : Qt.rgba(0, 0, 0, 0.45)
+  color: kind === "active" ? Color.accent
+    : kind === "minimized" ? "transparent"
+    : kind === "background" ? Util.alpha(mark.ink, 0.35)
+    : mark.ink
+  border.color: kind === "minimized" ? mark.ink
+    : kind === "background" ? Qt.rgba(0, 0, 0, 0.18)
+    : Qt.rgba(0, 0, 0, 0.45)
   border.width: kind === "minimized" ? mark.hairline * 2 : mark.hairline
 
   opacity: urgent ? (0.4 + 0.6 * pulse) : 1.0

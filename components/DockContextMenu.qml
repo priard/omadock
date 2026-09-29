@@ -432,8 +432,10 @@ BorderSurface {
           visible: player !== null
           width: parent.width
 
+          // No window but a live player: the app runs in the background
+          // (closed to the tray), which the dock shows as a faint dot.
           ContextRow {
-            text: "Now Playing"
+            text: (root && root.contextWindows === 0) ? "Now Playing · in background" : "Now Playing"
             isHeader: true
           }
 
