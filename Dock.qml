@@ -64,6 +64,17 @@ Item {
 
   readonly property var dockScreen: root.pickScreen()
 
+  // The output's own scale (Hyprland's monitor scale, e.g. 1.5). Qt renders
+  // fractional scales at the next whole ratio (2) and the compositor scales
+  // the buffer down, so pixel-exact drawing has to target this grid, not
+  // Screen.devicePixelRatio. HyprlandMonitor.scale reads 0 until the monitor
+  // list has been fetched, hence the refresh (Component.onCompleted) and the
+  // fallback.
+  readonly property real outputScale: {
+    var m = root.dockScreen ? Hyprland.monitorFor(root.dockScreen) : null
+    return (m && m.scale > 0) ? m.scale : 1
+  }
+
   // ------------------------------------------------- multi-monitor
   // Set by DockHost when one dock runs per monitor. forcedScreenName pins this
   // instance to its monitor regardless of the "screen" config key; isPrimary
@@ -313,7 +324,11 @@ Item {
 
   // Build the index once at load, but only when the host withheld its own
   // library — with a host library present the index would be dead weight.
-  Component.onCompleted: if (root.appLibrary === localAppLibrary) iconIndexScan.running = true
+  Component.onCompleted: {
+    if (root.appLibrary === localAppLibrary) iconIndexScan.running = true
+    // Fills HyprlandMonitor.scale for outputScale.
+    Hyprland.refreshMonitors()
+  }
 
   // ------------------------------------------------- magnification
 

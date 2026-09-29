@@ -249,7 +249,13 @@ Item {
       return root.dockBgColor
     }
 
-    readonly property real effectiveBorderWidth: root ? root.borderWidth : 1.5
+    // Whole device pixels for the rim and the padding: at a fractional scale
+    // (1.5) a 1.5 px rim puts everything inside the card a fraction of a pixel
+    // off the grid, and the unsmoothed square indicators then lose or gain a
+    // row depending on the border setting.
+    readonly property real dpr: root ? root.outputScale : 1
+    function devSnap(v) { return v <= 0 ? 0 : Math.max(1, Math.round(v * dockCard.dpr)) / dockCard.dpr }
+    readonly property real effectiveBorderWidth: dockCard.devSnap(root ? root.borderWidth : 1.5)
     readonly property color effectiveBorderColor: {
       if (!root) return Util.alpha(Color.menu.border, 0.48)
       // Specular Frosted Glass Rim: Crisp highlight with high alpha for contrast on dark and light surfaces
@@ -267,7 +273,7 @@ Item {
       ? Border.none()
       : Border.flat(dockCard.effectiveBorderColor, dockCard.effectiveBorderWidth)
     radius: root ? root.cardRadius(height) : Style.cornerRadius
-    padding: Style.space(5)
+    padding: dockCard.devSnap(Style.space(5))
     z: 1
 
     HoverHandler {
