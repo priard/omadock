@@ -197,6 +197,7 @@ Item {
       grid: root ? root.iconGrid : 16
       dropShadow: root ? root.iconShadow : false
       shadowStrength: root ? root.shadowStrength : 0.4
+      showOriginal: root ? (root.iconHoverOriginal && area.containsMouse) : false
     }
   }
 
@@ -240,38 +241,18 @@ Item {
 
     Repeater {
       model: item.maxVisibleDots
-      delegate: Rectangle {
+      // Active window: accent bar; open window: dot; minimized: hollow dot.
+      delegate: DockIndicator {
         readonly property var winObj: (item.windowList && item.windowList.length > index) ? item.windowList[index] : null
         readonly property bool winMinimized: winObj ? item.isWinMinimized(winObj) : item.minimized
         readonly property bool winActive: !winMinimized && ((winObj && winObj.address) ? item.isWinActive(winObj) : (index === 0 && item.isFocused))
 
-        width: winActive ? item.dynamicActiveWidth : item.dynamicDotSize
-        height: winActive ? Style.space(4) : item.dynamicDotSize
-        radius: height / 2
+        rootRef: item.rootRef
         anchors.verticalCenter: parent.verticalCenter
-
-        // 1. Active window: Solid illuminated bar
-        // 2. Open visible window: Solid circle
-        // 3. Minimized window: Hollow circle (transparent fill with solid border)
-        color: winActive
-          ? Color.accent
-          : (winMinimized
-              ? "transparent"
-              : (item.urgent ? Color.urgent : Util.alpha(root ? root.dockForeground : Color.bar.text, 0.88)))
-
-        border.color: winActive
-          ? Qt.rgba(0, 0, 0, 0.45)
-          : (winMinimized
-              ? (item.urgent ? Color.urgent : Util.alpha(root ? root.dockForeground : Color.bar.text, 0.88))
-              : Qt.rgba(0, 0, 0, 0.45))
-
-        border.width: winMinimized ? 1.5 : 1
-
-        opacity: item.urgent ? (0.4 + 0.6 * item.pulse) : 1.0
-
-        Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
-        Behavior on color { ColorAnimation { duration: 120 } }
-        Behavior on border.color { ColorAnimation { duration: 120 } }
+        kind: winActive ? "active" : (winMinimized ? "minimized" : "window")
+        dense: item.totalWindowCount >= 5
+        urgent: item.urgent
+        pulse: item.pulse
       }
     }
 
@@ -280,7 +261,7 @@ Item {
       visible: item.totalWindowCount > 5
       width: overflowText.implicitWidth + Style.space(4)
       height: Style.space(5)
-      radius: height / 2
+      radius: (root && root.indicatorSquare) ? 0 : height / 2
       anchors.verticalCenter: parent.verticalCenter
       color: Util.alpha(root ? root.dockForeground : Color.bar.text, 0.20)
       border.color: Qt.rgba(0, 0, 0, 0.35)

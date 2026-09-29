@@ -194,6 +194,7 @@ BorderSurface {
                 // The popup sits on the menu surface, not the dock card.
                 tint: root && root.iconTint === "accent" ? Color.accent : Color.menu.text
                 grid: root ? root.iconGrid : 16
+                showOriginal: root ? (root.iconHoverOriginal && cellMouseArea.containsMouse) : false
               }
 
               Text {
@@ -214,6 +215,8 @@ BorderSurface {
             MouseArea {
               id: cellMouseArea
               anchors.fill: parent
+              // Hover feeds "show original on hover" for the icon above.
+              hoverEnabled: true
               cursorShape: cellItem.isDragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
               acceptedButtons: Qt.LeftButton | Qt.RightButton
 

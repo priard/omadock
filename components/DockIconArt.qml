@@ -13,6 +13,10 @@ import qs.Commons
 // dropShadow adds a soft shadow that follows the drawn shape, used when the
 // dock has no background card to cast one.
 //
+// showOriginal draws the icon as shipped whatever iconStyle says (the
+// "show original on hover" option). The styled layers stay built while it is
+// on, so switching back and forth costs no decode or shader rebuild.
+//
 // Instead of an image source, the icon can be any item declared inside
 // (e.g. a font glyph). Such content is already one colour, so "mono" shows it
 // as is (the caller colours it with the tint); "pixel" and "dots" work from
@@ -22,6 +26,9 @@ Item {
 
   property url source
   property string iconStyle: "original"
+  property bool showOriginal: false
+  // The style actually drawn right now.
+  readonly property string shownStyle: art.showOriginal ? "original" : art.iconStyle
   property color tint: Color.bar.text
   // Cells across the icon for the pixel and dots styles.
   property int grid: 16
@@ -64,30 +71,28 @@ Item {
       id: img
       anchors.fill: parent
       source: art.source
-      // The pixel style decodes straight onto its grid; unsmoothed scaling
-      // then keeps every cell a hard square.
-      sourceSize: art.iconStyle === "pixel"
-        ? Qt.size(art.cells, art.cells)
-        : Qt.size(Math.max(16, art.renderSize * Screen.devicePixelRatio), Math.max(16, art.renderSize * Screen.devicePixelRatio))
+      // One decode size for every style, so switching style (or showing the
+      // original on hover) never reloads the image.
+      sourceSize: Qt.size(Math.max(16, art.renderSize * Screen.devicePixelRatio), Math.max(16, art.renderSize * Screen.devicePixelRatio))
       fillMode: Image.PreserveAspectFit
-      smooth: art.iconStyle !== "pixel"
-      mipmap: art.iconStyle !== "pixel"
+      smooth: true
+      mipmap: true
       asynchronous: true
-      visible: !art.hasCustom && (art.iconStyle === "original" || art.iconStyle === "pixel")
+      visible: !art.hasCustom && art.shownStyle === "original"
     }
 
     Item {
       id: custom
       anchors.fill: parent
-      visible: art.iconStyle === "original" || art.iconStyle === "mono"
+      visible: art.shownStyle === "original" || art.shownStyle === "mono"
     }
 
-    // Declared content has no decode size to shrink, so the pixel style
-    // renders it onto the grid instead and scales that up unsmoothed.
+    // Pixel style: the icon rendered onto its grid (averaging each cell) and
+    // scaled back up unsmoothed, so every cell is a hard square.
     ShaderEffectSource {
       anchors.fill: parent
-      visible: art.hasCustom && art.iconStyle === "pixel"
-      sourceItem: visible ? custom : null
+      visible: art.shownStyle === "pixel"
+      sourceItem: art.iconStyle === "pixel" ? art.styleSource : null
       textureSize: Qt.size(art.cells, art.cells)
       smooth: false
       live: true
@@ -98,6 +103,7 @@ Item {
     Loader {
       anchors.fill: parent
       active: art.iconStyle === "dots" || (art.iconStyle === "mono" && !art.hasCustom)
+      visible: !art.showOriginal
       sourceComponent: Item {
         // The dot matrix reads one texel per cell, so the icon is first
         // reduced to two texels per cell with smoothing: each cell then

@@ -70,19 +70,18 @@ Item {
       grid: root ? root.iconGrid : 16
       dropShadow: root ? root.iconShadow : false
       shadowStrength: root ? root.shadowStrength : 0.4
+      showOriginal: root ? (root.iconHoverOriginal && driveArea.containsMouse) : false
     }
   }
 
-  // Active stack open indicator dot
-  Rectangle {
+  // Open stack: the same accent bar an app with focus shows.
+  DockIndicator {
+    rootRef: ditem.rootRef
     visible: ditem.isOpen
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1)
     anchors.horizontalCenter: parent.horizontalCenter
-    width: Style.space(4)
-    height: Style.space(4)
-    radius: width / 2
-    color: Color.accent
+    kind: "active"
   }
 
   MouseArea {

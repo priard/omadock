@@ -692,6 +692,17 @@ PanelWindow {
               }
               onPicked: function(v) { root.setDockShape(v) }
             }
+            ChoiceRow {
+              label: "Indicators"
+              hint: "The dots and bars under icons. Theme follows the corners above."
+              options: [
+                { value: "theme", label: "Theme" },
+                { value: "rounded", label: "Rounded" },
+                { value: "square", label: "Square" }
+              ]
+              value: root ? root.indicatorShape : "theme"
+              onPicked: function(v) { root.setOption("indicatorShape", v) }
+            }
           }
 
           // ================================================= Placement
@@ -870,6 +881,13 @@ PanelWindow {
               step: 1
               value: root ? root.iconGrid : 16
               onCommitted: function(v) { root.setOption("iconGrid", Math.round(v)) }
+            }
+            SwitchRow {
+              label: "Show original on hover"
+              hint: "The icon under the pointer drops the style and shows as shipped. Icons in an opened group follow this too."
+              visible: root ? root.iconStyle !== "original" : false
+              checked: root ? root.iconHoverOriginal : false
+              onToggled: root.setOption("iconHoverOriginal", !root.iconHoverOriginal)
             }
 
             SectionLabel { text: "Motion" }

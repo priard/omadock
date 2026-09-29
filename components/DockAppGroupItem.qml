@@ -179,6 +179,7 @@ Item {
                 tint: root ? root.iconTintColor : Color.bar.text
                 // Same cell size as a full icon, so the minis match it.
                 grid: root ? Math.round(root.iconGrid * miniCell.miniSize / Math.max(1, root.baseIconArt)) : 8
+                showOriginal: root ? (root.iconHoverOriginal && groupArea.containsMouse) : false
               }
             }
           }
@@ -194,22 +195,17 @@ Item {
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1)
-    spacing: Style.space(2)
-    visible: gitem.hasRunningApps
+    spacing: Style.space(3)
+    visible: gitem.hasRunningApps || gitem.isOpen
 
+    // Same marks as an app: the first turns into the accent bar while one
+    // of the group's apps has focus or the group is open.
     Repeater {
       model: Math.min(3, Math.max(1, gitem.groupRunningInfo.count))
-      delegate: Rectangle {
-        width: (gitem.groupRunningInfo.active && index === 0) ? Style.space(12) : Style.space(4)
-        height: Style.space(4)
-        radius: height / 2
-        color: (gitem.groupRunningInfo.active && index === 0) || gitem.isOpen
-          ? Color.accent
-          : Util.alpha(root ? root.dockForeground : Color.bar.text, 0.88)
-        border.color: Qt.rgba(0, 0, 0, 0.45)
-        border.width: 1
-        Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
-        Behavior on color { ColorAnimation { duration: 120 } }
+      delegate: DockIndicator {
+        rootRef: gitem.rootRef
+        anchors.verticalCenter: parent.verticalCenter
+        kind: index === 0 && (gitem.groupRunningInfo.active || gitem.isOpen) ? "active" : "window"
       }
     }
   }

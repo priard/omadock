@@ -55,6 +55,7 @@ Item {
     grid: root ? root.iconGrid : 16
     dropShadow: root ? root.iconShadow : false
     shadowStrength: root ? root.shadowStrength : 0.4
+    showOriginal: root ? (root.iconHoverOriginal && area.containsMouse) : false
 
     // Probe at a fixed size to learn the glyph's ink-to-em ratio.
     TextMetrics {
@@ -78,7 +79,7 @@ Item {
       font.family: "omarchy"
       font.pixelSize: Math.max(1, Math.round(glyphBox.width * btn.glyphFill / inkRatio))
       color: area.containsMouse ? Color.accent
-        : ((glyphBox.iconStyle === "mono" || glyphBox.iconStyle === "dots") ? glyphBox.tint : btn.glyphColor)
+        : ((glyphBox.shownStyle === "mono" || glyphBox.shownStyle === "dots") ? glyphBox.tint : btn.glyphColor)
       x: Math.round(glyphBox.width / 2 - (glyphMetrics.tightBoundingRect.x + glyphMetrics.tightBoundingRect.width / 2))
       y: Math.round(glyphBox.height / 2 - (glyphText.baselineOffset + glyphMetrics.tightBoundingRect.y + glyphMetrics.tightBoundingRect.height / 2))
       Behavior on color { ColorAnimation { duration: 120 } }
