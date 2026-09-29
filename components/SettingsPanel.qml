@@ -26,6 +26,8 @@ PanelWindow {
   // Whether Hyprland blur is on at all (decoration:blur:enabled); probed on
   // open so the Blur switch can say when it cannot show anything.
   property bool systemBlurEnabled: true
+  // Hyprland's blur size right now (decoration:blur:size), probed on open.
+  property int currentBlurSize: 0
 
   readonly property var pages: [
     { id: "appearance", label: "Appearance", glyph: "󰏘" },
@@ -261,6 +263,7 @@ PanelWindow {
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
     channelProbe.running = true
     blurProbe.running = true
+    blurSizeProbe.running = true
   }
 
   // One-shot channel probe (event-driven, zero idle CPU): reads which profile
@@ -286,6 +289,19 @@ PanelWindow {
           var opt = JSON.parse(this.text)
           // Newer Hyprland reports booleans as "bool", older ones as "int".
           panel.systemBlurEnabled = typeof opt.bool === "boolean" ? opt.bool : opt.int !== 0
+        } catch (e) {}
+      }
+    }
+  }
+
+  Process {
+    id: blurSizeProbe
+    command: ["hyprctl", "getoption", "decoration:blur:size", "-j"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          var opt = JSON.parse(this.text)
+          if (typeof opt.int === "number") panel.currentBlurSize = opt.int
         } catch (e) {}
       }
     }
@@ -537,11 +553,21 @@ PanelWindow {
               SwitchRow {
                 label: "Blur"
                 hint: panel.systemBlurEnabled
-                  ? "Frosted glass behind the dock. Its strength is Hyprland's global blur size."
+                  ? "Frosted glass behind the dock."
                   : "Hyprland blur is off (decoration:blur:enabled), so this has no visible effect."
                 visible: root ? root.blurMode !== "system" : false
                 checked: root ? root.blurMode === "on" : false
                 onToggled: root.setBlurMode(root.blurMode === "on" ? "off" : "on")
+              }
+              SliderRow {
+                label: "Blur strength"
+                hint: "Hyprland has one blur size for everything, so this also changes it for windows and other panels. Back to your own value when blur leaves this mode."
+                visible: root ? root.blurMode === "on" : false
+                minimum: 1
+                maximum: 20
+                step: 1
+                value: root ? (root.blurSize > 0 ? root.blurSize : (panel.currentBlurSize > 0 ? panel.currentBlurSize : 6)) : 6
+                onCommitted: function(v) { root.setBlurSize(v, panel.currentBlurSize) }
               }
 
               SettingRow {
@@ -1070,7 +1096,7 @@ PanelWindow {
             }
             ChoiceRow {
               label: "Icon style"
-              hint: "Theme applies the style from Effects to the icons inside groups."
+              hint: "Theme applies the style from Effects to the icons of an opened group."
               options: [
                 { value: "theme", label: "Theme" },
                 { value: "none", label: "None" }

@@ -759,8 +759,8 @@ Item {
   // App group tile look: "rounded" (softly rounded rim), "square" (rim
   // without rounding) or "none" (bare mini-icon grid).
   property string groupStyle: "rounded"
-  // Icons inside group tiles: "theme" follows iconStyle, "none" keeps them
-  // original.
+  // Icons in an opened group (AppGroupPopup): "theme" follows iconStyle,
+  // "none" keeps them original. The tile on the dock always follows it.
   property string groupIconEffects: "theme"
   property bool settingsPanelOpen: false
   property string settingsPanelPage: "appearance"
@@ -1830,6 +1830,8 @@ Item {
     root.iconGrid = parsed && typeof parsed.iconGrid === "number"
       ? Math.max(8, Math.min(32, Math.round(parsed.iconGrid)))
       : 16
+    root.blurSize = parsed && typeof parsed.blurSize === "number" ? Math.max(0, Math.min(20, Math.round(parsed.blurSize))) : 0
+    root.systemBlurSize = parsed && typeof parsed.systemBlurSize === "number" ? Math.max(0, Math.round(parsed.systemBlurSize)) : 0
     root.applyBlurRule(false)
     root.showBorder = parsed ? parsed.showBorder !== false : true
     root.borderWidth = parsed && typeof parsed.borderWidth === "number"
@@ -1919,25 +1921,61 @@ Item {
   }
 
   // ------------------------------------------------- compositor blur
-  // Hyprland blurs layers through layer rules, and only globally sized
-  // (decoration.blur), so the dock can switch blur on or off but not set its
-  // strength. The rule lives in a Lua global so a later change (or "system")
-  // can disable it again without reloading the user's config. One dock applies
-  // it: every dock shares the "omadock" namespace.
+  // Hyprland blurs layers through layer rules, which can switch blur on or
+  // off per layer but not size it: blur size is one global setting
+  // (decoration.blur.size). So "on" can also carry a size, applied globally,
+  // and the size Hyprland had before (systemBlurSize) is put back when the
+  // dock stops overriding it. The rule lives in a Lua global so a later change
+  // (or "system") can disable it again without reloading the user's config.
+  // One dock applies it: every dock shares the "omadock" namespace.
   // "" until the first apply, so a rule left behind by an earlier shell
   // session (the Lua state outlives the shell) is always reconciled.
   property string _appliedBlurMode: ""
 
   function applyBlurRule(force) {
     if (!root.isPrimary) return
-    if (!force && root.blurMode === root._appliedBlurMode) return
-    var lua = "if _G.omadock_blur_rule then _G.omadock_blur_rule:set_enabled(false) end"
-    if (root.blurMode !== "system") {
-      lua += " _G.omadock_blur_rule = hl.layer_rule({ match = { namespace = \"^omadock$\" }, blur = "
-        + (root.blurMode === "on" ? "true" : "false") + ", ignore_alpha = 0.05 })"
+    if (force || root.blurMode !== root._appliedBlurMode) {
+      var lua = "if _G.omadock_blur_rule then _G.omadock_blur_rule:set_enabled(false) end"
+      if (root.blurMode !== "system") {
+        lua += " _G.omadock_blur_rule = hl.layer_rule({ match = { namespace = \"^omadock$\" }, blur = "
+          + (root.blurMode === "on" ? "true" : "false") + ", ignore_alpha = 0.05 })"
+      }
+      Quickshell.execDetached(["hyprctl", "eval", lua])
+      root._appliedBlurMode = root.blurMode
     }
-    Quickshell.execDetached(["hyprctl", "eval", lua])
-    root._appliedBlurMode = root.blurMode
+    // The size can change while the mode stays the same.
+    root.applyBlurSize(force)
+  }
+
+  // Global blur size the dock asks for while blur is "on"; 0 leaves it alone.
+  property int blurSize: 0
+  // Hyprland's own blur size, captured before the first override so it can be
+  // restored; persisted, since the override outlives a shell restart.
+  property int systemBlurSize: 0
+  property int _appliedBlurSize: 0
+
+  function setHyprBlurSize(size) {
+    Quickshell.execDetached(["hyprctl", "eval",
+      "hl.config({ decoration = { blur = { size = " + Math.round(size) + " } } })"])
+  }
+
+  function applyBlurSize(force) {
+    if (!root.isPrimary) return
+    var want = (root.blurMode === "on" && root.blurSize > 0) ? root.blurSize : 0
+    if (!force && want === root._appliedBlurSize) return
+    if (want > 0) root.setHyprBlurSize(want)
+    else if (root._appliedBlurSize > 0 && root.systemBlurSize > 0) root.setHyprBlurSize(root.systemBlurSize)
+    root._appliedBlurSize = want
+  }
+
+  // currentSize: Hyprland's blur size right now, read by the settings panel;
+  // remembered as the system size the first time the dock overrides it.
+  function setBlurSize(size, currentSize) {
+    if (root.systemBlurSize <= 0 && root._appliedBlurSize <= 0 && currentSize > 0)
+      root.systemBlurSize = currentSize
+    root.blurSize = Math.max(1, Math.min(20, Math.round(size)))
+    root.applyBlurSize(false)
+    root.saveConfig()
   }
 
   // ------------------------------------------------- drops from outside
@@ -2889,6 +2927,9 @@ Item {
     conf.showShadow = root.showShadow
     conf.shadowStrength = root.shadowStrength
     conf.blur = root.blurMode
+    if (root.blurSize > 0) conf.blurSize = root.blurSize
+    else delete conf.blurSize
+    if (root.systemBlurSize > 0) conf.systemBlurSize = root.systemBlurSize
     conf.iconStyle = root.iconStyle
     conf.iconTint = root.iconTint
     conf.iconGrid = root.iconGrid

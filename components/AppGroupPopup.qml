@@ -182,16 +182,18 @@ BorderSurface {
               spacing: Style.space(4)
               width: parent.width - Style.space(8)
 
-              Image {
+              // groupIconEffects decides whether the dock's icon style reaches
+              // the opened group ("theme") or its icons stay original ("none").
+              DockIconArt {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: Style.space(36)
                 height: Style.space(36)
                 source: cellItem.appIconSrc
-                sourceSize: Qt.size(width * 2, height * 2)
-                fillMode: Image.PreserveAspectFit
-                asynchronous: true
-                smooth: true
-                mipmap: true
+                renderSize: Style.space(36)
+                iconStyle: root && root.groupIconEffects !== "none" ? root.iconStyle : "original"
+                // The popup sits on the menu surface, not the dock card.
+                tint: root && root.iconTint === "accent" ? Color.accent : Color.menu.text
+                grid: root ? root.iconGrid : 16
               }
 
               Text {

@@ -34,7 +34,10 @@ Item {
   property real renderSize: 64
 
   readonly property bool usesGrid: art.iconStyle === "pixel" || art.iconStyle === "dots"
-  readonly property int cells: Math.max(6, Math.min(48, art.grid))
+  // Declared content (a font glyph) is drawn with thin strokes; a fine grid
+  // leaves them a sparse dotted outline that barely differs from the glyph,
+  // so such content is capped at a coarser grid.
+  readonly property int cells: Math.max(6, Math.min(art.hasCustom ? 14 : 48, art.grid))
   readonly property int status: img.status
 
   default property alias content: custom.data
@@ -119,6 +122,8 @@ Item {
           property real dimLevel: art.iconStyle === "dots" ? 0.22 : 0.35
           property real invert: art.tint.hslLightness < 0.5 ? 1.0 : 0.0
           property real dots: art.iconStyle === "dots" ? 1.0 : 0.0
+          // Thin glyph strokes cover only part of a cell; count them in.
+          property real alphaCut: art.hasCustom ? 0.12 : 0.35
           fragmentShader: Qt.resolvedUrl("../shaders/iconstyle.frag.qsb")
         }
       }

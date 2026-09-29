@@ -28,6 +28,7 @@ layout(std140, binding = 0) uniform buf {
     float dimLevel; // ink of the icon's faintest parts
     float invert;   // 1 when the tint is dark
     float dots;     // 1 for the dot matrix, 0 for monochrome
+    float alphaCut; // cell coverage below which a cell is outside the shape
 };
 
 layout(binding = 1) uniform sampler2D source;
@@ -63,7 +64,7 @@ void main() {
     vec2 cell = floor(cellPos);
     vec4 c = texture(source, (cell + 0.5) / grid);
 
-    if (c.a < 0.35) {
+    if (c.a < alphaCut) {
         fragColor = vec4(0.0);
         return;
     }
