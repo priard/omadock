@@ -470,6 +470,20 @@ function reorderPinned(pinnedIds, appId, insertBeforeId) {
   return arr
 }
 
+// A copy of list with the item at from moved before the item now at
+// insertIndex (to the end when insertIndex is past the last item). Returns
+// list itself when nothing moves.
+function moveBefore(list, from, insertIndex) {
+  var arr = toArray(list)
+  if (from < 0 || from >= arr.length) return list
+  var to = Math.max(0, Math.min(arr.length, insertIndex))
+  if (to === from || to === from + 1) return list
+  var next = arr.slice()
+  var moved = next.splice(from, 1)[0]
+  next.splice(to > from ? to - 1 : to, 0, moved)
+  return next
+}
+
 function entryFor(appRows, appId) {
   var want = stripDesktop(appId)
   if (!want || !appRows) return null
@@ -967,9 +981,28 @@ function resolveAppName(appLibrary, appRows, appId) {
   return id
 }
 
-function resolveDriveIcon(iconName, themeName, appLibrary) {
+function resolveDriveIcon(iconName, themeName, appLibrary, folderColorMode) {
   var name = String(iconName || "drive-removable-media-usb").trim()
   if (name.indexOf("/") === 0 || name.indexOf("file://") === 0) return name
+
+  // Drives follow the folder colour, so they sit next to the folders in the
+  // same style: wherever folders use Adwaita's monochrome outlines (white,
+  // black or symbolic, or a theme with no Yaru colour), drives do too.
+  var theme = String(themeName || "").trim()
+  var yaruTheme = theme === "Yaru" || (theme.indexOf("Yaru-") === 0 && theme !== "Yaru-gray" && theme !== "Yaru-grey")
+  var mode = String(folderColorMode || "theme")
+  if (mode === "white" || mode === "black" || mode === "symbolic"
+      || ((mode === "theme" || mode === "auto") && !yaruTheme)) {
+    var symbolicMap = {
+      "drive-removable-media-usb": "media-removable",
+      "usb-pendrive": "media-removable",
+      "drive-removable-media": "drive-removable-media",
+      "media-removable": "media-removable",
+      "drive-harddisk-usb": "drive-harddisk-usb",
+      "media-optical": "media-optical"
+    }
+    return "file:///usr/share/icons/Adwaita/symbolic/devices/" + (symbolicMap[name] || "drive-removable-media") + "-symbolic.svg"
+  }
 
   // Try iconIndex/theme resolution first for theme resilience
   if (appLibrary) {

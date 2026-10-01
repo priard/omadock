@@ -24,6 +24,12 @@ Item {
 
   signal openStackRequested(string path, string name, real cx, real cy)
   signal menuRequested(string path, string name, real cx, real cy)
+  signal dragStarted(string path)
+  signal dragMoved(string path, real x, real y)
+  signal dragDropped(string path)
+
+  // Faded while dragged, fainter still once pulled off the dock.
+  opacity: area.dragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
 
   width: (root ? (root.iconSlot * (root.waveHover ? fitem.magnifyScale : 1)) : 0) + fitem.gapWidth
   height: root ? root.iconSlot : 0
@@ -48,11 +54,7 @@ Item {
     return DockModel.resolveThemedFolderIcon(fitem.icon, root ? root.currentIconThemeName : "Yaru", root ? root.folderColor : "theme", root ? root.appLibrary : null)
   }
   readonly property bool isSymbolic: resolvedSource.indexOf("-symbolic.svg") >= 0 || resolvedSource.indexOf("symbolic") >= 0
-  readonly property color symbolicColor: {
-    if (root && root.folderColor === "white") return "#ffffff"
-    if (root && root.folderColor === "black") return "#111111"
-    return (Color.bar.background.hslLightness < 0.5 || Color.background.hslLightness < 0.5) ? "#ffffff" : "#111111"
-  }
+  readonly property color symbolicColor: root ? root.symbolicIconColor : "#ffffff"
 
   Behavior on magnifyScale {
     NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
@@ -133,14 +135,19 @@ Item {
     kind: "active"
   }
 
-  MouseArea {
+  DockPressDrag {
     id: area
     anchors.fill: parent
     hoverEnabled: true
     acceptedButtons: Qt.LeftButton | Qt.RightButton
-    cursorShape: Qt.PointingHandCursor
+    cursorShape: dragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+    mapTarget: root ? root.dockCard : null
 
-    onClicked: function(mouse) {
+    onDragStarted: fitem.dragStarted(fitem.folderPath)
+    onDragMoved: function(x, y) { fitem.dragMoved(fitem.folderPath, x, y) }
+    onDragFinished: fitem.dragDropped(fitem.folderPath)
+
+    onTapped: function(mouse) {
       var targetWin = root ? root.contentItemRef : null
       if (mouse.button === Qt.RightButton) {
         var mappedPos = targetWin ? fitem.mapToItem(targetWin, fitem.width / 2, 0) : null

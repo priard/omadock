@@ -417,6 +417,9 @@ Item {
   readonly property int folderSlots: root.pinnedFolders ? root.pinnedFolders.length : 0
   readonly property int driveSlots: (root.showRemovableDrives && root.mountedDrives) ? root.mountedDrives.length : 0
   readonly property bool hasFolderSeparator: (root.folderSlots > 0 || root.driveSlots > 0) && (root.pinnedSection.length > 0 || root.groupSlots > 0 || root.hasTiles || root.visibleRunningCount > 0)
+  // Folders | drives divider: drives come and go with the hardware, so they
+  // get a section of their own instead of trailing the pinned folders.
+  readonly property bool hasDriveSeparator: root.folderSlots > 0 && root.driveSlots > 0
 
   // Minimized-window preview tiles (macOS-style section on the dock's right).
   // In minimizeMode "all", a parked app's windows compress into ONE stacked
@@ -463,12 +466,14 @@ Item {
   readonly property int elementTotal: root.visibleSlotTotal
     + (root.hasSeparator ? 1 : 0)
     + (root.hasFolderSeparator ? 1 : 0)
+    + (root.hasDriveSeparator ? 1 : 0)
     + (root.hasLeftTileSeparator ? 1 : 0)
     + (root.hasTiles ? root.tileCount : 0)
 
   readonly property real baseRowWidth: root.visibleSlotTotal * root.iconSlot
     + (root.hasSeparator ? root.separatorWidth : 0)
     + (root.hasFolderSeparator ? root.separatorWidth : 0)
+    + (root.hasDriveSeparator ? root.separatorWidth : 0)
     + (root.hasLeftTileSeparator ? root.separatorWidth : 0)
     + (root.hasTiles ? root.tileCount * root.tileWidth : 0)
     + Math.max(0, root.elementTotal - 1) * root.gapWidth
@@ -694,6 +699,19 @@ Item {
   property string dropTargetGroupId: ""
   property string dragSourceGroupId: ""
   property real dropIndicatorX: 0
+  // Pinned folders and app groups are dragged too: folders to reorder them,
+  // and either one off the dock to take it away.
+  property string dragFolderPath: ""
+  property string dragGroupId: ""
+  // Insert index among the pinned folders for the dragged folder; -1 while
+  // the pointer is outside the folder section.
+  property int dropFolderIndex: -1
+  // The drag has been pulled up off the dock: letting go unpins or removes.
+  property bool dragRemoveArmed: false
+  // Pointer of the drag in progress, in dock card coordinates.
+  property real dragPointerX: 0
+  property real dragPointerY: 0
+  readonly property bool dockDragActive: root.dragAppId !== "" || root.dragFolderPath !== "" || root.dragGroupId !== ""
 
   // ------------------------------------------------- context menu
 
@@ -949,6 +967,13 @@ Item {
   property int themeVersion: 0
   property string currentIconThemeName: "Yaru"
   property string folderColor: "theme"
+  // Colour for symbolic folder and drive icons in the original icon style:
+  // the folder colour setting, or white or black to suit the theme.
+  readonly property color symbolicIconColor: {
+    if (root.folderColor === "white") return "#ffffff"
+    if (root.folderColor === "black") return "#111111"
+    return (Color.bar.background.hslLightness < 0.5 || Color.background.hslLightness < 0.5) ? "#ffffff" : "#111111"
+  }
   property int itemSpacing: 4
   // Gap between the panels when sections are split.
   property int sectionSpacing: 18
@@ -1514,7 +1539,7 @@ Item {
       return
     }
 
-    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (revealHover && revealHover.hovered) || root.contextAppId !== "" || root.dragAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen || root.externalDragOver || root.appDropTargetId !== ""
+    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (revealHover && revealHover.hovered) || root.contextAppId !== "" || root.dockDragActive || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen || root.externalDragOver || root.appDropTargetId !== ""
 
     // Hovered, Context Menu Open, or Dragging: keep visible
     if (isHovered) {
@@ -3741,6 +3766,20 @@ Item {
     root.saveConfig()
   }
 
+  // Moves a pinned folder so it lands before the folder now at insertIndex
+  // (the end when insertIndex is past the last one).
+  function moveFolder(path, insertIndex) {
+    var list = root.pinnedFolders || []
+    var from = -1
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].path === path) { from = i; break }
+    }
+    var next = DockModel.moveBefore(list, from, insertIndex)
+    if (next === list) return
+    root.pinnedFolders = next
+    root.saveConfig()
+  }
+
   // Widest piece of content in the open menu. Only implicit widths are read, so
   // feeding the result back into every row cannot loop.
   function menuContentWidth(item) {
@@ -3873,8 +3912,8 @@ Item {
     // Global dismiss area - catches clicks outside context menu, folder stack, or app group popup
     Item {
       id: globalDismiss
-      width: (root.contextAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.dragAppId !== "") ? dockWindow.width : 0
-      height: (root.contextAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.dragAppId !== "") ? dockWindow.height : 0
+      width: (root.contextAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.dockDragActive) ? dockWindow.width : 0
+      height: (root.contextAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.dockDragActive) ? dockWindow.height : 0
 
       MouseArea {
         anchors.fill: parent
@@ -3902,6 +3941,7 @@ Item {
             root.dropTargetAppId = ""
             root.dropTargetGroupId = ""
             root.dragSourceGroupId = ""
+            root.dragRemoveArmed = false
             root.syncVisibility()
           }
         }
