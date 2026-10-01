@@ -66,6 +66,7 @@ PanelWindow {
     topPadding: Style.spacing.xxl
     bottomPadding: Style.spacing.sm
     text: ""
+    textFormat: Text.PlainText
     color: Util.alpha(Color.menu.text, 0.55)
     font.family: Style.font.family
     font.pixelSize: Style.font.caption
@@ -91,9 +92,12 @@ PanelWindow {
       anchors.verticalCenter: parent.verticalCenter
       spacing: Style.spacing.xxs
 
+      // Folder names, group names and paths reach these two unwrapped: they
+      // are always plain text, never markup.
       Text {
         width: parent.width
         text: settingRow.label
+        textFormat: Text.PlainText
         color: Color.menu.text
         font.family: Style.font.family
         font.pixelSize: Style.font.subtitle
@@ -103,6 +107,7 @@ PanelWindow {
         width: parent.width
         visible: settingRow.hint !== ""
         text: settingRow.hint
+        textFormat: Text.PlainText
         color: Util.alpha(Color.menu.text, 0.55)
         font.family: Style.font.family
         font.pixelSize: Style.font.caption
@@ -203,6 +208,7 @@ PanelWindow {
         width: Style.space(52)
         horizontalAlignment: Text.AlignRight
         text: (slider.liveValue * sliderRow.displayScale).toFixed(sliderRow.displayDecimals) + sliderRow.suffix
+        textFormat: Text.PlainText
         color: Util.alpha(Color.menu.text, 0.55)
         font.family: Style.font.family
         font.pixelSize: Style.font.body
@@ -289,7 +295,9 @@ PanelWindow {
           var opt = JSON.parse(this.text)
           // Newer Hyprland reports booleans as "bool", older ones as "int".
           panel.systemBlurEnabled = typeof opt.bool === "boolean" ? opt.bool : opt.int !== 0
-        } catch (e) {}
+        } catch (e) {
+          console.warn("[omadock] Failed to parse decoration:blur:enabled option:", e)
+        }
       }
     }
   }
@@ -302,7 +310,9 @@ PanelWindow {
         try {
           var opt = JSON.parse(this.text)
           if (typeof opt.int === "number") panel.currentBlurSize = opt.int
-        } catch (e) {}
+        } catch (e) {
+          console.warn("[omadock] Failed to parse decoration:blur:size option:", e)
+        }
       }
     }
   }
@@ -355,6 +365,7 @@ PanelWindow {
 
         Text {
           text: "Omadock"
+          textFormat: Text.PlainText
           color: Color.menu.text
           font.family: Style.font.family
           font.pixelSize: Style.font.heading
@@ -362,6 +373,7 @@ PanelWindow {
         }
         Text {
           text: "Dock settings"
+          textFormat: Text.PlainText
           color: Util.alpha(Color.menu.text, 0.55)
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
@@ -400,6 +412,7 @@ PanelWindow {
               Text {
                 id: navGlyph
                 text: navItem.modelData.glyph
+                textFormat: Text.PlainText
                 color: navItem.current ? Color.accent : Util.alpha(Color.menu.text, 0.55)
                 font.family: Style.font.family
                 font.pixelSize: Style.font.iconLarge
@@ -413,6 +426,7 @@ PanelWindow {
               anchors.leftMargin: Style.spacing.lg
               anchors.verticalCenter: parent.verticalCenter
               text: navItem.modelData.label
+              textFormat: Text.PlainText
               color: navItem.current ? Color.accent : Color.menu.text
               font.family: Style.font.family
               font.pixelSize: Style.font.subtitle
@@ -450,6 +464,7 @@ PanelWindow {
             if (panel.pages[i].id === panel.page) return panel.pages[i].label
           return ""
         }
+        textFormat: Text.PlainText
         color: Color.menu.text
         font.family: Style.font.family
         font.pixelSize: Style.font.display
@@ -633,6 +648,7 @@ PanelWindow {
                         width: Style.space(64)
                         horizontalAlignment: Text.AlignHCenter
                         text: paletteTile.modelData.name
+                        textFormat: Text.PlainText
                         color: paletteTile.current ? Color.accent : Util.alpha(Color.menu.text, 0.7)
                         font.family: Style.font.family
                         font.pixelSize: Style.font.caption
@@ -815,6 +831,24 @@ PanelWindow {
               value: root ? root.indicatorShape : "theme"
               onPicked: function(v) { root.setOption("indicatorShape", v) }
             }
+
+            SectionLabel { text: "Dock Items" }
+
+            SwitchRow {
+              label: "Omarchy button"
+              hint: "The launcher at the start of the dock. Without it, right-click the dock background to reach these settings."
+              checked: root ? root.showAppsButton : true
+              onToggled: root.setOption("showAppsButton", !root.showAppsButton)
+            }
+            SwitchRow {
+              label: "Removable drives"
+              hint: "Show mounted USB drives at the end of the dock."
+              checked: root ? root.showRemovableDrives : true
+              onToggled: {
+                root.setOption("showRemovableDrives", !root.showRemovableDrives)
+                root.scanRemovableDrives()
+              }
+            }
           }
 
           // ================================================= Placement
@@ -953,6 +987,37 @@ PanelWindow {
                 onChanged: function(v) { root.setUrgentSoundName(v) }
               }
             }
+
+            SectionLabel { text: "Previews & Tooltips" }
+
+            SwitchRow {
+              label: "Tooltips"
+              checked: root ? root.showTooltips : true
+              onToggled: root.setOption("showTooltips", !root.showTooltips)
+            }
+            SliderRow {
+              label: "Tooltip delay"
+              enabled: root ? root.showTooltips : true
+              opacity: enabled ? 1 : 0.45
+              minimum: 0
+              maximum: 2000
+              step: 50
+              suffix: " ms"
+              value: root ? root.tooltipDelay : 450
+              onCommitted: function(v) { root.setOption("tooltipDelay", Math.round(v)) }
+            }
+            SwitchRow {
+              label: "Window previews"
+              hint: "Live thumbnails of an app's windows in its tooltip."
+              checked: root ? root.advancedTooltips : true
+              onToggled: root.setOption("advancedTooltips", !root.advancedTooltips)
+            }
+            SwitchRow {
+              label: "Minimized window tiles"
+              hint: "Show parked windows as preview tiles in the dock."
+              checked: root ? root.showMinimizedTiles : true
+              onToggled: root.setOption("showMinimizedTiles", !root.showMinimizedTiles)
+            }
           }
 
           // ================================================= Effects
@@ -1045,37 +1110,6 @@ PanelWindow {
               checked: root ? root.launchBounce : true
               onToggled: root.setOption("launchBounce", !root.launchBounce)
             }
-
-            SectionLabel { text: "Tooltips & previews" }
-
-            SwitchRow {
-              label: "Tooltips"
-              checked: root ? root.showTooltips : true
-              onToggled: root.setOption("showTooltips", !root.showTooltips)
-            }
-            SliderRow {
-              label: "Tooltip delay"
-              enabled: root ? root.showTooltips : true
-              opacity: enabled ? 1 : 0.45
-              minimum: 0
-              maximum: 2000
-              step: 50
-              suffix: " ms"
-              value: root ? root.tooltipDelay : 450
-              onCommitted: function(v) { root.setOption("tooltipDelay", Math.round(v)) }
-            }
-            SwitchRow {
-              label: "Window previews"
-              hint: "Live thumbnails of an app's windows in its tooltip."
-              checked: root ? root.advancedTooltips : true
-              onToggled: root.setOption("advancedTooltips", !root.advancedTooltips)
-            }
-            SwitchRow {
-              label: "Minimized window tiles"
-              hint: "Show parked windows as preview tiles in the dock."
-              checked: root ? root.showMinimizedTiles : true
-              onToggled: root.setOption("showMinimizedTiles", !root.showMinimizedTiles)
-            }
           }
 
           // ================================================= Size & spacing
@@ -1116,14 +1150,6 @@ PanelWindow {
               onCommitted: function(v) { root.setOption("sectionSpacing", Math.round(v)) }
             }
 
-            SectionLabel { text: "Items" }
-
-            SwitchRow {
-              label: "Omarchy button"
-              hint: "The launcher at the start of the dock. Without it, right-click the dock background to reach these settings."
-              checked: root ? root.showAppsButton : true
-              onToggled: root.setOption("showAppsButton", !root.showAppsButton)
-            }
           }
 
           // ================================================= Folders
@@ -1238,18 +1264,6 @@ PanelWindow {
                 }
               }
             }
-
-            SectionLabel { text: "Devices" }
-
-            SwitchRow {
-              label: "Removable drives"
-              hint: "Show mounted USB drives at the end of the dock."
-              checked: root ? root.showRemovableDrives : true
-              onToggled: {
-                root.setOption("showRemovableDrives", !root.showRemovableDrives)
-                root.scanRemovableDrives()
-              }
-            }
           }
 
           // ================================================= App groups
@@ -1289,6 +1303,7 @@ PanelWindow {
               topPadding: Style.spacing.lg
               bottomPadding: Style.spacing.lg
               text: "No groups yet. Drag one dock icon onto another, or create one from the apps that are running now."
+              textFormat: Text.PlainText
               color: Util.alpha(Color.menu.text, 0.55)
               wrapMode: Text.WordWrap
               font.family: Style.font.family
@@ -1344,6 +1359,7 @@ PanelWindow {
 
                       Text {
                         text: groupRow.modelData.name || "Group"
+                        textFormat: Text.PlainText
                         color: nameMouse.containsMouse ? Color.accent : Color.menu.text
                         font.family: Style.font.family
                         font.pixelSize: Style.font.subtitle
@@ -1352,6 +1368,7 @@ PanelWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: nameMouse.containsMouse
                         text: "󰏫"
+                        textFormat: Text.PlainText
                         color: Color.accent
                         font.family: Style.font.family
                         font.pixelSize: Style.font.body
@@ -1393,6 +1410,7 @@ PanelWindow {
                       var count = groupRow.appCount + (groupRow.appCount === 1 ? " app" : " apps")
                       return names.length > 0 ? count + " · " + names.join(", ") : count
                     }
+                    textFormat: Text.PlainText
                     color: Util.alpha(Color.menu.text, 0.55)
                     font.family: Style.font.family
                     font.pixelSize: Style.font.caption
@@ -1440,7 +1458,8 @@ PanelWindow {
               width: parent.width
               topPadding: Style.spacing.lg
               bottomPadding: Style.spacing.lg
-              text: "Omadock is built with love by suva — a medical student, between classes and clinics. It is free, and it always will be.\n\nIf it earns a place on your desktop, you can give some love back to its maker. No tiers, no perks — just support returned."
+              text: "Omadock is built with love by thepathless — a medical student, between classes and clinics. It is free, and it always will be.\n\nIf it earns a place on your desktop, you can give some love back to its maker. No tiers, no perks — just support returned."
+              textFormat: Text.PlainText
               color: Color.menu.text
               wrapMode: Text.WordWrap
               font.family: Style.font.family
@@ -1448,7 +1467,7 @@ PanelWindow {
             }
 
             SettingRow {
-              label: "Supporter #1 — suva"
+              label: "Supporter #1 — thepathless"
               hint: "The maker. Its first and forever supporter."
 
               Button {
@@ -1468,6 +1487,130 @@ PanelWindow {
                 foreground: Color.menu.text
                 bordered: true
                 onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/thepathless/omadock/blob/main/SPONSORS.md"))
+              }
+            }
+
+            SectionLabel { text: "Code Contributors" }
+
+            SettingRow {
+              label: "@priard (Lukasz)"
+              hint: "macOS folder stacks, icon shaders, gradients, grain, drop-to-open"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/priard"))
+              }
+            }
+
+            SettingRow {
+              label: "@G-Pappas (George P.)"
+              hint: "Multi-monitor docks & per-output instance management"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/G-Pappas"))
+              }
+            }
+
+            SettingRow {
+              label: "@NothingManTR (Taha Can)"
+              hint: "Removable media drives & safe eject, smart app matching, jump lists"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/NothingManTR"))
+              }
+            }
+
+            SettingRow {
+              label: "@assada"
+              hint: "Window focus dispatch & Hyprland layout awareness"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/assada"))
+              }
+            }
+
+            SettingRow {
+              label: "@tdslot"
+              hint: "Desktop entry launch suffix validation fix for pinned apps"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/tdslot"))
+              }
+            }
+
+            SettingRow {
+              label: "@Tech0001"
+              hint: "Application matching restoration"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/Tech0001"))
+              }
+            }
+
+            SectionLabel { text: "Bug Hunters & Diagnostics" }
+
+            SettingRow {
+              label: "@justinlharter"
+              hint: "Suspend/resume screen null recovery diagnostics"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/justinlharter"))
+              }
+            }
+
+            SettingRow {
+              label: "@maugustoldo (Marcos Augusto)"
+              hint: "GTK icon resolving, launcher matching, and theme accent"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/maugustoldo"))
+              }
+            }
+
+            SettingRow {
+              label: "@m-bowden (Michael Bowden)"
+              hint: "Webapp Exec-URL .execString desktop entry investigation"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/m-bowden"))
+              }
+            }
+
+            SettingRow {
+              label: "@herman6888"
+              hint: "Omarchy 4.x overlay plugin appLibrary diagnostic"
+
+              Button {
+                text: "GitHub ↗"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/herman6888"))
               }
             }
           }
@@ -1501,6 +1644,7 @@ PanelWindow {
 
               Text {
                 text: (root && root.manifest && root.manifest.version) ? "v" + root.manifest.version : "unknown"
+                textFormat: Text.PlainText
                 color: Color.menu.text
                 font.family: Style.font.family
                 font.pixelSize: Style.font.subtitle

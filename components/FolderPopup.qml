@@ -109,6 +109,7 @@ BorderSurface {
         Text {
           anchors.centerIn: parent
           text: "‹"
+          textFormat: Text.PlainText
           color: Color.accent
           font.family: Style.font.family
           font.pixelSize: Style.font.heading

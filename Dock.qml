@@ -214,7 +214,11 @@ Item {
       var found = localAppLibrary.iconIndex[value]
       if (found) return Util.fileUrl(found)
       var themed = ""
-      try { themed = Quickshell.iconPath(value, true) } catch (e) {}
+      try {
+        themed = Quickshell.iconPath(value, true)
+      } catch (e) {
+        console.warn("[omadock] Failed resolving themed icon path:", value, e)
+      }
       if (themed && themed.length > 0) return themed
       return localAppLibrary.fallbackIcon()
     }
@@ -226,7 +230,11 @@ Item {
       var found = localAppLibrary.iconIndex["application-x-executable"]
       if (found) return Util.fileUrl(found)
       var themed = ""
-      try { themed = Quickshell.iconPath("application-x-executable", true) } catch (e) {}
+      try {
+        themed = Quickshell.iconPath("application-x-executable", true)
+      } catch (e) {
+        console.warn("[omadock] Failed resolving fallback icon path:", e)
+      }
       return themed || ""
     }
 
@@ -264,7 +272,9 @@ Item {
       if (id === "") return
       // Always append .desktop — DesktopEntry.id strips the extension, so
       // ids like org.telegram.desktop need it re-added to resolve correctly.
-      var args = ["uwsm-app", "--", "gtk-launch", "--", id + ".desktop"]
+      // Redirect stdout and stderr to /dev/null so spawned applications don't inherit
+      // transient QProcess pipes that close when gtk-launch exits (causing EPIPE crashes).
+      var args = ["bash", "-c", "exec uwsm-app -- gtk-launch -- \"$1\" >/dev/null 2>&1", "_", id + ".desktop"]
       // gtk-launch exits non-zero up front when the desktop file no longer
       // resolves (stale pin, uninstalled app), but execDetached cannot
       // observe exit codes. Launches run through launchProc so failures
@@ -619,11 +629,9 @@ Item {
       var top = root.liveToplevelForAddress(addr)
       var title = String((top && top.title) || h.title || "Window")
       var appId = ""
-      try {
-        var hClass = (h && h.lastIpcObject) ? (h.lastIpcObject["class"] || h.lastIpcObject["initialClass"] || "") : ""
-        appId = (top && top.appId) ? DockModel.normalizeId(top.appId)
-          : (hClass ? DockModel.normalizeId(hClass) : "")
-      } catch (e) {}
+      var hClass = (h && h.lastIpcObject) ? (h.lastIpcObject["class"] || h.lastIpcObject["initialClass"] || "") : ""
+      appId = (top && top.appId) ? DockModel.normalizeId(top.appId)
+        : (hClass ? DockModel.normalizeId(hClass) : "")
       mins.push({ address: addr, title: title, appId: appId, waylandToplevel: top })
     }
     // Oldest parked first, so the tiles read chronologically left to right.
@@ -644,23 +652,15 @@ Item {
   }
 
   readonly property string activeId: {
-    try {
-      var top = ToplevelManager.activeToplevel
-      return top && top.appId ? DockModel.normalizeId(top.appId) : ""
-    } catch (e) {
-      return ""
-    }
+    var top = ToplevelManager.activeToplevel
+    return top && top.appId ? DockModel.normalizeId(top.appId) : ""
   }
 
   readonly property string activeWindowAddress: {
-    try {
-      var top = ToplevelManager.activeToplevel
-      if (!top) return ""
-      var h = root.hyprToplevelFor(top)
-      return h ? root.windowAddress(h) : ""
-    } catch (e) {
-      return ""
-    }
+    var top = ToplevelManager.activeToplevel
+    if (!top) return ""
+    var h = root.hyprToplevelFor(top)
+    return h ? root.windowAddress(h) : ""
   }
   onActiveIdChanged: if (root.activeId) root.clearUrgentApp(root.activeId, root.activeWindowAddress)
   onActiveWindowAddressChanged: if (root.activeWindowAddress) root.clearUrgentApp(root.activeId, root.activeWindowAddress)
@@ -819,7 +819,11 @@ Item {
   readonly property var themeGradientColors: {
     var _tv = root.themeVersion
     var text = ""
-    try { text = DockModel.readCapped(themeColorsFile.text(), DockModel.MAX_COLORS_TOML_BYTES) } catch (e) {}
+    try {
+      text = DockModel.readCapped(themeColorsFile.text, DockModel.MAX_COLORS_TOML_BYTES)
+    } catch (e) {
+      console.warn("[omadock] Failed reading theme colors:", e)
+    }
     var named = {}
     var re = /^\s*([a-z_]+)\s*=\s*"(#[0-9a-fA-F]{6})"/gm
     var m
@@ -1075,6 +1079,7 @@ Item {
         try {
           clients = JSON.parse(this.text) || []
         } catch (e) {
+          console.warn("[omadock] Failed parsing clients JSON:", e)
           return
         }
 
@@ -1169,6 +1174,7 @@ Item {
           root.activeStackTotalCount = parsed.count || 0
           root.activeStackEntries = parsed.items || []
         } catch (e) {
+          console.warn("[omadock] Failed parsing folder scan:", e)
           root.activeStackTotalCount = 0
           root.activeStackEntries = []
         }
@@ -1206,6 +1212,7 @@ Item {
           var parsed = JSON.parse(this.text) || []
           root.mountedDrives = DockModel.isList(parsed) ? parsed : []
         } catch (e) {
+          console.warn("[omadock] Failed parsing removable drives:", e)
           root.mountedDrives = []
         }
       }
@@ -1611,12 +1618,16 @@ Item {
 
   // ------------------------------------------------- file views
   //
-  // Watched files feed the long-lived shell process, so every read is gated by
-  // a byte ceiling (DockModel.readCapped) before it can reach JSON.parse or
-  // dock state, and reload cycles are debounced (fileChanged only fires from
-  // the filesystem watcher, never from our own atomic writes — the debounce
-  // coalesces rapid external edit bursts and the _savingConfig guard keeps the
-  // read after a save from re-applying stale data).
+  // Watched files feed the long-lived shell process, so the byte ceiling and
+  // the regular-file gate apply BEFORE any content is loaded into QML: every
+  // watched path goes through CappedFileView, which keeps FileView as a change
+  // watcher only and reads content through a stat-then-read gate bounded by
+  // DockModel.MAX_*_BYTES (a large file or FIFO can never enter or stall the
+  // shell at the read boundary). DockModel.readCapped stays as defense in
+  // depth on the accepted slice. Reload cycles are debounced (fileChanged only
+  // fires from the filesystem watcher, never from our own atomic writes — the
+  // debounce coalesces rapid external edit bursts and the _savingConfig guard
+  // keeps the read after a save from re-applying stale data).
 
   // Coalesces rapid external change bursts into one reload per file.
   Timer {
@@ -1640,9 +1651,10 @@ Item {
     }
   }
 
-  FileView {
+  CappedFileView {
     id: configFile
     path: root.configPath
+    maxBytes: DockModel.MAX_CONFIG_BYTES
     watchChanges: true
     atomicWrites: true
     onLoaded: {
@@ -1656,20 +1668,21 @@ Item {
     }
   }
 
-  FileView {
+  CappedFileView {
     id: dockFile
     path: root.dockPath
+    maxBytes: DockModel.MAX_DOCK_JSON_BYTES
     watchChanges: true
     atomicWrites: true
     onLoaded: root.loadPinned()
     onFileChanged: dockReloadDebounce.restart()
   }
 
-  FileView {
+  CappedFileView {
     id: themeIconsFile
     path: Quickshell.env("HOME") + "/.local/state/omarchy/current/theme/icons.theme"
+    maxBytes: DockModel.MAX_ICONS_THEME_BYTES
     watchChanges: true
-    printErrors: false
     onLoaded: root.handleThemeChanged()
     onFileChanged: {
       themeIconsFile.reload()
@@ -1677,9 +1690,10 @@ Item {
     }
   }
 
-  FileView {
+  CappedFileView {
     id: themeColorsFile
     path: Quickshell.env("HOME") + "/.local/state/omarchy/current/theme/colors.toml"
+    maxBytes: DockModel.MAX_COLORS_TOML_BYTES
     watchChanges: true
     onLoaded: root.handleThemeChanged()
     onFileChanged: {
@@ -1688,11 +1702,11 @@ Item {
     }
   }
 
-  FileView {
+  CappedFileView {
     id: dndConfigFile
     path: Quickshell.env("HOME") + "/.local/state/omarchy/notifications.json"
+    maxBytes: DockModel.MAX_NOTIFICATIONS_BYTES
     watchChanges: true
-    printErrors: false
     onFileChanged: dndConfigFile.reload()
   }
 
@@ -1701,12 +1715,14 @@ Item {
       return root.notifService.doNotDisturb
     }
     try {
-      var txt = DockModel.readCapped(dndConfigFile.text(), DockModel.MAX_NOTIFICATIONS_BYTES).trim()
+      var txt = DockModel.readCapped(dndConfigFile.text, DockModel.MAX_NOTIFICATIONS_BYTES).trim()
       if (txt) {
         var parsed = JSON.parse(txt)
         if (parsed && typeof parsed.dnd === "boolean") return parsed.dnd
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[omadock] Failed reading dnd config:", e)
+    }
     return false
   }
 
@@ -1766,7 +1782,9 @@ Item {
           var addressOnly = root.windowAddress(root.hyprToplevelFor(top))
           if (addressOnly) root.clearUrgentApp("", addressOnly)
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("[omadock] Error handling active toplevel change:", e)
+      }
       debounceOverlapTimer.restart()
       root.syncContextWindows()
     }
@@ -1996,11 +2014,11 @@ Item {
   // ------------------------------------------------- functions
 
   function loadPinned() {
-    root.pinnedIds = DockModel.parsePinned(DockModel.readCapped(dockFile.text(), DockModel.MAX_DOCK_JSON_BYTES))
+    root.pinnedIds = DockModel.parsePinned(DockModel.readCapped(dockFile.text, DockModel.MAX_DOCK_JSON_BYTES))
   }
 
   function loadConfig() {
-    var raw = DockModel.readCapped(configFile.text(), DockModel.MAX_CONFIG_BYTES).trim()
+    var raw = DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES).trim()
     var parsed = {}
     if (raw) {
       try {
@@ -2117,12 +2135,18 @@ Item {
 
   function handleThemeChanged() {
     try {
-      var t = DockModel.readCapped(themeIconsFile.text(), DockModel.MAX_ICONS_THEME_BYTES).trim()
+      var t = DockModel.readCapped(themeIconsFile.text, DockModel.MAX_ICONS_THEME_BYTES).trim()
       if (t) root.currentIconThemeName = t
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[omadock] Failed reading icon theme:", e)
+    }
     root.themeVersion++
     if (root.appLibrary) {
-      try { root.appLibrary.refreshIcons() } catch (e) {}
+      try {
+        root.appLibrary.refreshIcons()
+      } catch (e) {
+        console.warn("[omadock] Failed refreshing appLibrary icons:", e)
+      }
     }
     root.rescanApps()
   }
@@ -2566,7 +2590,9 @@ Item {
         var h = root.hyprToplevelFor(top)
         if (root.windowAddress(h) === addr) return top
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[omadock] Failed resolving live toplevel for address:", e)
+    }
     return null
   }
 
@@ -2578,7 +2604,9 @@ Item {
         var h = tops[i]
         if (h && root.windowAddress(h) === addr) return h
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[omadock] Failed resolving live Hyprland toplevel for address:", e)
+    }
     return null
   }
 
@@ -3029,7 +3057,6 @@ Item {
       if (rawAddr) normAddr = "0x" + rawAddr
     }
 
-    // Direct address deletion if present
     if (normAddr && map[normAddr]) {
       delete map[normAddr]
       changed = true
@@ -3038,7 +3065,6 @@ Item {
     var allEntries = root.pinnedSection.concat(root.runningSection).concat(root.groupedSection || [])
     var targetEntries = []
 
-    // Find entries matching address or appId
     for (var i = 0; i < allEntries.length; i++) {
       var entry = allEntries[i]
       if (!entry) continue
@@ -3064,7 +3090,6 @@ Item {
       }
     }
 
-    // Direct raw appId deletion
     if (appId) {
       var rawId = DockModel.stripDesktop(appId)
       var normId = DockModel.normalizeId(appId)
@@ -3073,7 +3098,6 @@ Item {
       if (normId && map[normId]) { delete map[normId]; changed = true }
     }
 
-    // Delete keys for matched entries
     for (var t = 0; t < targetEntries.length; t++) {
       var tEntry = targetEntries[t]
       var tId = tEntry.appId || tEntry.id
@@ -3251,7 +3275,7 @@ Item {
   function saveConfig() {
     var conf = {}
     try {
-      var txt = DockModel.readCapped(configFile.text(), DockModel.MAX_CONFIG_BYTES).trim()
+      var txt = DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES).trim()
       if (txt) conf = JSON.parse(txt) || {}
     } catch (e) {
       conf = {}
@@ -3517,13 +3541,17 @@ Item {
         action.execute()
         return
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[omadock] Failed executing desktop action:", e)
+    }
 
     try {
       if (action.command && action.command.length > 0) {
         Quickshell.execDetached(action.command)
       }
-    } catch (e2) {}
+    } catch (e2) {
+      console.warn("[omadock] Failed launching desktop action command:", e2)
+    }
   }
 
   function isWindowFocused(win) {
@@ -3562,11 +3590,9 @@ Item {
     }
     root.contextWindowList = wins
     root.contextWindows = wins.length
-    try {
-      if (root.appContextMenuColumnRef && root.appContextMenuColumnRef.selectedWindowIdx >= wins.length) {
-        root.appContextMenuColumnRef.selectedWindowIdx = -1
-      }
-    } catch (e) {}
+    if (root.appContextMenuColumnRef && root.appContextMenuColumnRef.selectedWindowIdx >= wins.length) {
+      root.appContextMenuColumnRef.selectedWindowIdx = -1
+    }
   }
 
   function openContext(appId, x, y) {
@@ -3582,7 +3608,7 @@ Item {
     var canonicalId = (deskEntry && deskEntry.id) ? deskEntry.id : appId
     root.contextPinned = DockModel.isPinned(root.pinnedIds, appId) || (canonicalId !== appId && DockModel.isPinned(root.pinnedIds, canonicalId))
     root.contextDesktopActions = (deskEntry && deskEntry.actions) ? deskEntry.actions : []
-    try { if (root.appContextMenuColumnRef) root.appContextMenuColumnRef.selectedWindowIdx = -1 } catch (e) {}
+    if (root.appContextMenuColumnRef) root.appContextMenuColumnRef.selectedWindowIdx = -1
     root.contextX = x
     root.contextY = y
   }

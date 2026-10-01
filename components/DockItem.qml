@@ -343,7 +343,8 @@ Item {
 
           // If context menu is open for this app, synchronize its selection
           if (root && root.contextAppId === item.appId) {
-            try { appContextMenuColumn.selectedWindowIdx = item.selectedWindowIdx } catch (e) {}
+            if (typeof appContextMenuColumn !== "undefined" && appContextMenuColumn)
+              appContextMenuColumn.selectedWindowIdx = item.selectedWindowIdx
             return
           }
 
@@ -410,11 +411,10 @@ Item {
         // If context menu is open for this app:
         if (root && root.contextAppId === item.appId) {
           var chosenIdx = item.selectedWindowIdx
-          try {
-            if (appContextMenuColumn && appContextMenuColumn.selectedWindowIdx >= 0) {
-              chosenIdx = appContextMenuColumn.selectedWindowIdx
-            }
-          } catch (e) {}
+          if (typeof appContextMenuColumn !== "undefined" && appContextMenuColumn
+              && appContextMenuColumn.selectedWindowIdx >= 0) {
+            chosenIdx = appContextMenuColumn.selectedWindowIdx
+          }
 
           if (chosenIdx >= 0 && item.windowList && chosenIdx < item.windowList.length) {
             var chosenWin = item.windowList[chosenIdx]
@@ -423,7 +423,8 @@ Item {
             }
           }
           item.selectedWindowIdx = -1
-          try { appContextMenuColumn.selectedWindowIdx = -1 } catch (e2) {}
+          if (typeof appContextMenuColumn !== "undefined" && appContextMenuColumn)
+            appContextMenuColumn.selectedWindowIdx = -1
           root.closeContext()
           return
         }

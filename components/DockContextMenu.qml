@@ -510,6 +510,7 @@ BorderSurface {
                   text: mediaButton.modelData.id === "toggle"
                     ? (mediaButton.player && mediaButton.player.isPlaying ? "󰏤" : "󰐊")
                     : mediaButton.modelData.glyph
+                  textFormat: Text.PlainText
                   color: mediaButton.modelData.id === "toggle" ? Color.accent : Color.menu.text
                   font.family: Style.font.family
                   font.pixelSize: Style.font.iconLarge

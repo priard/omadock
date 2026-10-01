@@ -4,3 +4,4 @@ agent.md
 
 # Raw screenshot captures
 screenshots/
+__pycache__/

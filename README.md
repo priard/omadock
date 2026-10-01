@@ -4,7 +4,7 @@
 
 ### *A modern, fluid, zero-CPU application dock engineered for Omarchy Linux*
 
-[![Release](https://img.shields.io/badge/release-v3.7.1-6c7086?style=for-the-badge&logo=github&logoColor=white&labelColor=1e1e2e)](https://github.com/thepathless/omadock/releases)
+[![Release](https://img.shields.io/github/v/release/thepathless/omadock?style=for-the-badge&logo=github&logoColor=white&labelColor=1e1e2e&color=6c7086)](https://github.com/thepathless/omadock/releases)
 [![Omarchy](https://img.shields.io/badge/omarchy-4.0.3+-cba6f7?style=for-the-badge&logo=archlinux&logoColor=white&labelColor=1e1e2e)](https://omarchy.org)
 [![Hyprland](https://img.shields.io/badge/compositor-Hyprland-89b4fa?style=for-the-badge&logo=wayland&logoColor=white&labelColor=1e1e2e)](https://hyprland.org)
 [![Quickshell](https://img.shields.io/badge/shell-Quickshell_Qt6-a6e3a1?style=for-the-badge&logo=qt&logoColor=white&labelColor=1e1e2e)](https://quickshell.org)
@@ -25,7 +25,7 @@
   <a href="#%EF%B8%8F-configuration-reference"><b>Configuration</b></a> •
   <a href="#-keyboard-shortcuts-via-ipc"><b>Keybindings</b></a> •
   <a href="#-faq"><b>FAQ</b></a> •
-  <a href="https://github.com/sponsors/thepathless"><b>Sponsor ❤️</b></a>
+  <a href="#support-the-project"><b>Support</b></a>
 </p>
 
 </div>
@@ -34,9 +34,13 @@
 
 ## ❤️ Support the project
 
-Omadock is built by one person — **suva ([@thepathless](https://github.com/thepathless))**, a medical student in India who codes between classes and clinics. It's free, and it always will be — but building it costs money I don't quite have: monthly AI coding tokens, and a laptop that's falling apart (dead WiFi, sticky keys, a trackpad with a mind of its own) — so I'm saving for a **[Dell XPS 13 (2026)](https://www.dell.com/en-us/blog/year-of-the-linux-laptop-omarchy-on-xps/)**.
+Omadock is built by **[thepathless](https://github.com/thepathless)**, a medical student in India who codes between classes and clinics. It's free, and it always will be — but building it costs money I don't quite have: monthly AI coding tokens, and a laptop that's falling apart (dead WiFi, sticky keys, a trackpad with a mind of its own) — so I'm saving for a **[Dell XPS 13 (2026)](https://www.dell.com/en-us/blog/year-of-the-linux-laptop-omarchy-on-xps/)**.
 
 If Omadock earns a place on your desktop, [**sponsoring me**](https://github.com/sponsors/thepathless) keeps the AI lights on and the laptop fund growing. Every supporter is honored on the [**supporters wall**](SPONSORS.md) 💝 — with love, no tiers, no perks.
+
+<p align="center">
+  <a href="https://github.com/sponsors/thepathless"><img src="https://img.shields.io/badge/Sponsor_%E2%9D%A4%EF%B8%8F-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor ❤️ on GitHub" /></a>
+</p>
 
 ### 💻 Laptop fund
 
@@ -452,7 +456,7 @@ Run <code>omarchy restart shell</code> in your terminal to instantly reload the 
 ## 🛠️ Diagnostics & Validation
 
 ```bash
-# Validate manifest compliance against Omarchy 4.0.1+ standards
+# Validate manifest compliance against Omarchy 4.0.3+ standards
 omarchy plugin validate ~/Projects/omadock
 
 # Inspect live compositor journal logs
@@ -472,31 +476,6 @@ Copyright © 2026 **[thepathless](https://github.com/thepathless)**.
 
 ---
 
-## 📋 Version Changes & Bug Fixes
+## 📋 Releases & Changelog
 
-A running changelog of user-facing changes. Full detail lives in the [commit history](https://github.com/thepathless/omadock/commits/main).
-
-### v3.8.0 — 2026-09-28
-- **Feature ([#11](https://github.com/thepathless/omadock/pull/11), contributed by [@G-Pappas](https://github.com/G-Pappas)):** opt-in **multi-monitor mode** — one dock per connected monitor, each listing only the windows on that monitor (like the Windows taskbar on every display). Pinned apps appear on every dock, minimized tiles follow their origin monitor, monitors are hotplug-aware, and keybinds act on the focused monitor's dock first. Enable via *Settings → Placement & Alignment → Show on All Monitors* or `"multiMonitor": true`. **Off by default** — single-dock behavior is unchanged.
-
-### v3.7.3 — 2026-09-28
-- **Bug Fix ([#9](https://github.com/thepathless/omadock/issues/9)):** the dock no longer vanishes after suspend/resume. When outputs go away (sleep, monitor unplug, DPMS) Hyprland closes every layer surface and Quickshell deletes the dock window — the dock now detects that and rebuilds its surface as soon as a real screen returns.
-- **Bug Fix:** launching an app that is no longer installed now shows an **“App no longer installed”** notification instead of failing silently — stale pinned icons no longer bounce on click.
-- **Improvement:** *Pin to Dock* validates the desktop id first and refuses ids that no longer resolve to an installed app, with the same clear notification.
-- **Tooling:** the launch-id validation harness (`tests/launch-harness.py`) is now part of the repository's verification suite — it checks every installed desktop-entry id against the dock's `gtk-launch` suffix logic (Desktop Entry Spec + GIO ground truths).
-
-### v3.7.2 — 2026-09-25
-- **Bug Fix:** desktop ids that themselves end in `.desktop` (e.g. `org.telegram.desktop`) failed to launch — the `.desktop` suffix is now always appended for `gtk-launch`.
-
-### v3.7.1 — 2026-09-23
-- **Security (marketplace review):** watched config reads are byte-capped, persisted collections (app groups, pinned folders) are shape/size-bounded, and reload cycles are debounced.
-
-### v3.7.0 — 2026-09-22
-- **Feature:** expanded dock hitbox, smoother autohide slide curves, and increased hide hysteresis.
-- **Feature:** absolute-path icon index — dock icons survive broken or missing icon themes (e.g. `vantablack` → `Yaru-gray`).
-- **Feature:** theme accent color (`Color.accent`) replaces the never-defined `Color.bar.active` fallback across all 41 touchpoints.
-
-### v3.6.x highlights
-- **v3.6.5:** monochrome (`white`/`black`/`symbolic`) folder icons preserved through icon resolution.
-- **v3.6.4 / v3.6.3:** explicit Yaru folder-color paths kept; `noDisplay` desktop entries hidden from the dock.
-- **v3.6.0:** stable baseline — zero-CPU region autohide, tiling window adaptation, app groups, folders, minimized-window tiles.
+Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).

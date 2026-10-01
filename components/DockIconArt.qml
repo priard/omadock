@@ -82,25 +82,43 @@ Item {
       smooth: true
       mipmap: true
       asynchronous: true
-      // Also shows under a mono / dots effect that is not at full strength.
+      // Also shows under a mono / dots effect that is not at full strength,
+      // and while the pixel grid samples it. That grid stands in for the
+      // image on screen and hides it from the scene itself (hideSource), so
+      // the image stays rendered as the grid's texture and never shows
+      // through the coarse cells.
       readonly property bool underEffect: (art.shownStyle === "mono" || art.shownStyle === "dots") && art.strength < 1
-      visible: !art.hasCustom && (art.shownStyle === "original" || underEffect)
+      visible: !art.hasCustom && (art.shownStyle === "original" || underEffect || art.shownStyle === "pixel")
       opacity: underEffect ? 1 - art.strength : 1
     }
 
     Item {
       id: custom
       anchors.fill: parent
-      visible: art.shownStyle === "original" || art.shownStyle === "mono" || (art.shownStyle === "dots" && art.strength < 1)
+      // Declared content follows the same rule as the image: it stays
+      // rendered while the pixel grid reads from it, and the grid hides it
+      // from the scene again.
+      visible: art.shownStyle === "original" || art.shownStyle === "mono"
+        || (art.shownStyle === "dots" && art.strength < 1)
+        || (art.shownStyle === "pixel" && art.hasCustom)
       opacity: art.shownStyle === "dots" ? 1 - art.strength : 1
     }
 
     // Pixel style: the icon rendered onto its grid (averaging each cell) and
     // scaled back up unsmoothed, so every cell is a hard square.
+    //
+    // This is the grid's side of the source contract: the item it samples
+    // (art.styleSource: img, or declared content) stays rendered for this
+    // shader, and the grid hides that source from the scene itself with
+    // hideSource, instead of leaning on the source's own visible flag to
+    // keep it off screen.
     ShaderEffectSource {
       anchors.fill: parent
       visible: art.shownStyle === "pixel"
       sourceItem: art.iconStyle === "pixel" ? art.styleSource : null
+      // Only while the grid is the thing on screen: hovering back to the
+      // original must not leave the image hidden behind an invisible grid.
+      hideSource: art.shownStyle === "pixel"
       textureSize: Qt.size(art.cells, art.cells)
       smooth: false
       live: true

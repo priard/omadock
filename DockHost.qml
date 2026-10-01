@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "DockModel.js" as DockModel
+import "components"
 
 // Entry point. Runs one Dock per monitor when "multiMonitor" is on, else a
 // single Dock on the configured "screen" exactly as before. Each per-monitor
@@ -42,7 +43,7 @@ Item {
   }
 
   function loadConfig() {
-    var raw = DockModel.readCapped(configFile.text(), DockModel.MAX_CONFIG_BYTES).trim()
+    var raw = DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES).trim()
     var parsed = {}
     if (raw) {
       try { parsed = JSON.parse(raw) || {} } catch (e) { parsed = {} }
@@ -51,10 +52,15 @@ Item {
     host.screenName = typeof parsed.screen === "string" ? parsed.screen : ""
   }
 
-  FileView {
+  // CappedFileView gates the read (regular file + byte ceiling) before any
+  // content enters QML — the host shares the mutable config with the dock, so
+  // the same pre-load cap applies here.
+  CappedFileView {
     id: configFile
     path: host.configPath
+    maxBytes: DockModel.MAX_CONFIG_BYTES
     watchChanges: true
+    atomicWrites: false
     onLoaded: host.loadConfig()
     onFileChanged: configReloadDebounce.restart()
   }
