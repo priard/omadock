@@ -784,6 +784,17 @@ PanelWindow {
               value: root ? Math.max(0, root.borderOpacity) : 1
               onCommitted: function(v) { root.setBorderOpacity(Math.round(v * 100) / 100) }
             }
+            ChoiceRow {
+              label: "Divider style"
+              hint: "Theme draws the lines like the dock's border, in its colour, opacity and width."
+              visible: root ? !root.splitSections : true
+              options: [
+                { value: "simple", label: "Simple" },
+                { value: "theme", label: "Theme" }
+              ]
+              value: root ? root.dividerStyle : "simple"
+              onPicked: function(v) { root.setOption("dividerStyle", v) }
+            }
 
             SectionLabel { text: "Shape" }
 
@@ -1159,17 +1170,6 @@ PanelWindow {
               suffix: "%"
               value: root ? root.dividerHeight : 70
               onCommitted: function(v) { root.setOption("dividerHeight", Math.round(v)) }
-            }
-            ChoiceRow {
-              label: "Divider style"
-              hint: "Theme draws the lines like the dock's border, in its colour and width."
-              visible: root ? !root.splitSections : true
-              options: [
-                { value: "simple", label: "Simple" },
-                { value: "theme", label: "Theme" }
-              ]
-              value: root ? root.dividerStyle : "simple"
-              onPicked: function(v) { root.setOption("dividerStyle", v) }
             }
           }
 
