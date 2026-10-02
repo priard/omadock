@@ -1262,18 +1262,68 @@ PanelWindow {
                 width: parent ? parent.width : Style.space(420)
                 implicitHeight: Math.max(thumbView.implicitHeight, presetTexts.implicitHeight) + Style.spacing.lg * 2
 
-                PresetThumb {
+                // The thumbnail is the Apply button: an accent ring marks the
+                // preset in use, hovering another one offers to apply it.
+                Item {
                   id: thumbView
-                  rootRef: root
-                  look: presetRow.modelData.look
+                  readonly property bool active: presetRow.modelData.id === root.activePresetId
+                  implicitWidth: thumbArt.implicitWidth
+                  implicitHeight: thumbArt.implicitHeight
+                  width: implicitWidth
+                  height: implicitHeight
                   anchors.left: parent.left
+                  anchors.leftMargin: Style.space(4)
                   anchors.verticalCenter: parent.verticalCenter
+
+                  PresetThumb {
+                    id: thumbArt
+                    anchors.fill: parent
+                    rootRef: root
+                    look: presetRow.modelData.look
+                  }
+
+                  Rectangle {
+                    anchors.fill: parent
+                    radius: Style.space(8)
+                    visible: thumbMouse.containsMouse && !thumbView.active
+                    color: Qt.rgba(0, 0, 0, 0.45)
+                    Text {
+                      anchors.centerIn: parent
+                      text: "Apply"
+                      textFormat: Text.PlainText
+                      color: "#ffffff"
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.body
+                      font.bold: true
+                    }
+                  }
+
+                  Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: -Style.space(3)
+                    radius: Style.space(11)
+                    color: "transparent"
+                    visible: thumbView.active || thumbMouse.containsMouse
+                    border.width: Style.space(2)
+                    border.color: thumbView.active ? Color.accent : Util.alpha(Color.accent, 0.4)
+                  }
+
+                  MouseArea {
+                    id: thumbMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: thumbView.active ? Qt.ArrowCursor : Qt.PointingHandCursor
+                    onClicked: {
+                      panel.endPresetEdit()
+                      root.applyPreset(presetRow.modelData.id)
+                    }
+                  }
                 }
 
                 Column {
                   id: presetTexts
                   anchors.left: thumbView.right
-                  anchors.leftMargin: Style.spacing.xl
+                  anchors.leftMargin: Style.spacing.xl + Style.space(3)
                   anchors.right: presetActions.left
                   anchors.rightMargin: Style.spacing.lg
                   anchors.verticalCenter: parent.verticalCenter
@@ -1325,13 +1375,6 @@ PanelWindow {
                   anchors.verticalCenter: parent.verticalCenter
                   spacing: Style.spacing.md
 
-                  Button {
-                    visible: !presetRow.confirming
-                    text: "Apply"
-                    foreground: Color.menu.text
-                    bordered: true
-                    onClicked: { panel.endPresetEdit(); root.applyPreset(presetRow.modelData.id) }
-                  }
                   Button {
                     visible: !presetRow.confirming
                     text: "Update"
