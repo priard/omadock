@@ -14,8 +14,8 @@ Item {
   readonly property var dock: rootRef
   property var look: ({})
 
-  implicitWidth: Style.space(160)
-  implicitHeight: Style.space(44)
+  implicitWidth: Style.space(168)
+  implicitHeight: Style.space(64)
 
   function val(key, fallback) {
     return (thumb.look && thumb.look[key] !== undefined) ? thumb.look[key] : fallback
@@ -24,10 +24,11 @@ Item {
     try { return Qt.color(s) } catch (e) { return fallback }
   }
 
-  readonly property real bodyHeight: thumb.height - Style.space(12)
+  // The dock sits at the bottom of a small "screen", as on the desktop.
+  readonly property real bodyHeight: Math.round(thumb.height * 0.48)
   // Scale from the real dock (about 60 px tall) to this drawing.
   readonly property real k: thumb.bodyHeight / 60
-  readonly property real iconSize: Math.round(thumb.bodyHeight * 0.52)
+  readonly property real iconSize: Math.round(thumb.bodyHeight * 0.6)
   readonly property real iconGap: Style.space(3)
   readonly property real sectionPad: Style.space(4)
 
@@ -150,15 +151,19 @@ Item {
     }
   }
 
-  // Backdrop: two theme colours, so opacity and a missing background show.
+  // The "screen": a soft wallpaper from the theme's accent into its
+  // background, so opacity and a missing background show, with a thin edge
+  // that keeps it apart from the panel behind it.
   Rectangle {
     anchors.fill: parent
-    radius: Style.space(6)
+    radius: Style.space(8)
     gradient: Gradient {
-      orientation: Gradient.Horizontal
-      GradientStop { position: 0; color: Qt.darker(Color.accent, 1.6) }
-      GradientStop { position: 1; color: Qt.lighter(Color.menu.background, 1.05) }
+      GradientStop { position: 0; color: thumb.mix(Color.menu.background, Color.accent, 0.55) }
+      GradientStop { position: 0.6; color: thumb.mix(Color.menu.background, Color.accent, 0.2) }
+      GradientStop { position: 1; color: Qt.darker(Color.menu.background, 1.15) }
     }
+    border.width: 1
+    border.color: Util.alpha(Color.menu.text, 0.12)
   }
 
   Loader {
@@ -171,7 +176,9 @@ Item {
   // them, or each on its own panel when split.
   Row {
     id: sections
-    anchors.centerIn: parent
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.bottom: parent.bottom
+    anchors.bottomMargin: Style.space(5)
     height: thumb.bodyHeight
     spacing: thumb.split ? Style.space(4) : 0
 
