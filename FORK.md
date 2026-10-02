@@ -16,3 +16,6 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 ## Upstreamed
 
 - #12 settings panel, background/shadow/border switches (merged 2026-09-29).
+- #13 dock polish, stacks, icon styles, blur/shadow controls (landed in v4.0.0).
+- #14 split panels, folder and group reordering, drag improvements, drive
+  section (merged 2026-10-02).
