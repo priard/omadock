@@ -187,3 +187,211 @@ class Sampler:
 
 
 # --- driver -----------------------------------------------------------------
+SHELL_PATH = "/usr/share/omarchy/shell"
+OUTSIDE_Y = 1250      # enter the dock from above so hover-enter effects fire
+DWELL = 0.15          # seconds per item while sweeping
+
+SCENARIOS = [         # (name, seconds, description)
+    ("S0", 30, "idle, pointer away from the dock"),
+    ("S1", 30, "pointer sweeps across every item and back"),
+    ("S2", 15, "tooltip of an app with >= 2 windows (window previews)"),
+    ("S3", 15, "settings panel open"),
+    ("S4", 30, "idle again after S1-S3 (leak check)"),
+    ("S6", 15, "urgent window present, pointer away"),
+]
+EVENT_SWITCHES = 20
+
+
+def to_screen(items, layer):
+    out = []
+    for it in items:
+        it = dict(it)
+        it["cx"] = layer["x"] + it["x"] + it["w"] // 2
+        it["cy"] = layer["y"] + it["y"] + it["h"] // 2
+        out.append(it)
+    return out
+
+
+def sweep_path(items):
+    pts = [(it["cx"], it["cy"]) for it in sorted(items, key=lambda i: (i["cx"], i["cy"]))]
+    return pts + pts[-2:0:-1] if len(pts) > 1 else pts
+
+
+def pick_targets(items):
+    multi = next((i for i in items if i["kind"] == "app" and i.get("windows", 0) >= 2), None)
+    urgent = next((i for i in items if i.get("urgent")), None)
+    return {"multi": multi, "urgent": urgent}
+
+
+def first_free_workspace(used_ids):
+    used = {int(i) for i in used_ids}
+    n = 1
+    while n in used:
+        n += 1
+    return str(n)
+
+
+def _run(cmd, timeout=10):
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    return r.stdout
+
+
+class Desktop:
+    """Everything that touches the live desktop. Pointer moves only."""
+
+    def ipc(self, fn, *args):
+        return _run(["qs", "-p", SHELL_PATH, "ipc", "call", "omadock", fn, *args]).strip()
+
+    def hypr_json(self, *args):
+        return json.loads(_run(["hyprctl", *args, "-j"]) or "null")
+
+    def cursor(self):
+        c = self.hypr_json("cursorpos")
+        return int(c["x"]), int(c["y"])
+
+    def move(self, x, y):
+        _run(["hyprctl", "dispatch", f"hl.dsp.cursor.move({{x={int(x)}, y={int(y)}}})"])
+
+    def layer(self):
+        for mon in (self.hypr_json("layers") or {}).values():
+            for layers in mon.get("levels", {}).values():
+                for l in layers:
+                    if l.get("namespace") == "omadock":
+                        return l
+        return None
+
+    def items(self):
+        layer = self.layer()
+        if layer is None:
+            return []
+        try:
+            raw = json.loads(self.ipc("itemGeometry") or "[]")
+        except json.JSONDecodeError:
+            return []
+        return to_screen(raw, layer)
+
+    def quickshell_pid(self):
+        out = _run(["pgrep", "-x", "quickshell"]).split()
+        return int(out[0]) if out else None
+
+    def hyprland_pid(self):
+        out = _run(["pgrep", "-x", "Hyprland"]).split()
+        return int(out[0]) if out else None
+
+    def active_workspace(self):
+        return str(self.hypr_json("activeworkspace")["name"])
+
+    def focus_workspace(self, name):
+        safe = str(name).replace("\\", "\\\\").replace('"', '\\"')
+        _run(["hyprctl", "dispatch", f'hl.dsp.focus({{ workspace = "{safe}" }})'])
+
+    def free_workspace(self):
+        return first_free_workspace([w["id"] for w in self.hypr_json("workspaces")])
+
+
+def measure(desktop, seconds, action=None):
+    """One run: sample for `seconds` while `action(deadline)` drives the desktop."""
+    s = Sampler(desktop.quickshell_pid(), desktop.hyprland_pid())
+    s.start()
+    deadline = time.monotonic() + seconds
+    if action:
+        action(deadline)
+    remaining = deadline - time.monotonic()
+    if remaining > 0:
+        time.sleep(remaining)
+    return s.stop()
+
+
+def run_scenarios(desktop, repeat, events, log):
+    items = desktop.items()
+    for _ in range(3):          # a hidden dock reports no visible items
+        if items:
+            break
+        desktop.ipc("reveal")
+        time.sleep(1)
+        items = desktop.items()
+    targets = pick_targets(items)
+    away = (desktop.layer() or {"x": 0, "w": 400})
+    away_xy = (away["x"] + away["w"] // 2, OUTSIDE_Y // 2)
+    results = {}
+
+    def park():
+        desktop.move(*away_xy)
+
+    def sweep(deadline):
+        path = sweep_path(items)
+        if not path:
+            return
+        desktop.move(path[0][0], OUTSIDE_Y)
+        while time.monotonic() < deadline:
+            for x, y in path:
+                if time.monotonic() >= deadline:
+                    break
+                desktop.move(x, y)
+                time.sleep(DWELL)
+
+    def hover_multi(deadline):
+        t = targets["multi"]
+        desktop.move(t["cx"], OUTSIDE_Y)
+        time.sleep(0.2)
+        desktop.move(t["cx"], t["cy"])
+
+    def settings(deadline):
+        desktop.ipc("openSettings")
+
+    plan = [
+        ("S0", None, None),
+        ("S1", sweep, None if items else "no dock items found"),
+        ("S2", hover_multi, None if targets["multi"] else "no app with >= 2 windows"),
+        ("S3", settings, None),
+        ("S4", None, None),
+        ("S6", None, None if targets["urgent"] else "no urgent window"),
+    ]
+    durations = {name: secs for name, secs, _ in SCENARIOS}
+    for name, action, skip in plan:
+        if skip:
+            log(f"{name}: skipped ({skip})")
+            results[name] = {"runs": [], "summary": {}, "skipped": skip}
+            continue
+        runs = []
+        for i in range(repeat):
+            park()
+            time.sleep(2)
+            log(f"{name} run {i + 1}/{repeat} ({durations[name]} s)")
+            runs.append(measure(desktop, durations[name], action))
+            if name == "S3":
+                desktop.ipc("closeSettings")
+            park()
+        results[name] = {"runs": runs, "summary": summarize_runs(runs), "skipped": None}
+    if events:
+        results["S5"] = run_events(desktop, repeat, log)
+    return results
+
+
+NUMERIC = ["rss_mb", "rss_mb_end", "pss_mb", "vram_mib", "hypr_vram_mib", "cpu_pct",
+           "hypr_cpu_pct", "threads", "fds", "ctxsw_per_s"]
+
+
+def summarize_runs(runs):
+    good = [r for r in runs if r.get("valid")]
+    return {k: summarize([r.get(k) for r in good]) for k in NUMERIC}
+
+
+def run_events(desktop, repeat, log):
+    home = desktop.active_workspace()
+    other = desktop.free_workspace()
+    runs = []
+    try:
+        for i in range(repeat):
+            log(f"S5 run {i + 1}/{repeat} ({EVENT_SWITCHES} switches {home} <-> {other})")
+
+            def flip(deadline):
+                for n in range(EVENT_SWITCHES):
+                    desktop.focus_workspace(other if n % 2 == 0 else home)
+                    time.sleep(0.5)
+                desktop.focus_workspace(home)
+
+            runs.append(measure(desktop, EVENT_SWITCHES * 0.5 + 2, flip))
+    finally:
+        desktop.focus_workspace(home)
+    return {"runs": runs, "summary": summarize_runs(runs), "skipped": None}

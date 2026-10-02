@@ -67,5 +67,40 @@ class SamplerSelf(unittest.TestCase):
         self.assertIn("cpu_threads", m)
 
 
+class Geometry(unittest.TestCase):
+    ITEMS = [
+        {"id": "b", "kind": "app", "x": 300, "y": 1300, "w": 60, "h": 60, "windows": 3, "urgent": False},
+        {"id": "a", "kind": "app", "x": 200, "y": 1300, "w": 60, "h": 60, "windows": 1, "urgent": True},
+        {"id": "f", "kind": "folder", "x": 400, "y": 1300, "w": 60, "h": 60, "windows": 0, "urgent": False},
+    ]
+
+    def test_to_screen_adds_centres(self):
+        out = bench.to_screen(self.ITEMS, {"x": 10, "y": 36})
+        self.assertEqual((out[0]["cx"], out[0]["cy"]), (340, 1366))
+
+    def test_sweep_path_goes_there_and_back(self):
+        pts = bench.sweep_path(bench.to_screen(self.ITEMS, {"x": 0, "y": 0}))
+        self.assertEqual([p[0] for p in pts], [230, 330, 430, 330])
+
+    def test_sweep_path_empty(self):
+        self.assertEqual(bench.sweep_path([]), [])
+
+    def test_pick_targets(self):
+        t = bench.pick_targets(self.ITEMS)
+        self.assertEqual(t["multi"]["id"], "b")
+        self.assertEqual(t["urgent"]["id"], "a")
+
+    def test_pick_targets_none(self):
+        t = bench.pick_targets([self.ITEMS[2]])
+        self.assertIsNone(t["multi"])
+        self.assertIsNone(t["urgent"])
+
+
+class Workspaces(unittest.TestCase):
+    def test_free_workspace_skips_used(self):
+        self.assertEqual(bench.first_free_workspace([1, 2, 3, 5]), "4")
+        self.assertEqual(bench.first_free_workspace([]), "1")
+        self.assertEqual(bench.first_free_workspace([-98, 1]), "2")
+
 if __name__ == "__main__":
     unittest.main()
