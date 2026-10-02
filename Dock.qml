@@ -948,20 +948,25 @@ Item {
   // dark dock reads at a lower ratio than a dark one on a light dock, and
   // glares sooner, so it stops earlier.
   // The dock's rim, shared by the panels and by "theme" dividers.
-  readonly property color rimColor: {
+  readonly property real rimAlpha: {
     // Specular Frosted Glass Rim: Crisp highlight with high alpha for contrast on dark and light surfaces
     var autoAlpha = (root.effectiveDockOpacity < 0.25 || root.dockBgColor === "none")
       ? 0.48
       : Math.max(0.24, root.effectiveDockOpacity * 0.35)
     // Manual override from Settings → Appearance → Border opacity.
-    var rimAlpha = root.borderOpacity < 0 ? autoAlpha : Math.max(0.0, Math.min(1.0, root.borderOpacity))
-    return Util.alpha(root.dockForeground, rimAlpha)
+    return root.borderOpacity < 0 ? autoAlpha : Math.max(0.0, Math.min(1.0, root.borderOpacity))
   }
+  readonly property color rimColor: Util.alpha(root.dockForeground, root.rimAlpha)
 
   // Divider lines: "simple" is a thin line in dividerColor, "theme" is drawn
-  // like the rim, in its colour and width.
-  readonly property color dividerLineColor: root.dividerStyle === "theme" ? root.rimColor : root.dividerColor
-  readonly property real dividerLineWidth: root.dividerStyle === "theme" ? root.borderWidth : Style.space(1)
+  // like the rim, in its colour, opacity and width, and "custom" in the
+  // rim's colour with its own width and opacity.
+  readonly property color dividerLineColor: root.dividerStyle === "theme" ? root.rimColor
+    : root.dividerStyle === "custom" ? Util.alpha(root.dockForeground, root.dividerOpacity)
+    : root.dividerColor
+  readonly property real dividerLineWidth: root.dividerStyle === "theme" ? root.borderWidth
+    : root.dividerStyle === "custom" ? root.dividerWidth
+    : Style.space(1)
 
   readonly property color dividerColor: {
     var bg = Qt.color(root.iconBackdropColor)
@@ -1060,6 +1065,8 @@ Item {
   // Length of the section divider lines, in percent of the dock's height.
   property int dividerHeight: 70
   property string dividerStyle: "simple"
+  property real dividerWidth: 1.5
+  property real dividerOpacity: 0.4
   property string minimizeMode: "active"
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
@@ -2138,7 +2145,9 @@ Item {
     root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" ? parsed.itemSpacing : 4
     root.sectionSpacing = parsed && typeof parsed.sectionSpacing === "number" ? Math.max(0, Math.min(48, Math.round(parsed.sectionSpacing))) : 18
     root.dividerHeight = parsed && typeof parsed.dividerHeight === "number" && isFinite(parsed.dividerHeight) ? Math.max(20, Math.min(100, Math.round(parsed.dividerHeight))) : 70
-    root.dividerStyle = parsed && parsed.dividerStyle === "theme" ? "theme" : "simple"
+    root.dividerStyle = parsed && ["theme", "custom"].indexOf(parsed.dividerStyle) >= 0 ? parsed.dividerStyle : "simple"
+    root.dividerWidth = parsed && typeof parsed.dividerWidth === "number" && isFinite(parsed.dividerWidth) ? Math.max(1, Math.min(6, Math.round(parsed.dividerWidth * 2) / 2)) : 1.5
+    root.dividerOpacity = parsed && typeof parsed.dividerOpacity === "number" && isFinite(parsed.dividerOpacity) ? Math.max(0, Math.min(1, parsed.dividerOpacity)) : 0.4
     if (parsed && typeof parsed.minimizeMode === "string") {
       root.minimizeMode = parsed.minimizeMode
     } else if (parsed && parsed.clickToMinimize === true) {
@@ -2501,6 +2510,25 @@ Item {
   // Plain value settings from the settings panel: set, persist.
   function setOption(key, value) {
     root[key] = value
+    root.saveConfig()
+  }
+
+  // Leaving "theme" for "custom" starts from the rim's width and opacity, so
+  // the lines look the same until changed.
+  function setDividerStyle(style) {
+    if (style === "custom" && root.dividerStyle === "theme") {
+      root.dividerWidth = root.borderWidth
+      root.dividerOpacity = Math.round(root.rimAlpha * 100) / 100
+    }
+    root.dividerStyle = style
+    root.saveConfig()
+  }
+
+  // "theme" dividers follow the rim, so they turn "custom" when it goes
+  // away: they keep their look and stay adjustable.
+  function setShowBorder(show) {
+    if (!show && root.dividerStyle === "theme") root.setDividerStyle("custom")
+    root.showBorder = show
     root.saveConfig()
   }
 
@@ -3375,6 +3403,8 @@ Item {
     conf.sectionSpacing = root.sectionSpacing
     conf.dividerHeight = root.dividerHeight
     conf.dividerStyle = root.dividerStyle
+    conf.dividerWidth = root.dividerWidth
+    conf.dividerOpacity = root.dividerOpacity
     conf.minimizeMode = root.minimizeMode
     conf.clickToMinimize = root.minimizeMode !== "off"
     conf.showUrgentHint = root.showUrgentHint

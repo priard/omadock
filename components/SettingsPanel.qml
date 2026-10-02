@@ -753,7 +753,7 @@ PanelWindow {
               label: "Border"
               hint: "Thin rim around the dock."
               checked: root ? root.showBorder : true
-              onToggled: root.setOption("showBorder", !root.showBorder)
+              onToggled: root.setShowBorder(!root.showBorder)
             }
             SliderRow {
               label: "Border width"
@@ -786,14 +786,35 @@ PanelWindow {
             }
             ChoiceRow {
               label: "Divider style"
-              hint: "Theme draws the lines like the dock's border, in its colour, opacity and width."
+              hint: "Theme draws the lines like the border, in its colour, opacity and width. Custom sets the width and opacity by hand."
               visible: root ? !root.splitSections : true
-              options: [
-                { value: "simple", label: "Simple" },
-                { value: "theme", label: "Theme" }
-              ]
+              options: (root && !root.showBorder)
+                ? [{ value: "simple", label: "Simple" }, { value: "custom", label: "Custom" }]
+                : [{ value: "simple", label: "Simple" }, { value: "theme", label: "Theme" }, { value: "custom", label: "Custom" }]
               value: root ? root.dividerStyle : "simple"
-              onPicked: function(v) { root.setOption("dividerStyle", v) }
+              onPicked: function(v) { root.setDividerStyle(v) }
+            }
+            SliderRow {
+              label: "Divider width"
+              visible: root ? (!root.splitSections && root.dividerStyle === "custom") : false
+              minimum: 1
+              maximum: 6
+              step: 0.5
+              suffix: " px"
+              displayDecimals: 1
+              value: root ? root.dividerWidth : 1.5
+              onCommitted: function(v) { root.setOption("dividerWidth", Math.round(v * 2) / 2) }
+            }
+            SliderRow {
+              label: "Divider opacity"
+              visible: root ? (!root.splitSections && root.dividerStyle === "custom") : false
+              minimum: 0
+              maximum: 1
+              step: 0.05
+              displayScale: 100
+              suffix: "%"
+              value: root ? root.dividerOpacity : 0.4
+              onCommitted: function(v) { root.setOption("dividerOpacity", Math.round(v * 100) / 100) }
             }
 
             SectionLabel { text: "Shape" }
