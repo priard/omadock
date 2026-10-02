@@ -1149,7 +1149,6 @@ PanelWindow {
               value: root ? root.sectionSpacing : 18
               onCommitted: function(v) { root.setOption("sectionSpacing", Math.round(v)) }
             }
-
           }
 
           // ================================================= Folders
