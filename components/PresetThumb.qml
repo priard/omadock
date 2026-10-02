@@ -28,9 +28,13 @@ Item {
   readonly property real bodyHeight: Math.round(thumb.height * 0.48)
   // Scale from the real dock (about 60 px tall) to this drawing.
   readonly property real k: thumb.bodyHeight / 60
-  readonly property real iconSize: Math.round(thumb.bodyHeight * 0.6)
+  readonly property real iconSize: Math.round(thumb.bodyHeight * 0.56)
   readonly property real iconGap: Style.space(3)
   readonly property real sectionPad: Style.space(4)
+  // Indicator dot and its gap under the icon; icon, gap and dot are centred
+  // together in the dock so the dot never runs into the icon or the rim.
+  readonly property real dotSize: Style.space(3)
+  readonly property real dotGap: Style.space(2)
 
   readonly property string bg: String(val("bgColor", "theme"))
   readonly property real opacityValue: {
@@ -215,7 +219,7 @@ Item {
 
           Row {
             anchors.centerIn: parent
-            anchors.verticalCenterOffset: -Style.space(1)
+            anchors.verticalCenterOffset: -(thumb.dotGap + thumb.dotSize) / 2
             spacing: thumb.iconGap
             Repeater {
               model: sectionSlot.modelData.count
@@ -276,8 +280,8 @@ Item {
                   visible: parent.n === 0 || parent.n === 3
                   anchors.horizontalCenter: parent.horizontalCenter
                   anchors.top: parent.bottom
-                  anchors.topMargin: Style.space(1)
-                  width: Style.space(3)
+                  anchors.topMargin: thumb.dotGap
+                  width: thumb.dotSize
                   height: width
                   radius: thumb.val("indicatorShape", "theme") === "square" ? 0 : width / 2
                   color: thumb.fg
