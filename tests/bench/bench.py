@@ -6,10 +6,14 @@ fixed scenarios on the live desktop and writes a JSON report. Pointer
 moves only; never clicks or types. See tests/bench/README.md.
 """
 
+import argparse
+import hashlib
 import json
 import os
+import socket
 import statistics
 import subprocess
+import sys
 import threading
 import time
 import xml.etree.ElementTree as ET
@@ -395,3 +399,176 @@ def run_events(desktop, repeat, log):
     finally:
         desktop.focus_workspace(home)
     return {"runs": runs, "summary": summarize_runs(runs), "skipped": None}
+# --- report / CLI -----------------------------------------------------------
+
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+CONFIG = os.path.expanduser("~/.config/omarchy/omadock.json")
+SHELL_JSON = os.path.expanduser("~/.config/omarchy/shell.json")
+SETTLE = 20          # seconds after a shell restart before measuring
+
+
+def result_path(out_dir, host, when):
+    return os.path.join(out_dir, time.strftime("%Y-%m-%d-%H%M", when) + f"-{host}.json")
+
+
+def dock_cost(disabled, enabled):
+    out = {}
+    for k in NUMERIC:
+        a, b = disabled.get(k), enabled.get(k)
+        out[k] = round(b - a, 2) if a is not None and b is not None else None
+    return out
+
+
+def _sh(cmd):
+    try:
+        return _run(cmd).strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def conditions(desktop):
+    cpu = next((l.split(":", 1)[1].strip() for l in open("/proc/cpuinfo")
+                if l.startswith("model name")), "")
+    mem_kb = _status_value(open("/proc/meminfo").read(), "MemTotal")
+    pid = desktop.quickshell_pid()
+    try:
+        cfg = hashlib.sha256(open(CONFIG, "rb").read()).hexdigest()[:16]
+    except OSError:
+        cfg = None
+    monitors = desktop.hypr_json("monitors") or []
+    items = desktop.items()
+    started = None
+    if pid:
+        boot = time.time() - float(open("/proc/uptime").read().split()[0])
+        start_ticks = int(open(f"/proc/{pid}/stat").read().rpartition(")")[2].split()[19])
+        started = round(time.time() - (boot + start_ticks / CLK_TCK))
+    return {
+        "host": socket.gethostname(),
+        "cpu": cpu,
+        "cores": os.cpu_count(),
+        "ram_gb": round(mem_kb / 1024 / 1024, 1),
+        "gpu": _sh(["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader"]),
+        "kernel": os.uname().release,
+        "packages": _sh(["pacman", "-Q", "omarchy", "quickshell", "hyprland", "qt6-base"]).splitlines(),
+        "dock_commit": _sh(["git", "-C", REPO, "rev-parse", "--short", "HEAD"]),
+        "dock_dirty": bool(_sh(["git", "-C", REPO, "status", "--porcelain", "--untracked-files=no"])),
+        "config_sha256": cfg,
+        "items": len(items),
+        "items_by_kind": {k: sum(1 for i in items if i["kind"] == k) for k in {i["kind"] for i in items}},
+        "windows": len(desktop.hypr_json("clients") or []),
+        "monitors": [f'{m["name"]} {m["width"]}x{m["height"]}@{m["refreshRate"]:.0f} scale {m["scale"]}'
+                     for m in monitors],
+        "dock_layer": desktop.layer(),
+        "quickshell_uptime_s": started,
+        "loadavg": os.getloadavg(),
+    }
+
+
+def wait_quiet(log, limit=1.5, timeout=30):
+    end = time.monotonic() + timeout
+    while os.getloadavg()[0] > limit and time.monotonic() < end:
+        time.sleep(2)
+    load = os.getloadavg()[0]
+    if load > limit:
+        log(f"warning: load average {load:.2f} stays above {limit}; results may be noisy")
+    return load
+
+
+def restart_shell(desktop, log):
+    _run(["omarchy", "restart", "shell"], timeout=60)
+    for _ in range(60):
+        if desktop.quickshell_pid():
+            break
+        time.sleep(1)
+    log(f"shell restarted, settling {SETTLE} s")
+    time.sleep(SETTLE)
+
+
+def run_full(desktop, log):
+    backup = open(SHELL_JSON, "rb").read()
+    result = {}
+    try:
+        log("full: disabling omadock")
+        _run(["omarchy", "plugin", "disable", "omadock"], timeout=30)
+        restart_shell(desktop, log)
+        result["disabled"] = measure(desktop, 30)
+    finally:
+        log("full: enabling omadock")
+        _run(["omarchy", "plugin", "enable", "omadock"], timeout=30)
+        with open(SHELL_JSON, "wb") as f:
+            f.write(backup)
+        restart_shell(desktop, log)
+    result["enabled"] = measure(desktop, 30)
+    result["dock_cost"] = dock_cost(result["disabled"], result["enabled"])
+    return result
+
+
+def print_summary(report):
+    print(f'\n## Benchmark {report["started"]} ({report["conditions"]["dock_commit"]}'
+          f'{" dirty" if report["conditions"]["dock_dirty"] else ""})\n')
+    print("| scenario | cpu % | hypr cpu % | rss MB | vram MiB | fds | ctxsw/s |")
+    print("|---|---|---|---|---|---|---|")
+    for name, sc in report["scenarios"].items():
+        if sc["skipped"]:
+            print(f"| {name} | skipped: {sc['skipped']} | | | | | |")
+            continue
+        s = sc["summary"]
+        cell = lambda k: "–" if s[k]["median"] is None else f'{s[k]["median"]:g}'
+        print(f"| {name} | {cell('cpu_pct')} | {cell('hypr_cpu_pct')} | {cell('rss_mb')} | "
+              f"{cell('vram_mib')} | {cell('fds')} | {cell('ctxsw_per_s')} |")
+    if report.get("full"):
+        c = report["full"]["dock_cost"]
+        print(f'\nDock cost (enabled - disabled): vram {c["vram_mib"]} MiB, '
+              f'rss {c["rss_mb"]} MB, cpu {c["cpu_pct"]} %')
+
+
+def cmd_run(args):
+    log = lambda m: print(f"[bench] {m}", file=sys.stderr, flush=True)
+    desktop = Desktop()
+    if not desktop.quickshell_pid() or desktop.layer() is None:
+        log("quickshell or the omadock layer is missing; run tests/smoke-test.sh")
+        return 1
+    if args.full and not args.yes:
+        answer = input("--full restarts the shell 2x (bar and dock vanish briefly). Continue? [y/N] ")
+        if answer.strip().lower() != "y":
+            return 1
+    cursor = desktop.cursor()
+    report = {"schema": 1, "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+              "args": vars(args) | {"func": None}, "full": None}
+    try:
+        report["load_before"] = wait_quiet(log)
+        report["conditions"] = conditions(desktop)
+        desktop.ipc("reveal")
+        report["scenarios"] = run_scenarios(desktop, args.repeat, args.events, log)
+        if args.full:
+            report["full"] = run_full(desktop, log)
+    finally:
+        desktop.ipc("closeSettings")
+        desktop.move(*cursor)
+    os.makedirs(args.out, exist_ok=True)
+    path = result_path(args.out, report["conditions"]["host"], time.localtime())
+    with open(path, "w") as f:
+        json.dump(report, f, indent=1)
+    print_summary(report)
+    shown = os.path.relpath(path, REPO) if path.startswith(REPO + os.sep) else path
+    print(f"\nSaved {shown}", flush=True)
+    smoke = subprocess.run(["bash", os.path.join(REPO, "tests/smoke-test.sh")])
+    return smoke.returncode
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="bench.py", description=__doc__)
+    sub = p.add_subparsers(dest="cmd", required=True)
+    r = sub.add_parser("run", help="measure the live dock")
+    r.add_argument("--full", action="store_true", help="also measure plugin disabled vs enabled (restarts the shell)")
+    r.add_argument("--events", action="store_true", help="also switch workspaces (S5)")
+    r.add_argument("--repeat", type=int, default=3)
+    r.add_argument("--yes", action="store_true", help="do not ask before restarting the shell")
+    r.add_argument("--out", default=os.path.join(REPO, "bench", "results"))
+    r.set_defaults(func=cmd_run)
+    args = p.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

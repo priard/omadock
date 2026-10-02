@@ -102,5 +102,19 @@ class Workspaces(unittest.TestCase):
         self.assertEqual(bench.first_free_workspace([]), "1")
         self.assertEqual(bench.first_free_workspace([-98, 1]), "2")
 
+class Report(unittest.TestCase):
+    def test_result_path(self):
+        import time as _t
+        when = _t.strptime("2026-10-02 14:05", "%Y-%m-%d %H:%M")
+        self.assertEqual(bench.result_path("bench/results", "tower", when),
+                         "bench/results/2026-10-02-1405-tower.json")
+
+    def test_dock_cost(self):
+        cost = bench.dock_cost({"vram_mib": 496, "rss_mb": 858.0, "cpu_pct": None},
+                               {"vram_mib": 690, "rss_mb": 896.5, "cpu_pct": 1.2})
+        self.assertEqual(cost["vram_mib"], 194)
+        self.assertAlmostEqual(cost["rss_mb"], 38.5)
+        self.assertIsNone(cost["cpu_pct"])
+
 if __name__ == "__main__":
     unittest.main()
