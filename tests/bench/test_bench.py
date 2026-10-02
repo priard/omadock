@@ -144,5 +144,116 @@ class Compare(unittest.TestCase):
         _, warnings = bench.compare_reports(_report([1], 1), _report([1], 1, pkgs=("quickshell 0.4.0-1",)))
         self.assertTrue(any("packages" in w for w in warnings))
 
+class ExitedThreads(unittest.TestCase):
+    def _burn(self, seconds):
+        import time as _t
+        end = _t.thread_time() + seconds
+        while _t.thread_time() < end:
+            pass
+
+    def test_cpu_counts_threads_that_exit_mid_window(self):
+        import threading
+        s = bench.Sampler(os.getpid(), None, interval=0.05, vram_interval=100)
+        s.start()
+        t = threading.Thread(target=self._burn, args=(0.4,))
+        t.start()
+        t.join()
+        m = s.stop()
+        cpu_seconds = m["cpu_pct"] * m["seconds"] / 100
+        self.assertGreaterEqual(cpu_seconds, 0.3)
+
+    def test_read_proc_ticks(self):
+        self.assertIsNone(bench.read_proc_ticks(999999999))
+        self.assertGreaterEqual(bench.read_proc_ticks(os.getpid()), 0)
+
+
+class ContextSwitches(unittest.TestCase):
+    def test_ctxsw_counts_every_thread(self):
+        import threading, time as _t
+        stop = threading.Event()
+
+        def nap():
+            while not stop.is_set():
+                _t.sleep(0.001)
+
+        t = threading.Thread(target=nap)
+        t.start()
+        _t.sleep(0.3)
+        try:
+            main_only = sum(bench._status_value(open(f"/proc/{os.getpid()}/status").read(), k)
+                            for k in ("voluntary_ctxt_switches", "nonvoluntary_ctxt_switches"))
+            sample = bench.read_proc_sample(os.getpid())
+        finally:
+            stop.set()
+            t.join()
+        self.assertGreater(sample["ctxsw"], main_only + 50)
+
+
+class FakeDesktop:
+    def __init__(self, visible_after_reveal=True):
+        self.revealed = False
+        self.visible_after_reveal = visible_after_reveal
+        self.calls = []
+
+    def ipc(self, fn, *args):
+        self.calls.append(fn)
+        if fn == "reveal":
+            self.revealed = True
+        return ""
+
+    def items(self):
+        if self.revealed and self.visible_after_reveal:
+            return [{"id": "a", "kind": "app", "cx": 10, "cy": 20, "windows": 2}]
+        return []
+
+    def layer(self):
+        return {"x": 0, "y": 0, "w": 100, "h": 100} if self.visible_after_reveal else None
+
+
+class Reveal(unittest.TestCase):
+    def test_prepare_items_reveals_hidden_dock(self):
+        d = FakeDesktop()
+        self.assertEqual(len(bench.prepare_items(d, wait=0)), 1)
+        self.assertIn("reveal", d.calls)
+
+    def test_prepare_items_gives_up(self):
+        self.assertEqual(bench.prepare_items(FakeDesktop(visible_after_reveal=False), wait=0), [])
+
+
+class Dwell(unittest.TestCase):
+    def _cfg(self, text):
+        import tempfile
+        f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        f.write(text)
+        f.close()
+        self.addCleanup(os.unlink, f.name)
+        return f.name
+
+    def test_dwell_exceeds_tooltip_delay(self):
+        self.assertAlmostEqual(bench.hover_dwell(self._cfg('{"tooltipDelay": 1000}')), 1.15)
+
+    def test_dwell_default(self):
+        self.assertAlmostEqual(bench.hover_dwell(self._cfg("garbage{")), 0.6)
+        self.assertAlmostEqual(bench.hover_dwell("/nonexistent/omadock.json"), 0.6)
+
+
+class FullState(unittest.TestCase):
+    def test_disabled_dock_must_have_no_layer(self):
+        self.assertIsNone(bench.full_state_error(FakeDesktop(visible_after_reveal=False), False))
+        self.assertIn("still mapped", bench.full_state_error(FakeDesktop(), False))
+
+    def test_enabled_dock_must_have_layer(self):
+        self.assertIsNone(bench.full_state_error(FakeDesktop(), True))
+        self.assertIn("not mapped", bench.full_state_error(FakeDesktop(visible_after_reveal=False), True))
+
+class ShellPid(unittest.TestCase):
+    def test_picks_the_omarchy_shell_not_another_quickshell(self):
+        out = "2969780 /usr/bin/quickshell\n2973246 quickshell -n -p /usr/share/omarchy/shell\n"
+        self.assertEqual(bench.pick_shell_pid(out), 2973246)
+
+    def test_none_when_absent(self):
+        self.assertIsNone(bench.pick_shell_pid("2969780 /usr/bin/quickshell\n"))
+        self.assertIsNone(bench.pick_shell_pid(""))
+
 if __name__ == "__main__":
     unittest.main()

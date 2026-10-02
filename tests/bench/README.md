@@ -28,7 +28,7 @@ keeping (baselines, before/after of an optimisation).
 | # | what | seconds |
 |---|---|---|
 | S0 | idle, pointer away from the dock | 30 |
-| S1 | pointer sweeps across every item and back | 30 |
+| S1 | pointer sweeps across every item and back, resting past the tooltip delay | 30 |
 | S2 | tooltip of an app with >= 2 windows (window previews) | 15 |
 | S3 | settings panel open | 15 |
 | S4 | idle after S1-S3; compare with S0 for leaks | 30 |
@@ -43,16 +43,18 @@ median/min/max.
 All for the `quickshell` process, which also hosts the Omarchy bar,
 background and notifications. Only `--full` isolates the dock itself.
 
-- `cpu_pct`: CPU over the window, 100 = one core. `cpu_threads` splits it
-  by thread name; `quickshell` (main thread) does QML and rendering.
+- `cpu_pct`: CPU of the whole process over the window, 100 = one core,
+  including threads that exited meanwhile. `cpu_threads` splits it by
+  thread name (live threads only); `quickshell` (main thread) does QML and
+  rendering.
 - `hypr_cpu_pct`: Hyprland's CPU in the same window. It pays for
   compositing and blurring the dock surface.
 - `rss_mb`, `pss_mb`: resident / proportional memory (median of samples);
   `rss_mb_end` is the last sample.
 - `vram_mib`, `hypr_vram_mib`: from `nvidia-smi -q -x` (NVIDIA only).
 - `fds`, `threads`: should not grow between S0 and S4.
-- `ctxsw_per_s`: context switches per second, a wake-up proxy; at idle it
-  should be low and flat.
+- `ctxsw_per_s`: context switches per second summed over all threads, a
+  wake-up proxy; at idle it should be low and flat.
 
 ## Conditions recorded with each run
 
@@ -68,6 +70,12 @@ hardware, versions, config or monitors differ.
 - Freshly restarted shells use less RAM than ones that ran for hours;
   check `quickshell_uptime_s` before comparing RSS.
 - VRAM is reported by the driver and is freed lazily; compare medians.
+- `hypr_cpu_pct` includes Hyprland serving the script's own `hyprctl`
+  calls (a few per second in S1).
+- The pointer is parked in the middle of the screen between runs; with
+  focus-follows-mouse this can move keyboard focus to the window there.
+- `--full` checks that the dock layer really disappears and comes back;
+  otherwise the dock cost is reported as invalid.
 
 ## Unit tests
 

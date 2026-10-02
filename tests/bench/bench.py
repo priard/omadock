@@ -71,9 +71,36 @@ def read_proc_sample(pid):
         "pss_kb": _status_value(rollup, "Pss"),
         "threads": _status_value(status, "Threads"),
         "fds": fds,
-        "ctxsw": _status_value(status, "voluntary_ctxt_switches")
-        + _status_value(status, "nonvoluntary_ctxt_switches"),
+        "ctxsw": _task_ctxsw(pid),
     }
+
+
+def _task_ctxsw(pid):
+    """Context switches summed over every thread (status covers one task)."""
+    total = 0
+    try:
+        tids = os.listdir(f"/proc/{pid}/task")
+    except OSError:
+        return 0
+    for tid in tids:
+        try:
+            with open(f"/proc/{pid}/task/{tid}/status") as f:
+                text = f.read()
+        except OSError:
+            continue
+        total += (_status_value(text, "voluntary_ctxt_switches")
+                  + _status_value(text, "nonvoluntary_ctxt_switches"))
+    return total
+
+
+def read_proc_ticks(pid):
+    """utime+stime of the whole process, including threads that already
+    exited (unlike a sum over /proc/<pid>/task), or None when it is gone."""
+    try:
+        with open(f"/proc/{pid}/stat") as f:
+            return parse_stat(f.read())[1]
+    except (OSError, IndexError, ValueError):
+        return None
 
 
 def parse_nvidia_xml(xml_text):
@@ -114,10 +141,6 @@ def summarize(values):
     return {"median": statistics.median(vals), "min": min(vals), "max": max(vals)}
 
 
-def _ticks(threads):
-    return sum(threads.values()) if threads else 0
-
-
 # --- sampler ----------------------------------------------------------------
 
 class Sampler:
@@ -133,7 +156,8 @@ class Sampler:
     def start(self):
         self._t0 = time.monotonic()
         self._threads0 = read_threads(self.pid)
-        self._hyp0 = read_threads(self.hypr_pid) if self.hypr_pid else None
+        self._ticks0 = read_proc_ticks(self.pid)
+        self._hyp0 = read_proc_ticks(self.hypr_pid) if self.hypr_pid else None
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
@@ -159,7 +183,9 @@ class Sampler:
         self._thread.join()
         secs = time.monotonic() - self._t0
         threads1 = read_threads(self.pid)
-        if threads1 is None or self._threads0 is None or not self._samples:
+        ticks1 = read_proc_ticks(self.pid)
+        if (threads1 is None or self._threads0 is None or ticks1 is None
+                or self._ticks0 is None or not self._samples):
             self.valid = False
         per = {}
         if self.valid:
@@ -167,7 +193,7 @@ class Sampler:
                 d = t - self._threads0.get(name, 0)
                 if d > 0:
                     per[name] = round(cpu_pct(d, secs), 2)
-        hyp1 = read_threads(self.hypr_pid) if self.hypr_pid else None
+        hyp1 = read_proc_ticks(self.hypr_pid) if self.hypr_pid else None
         smp = self._samples
         med = lambda k: statistics.median([x[k] for x in smp]) if smp else None
         return {
@@ -178,10 +204,10 @@ class Sampler:
             "pss_mb": round(med("pss_kb") / 1024, 1) if smp else None,
             "vram_mib": summarize(self._vram)["median"],
             "hypr_vram_mib": summarize(self._hvram)["median"],
-            "cpu_pct": round(cpu_pct(_ticks(threads1) - _ticks(self._threads0), secs), 2)
+            "cpu_pct": round(cpu_pct(ticks1 - self._ticks0, secs), 2)
             if self.valid else None,
             "cpu_threads": per,
-            "hypr_cpu_pct": round(cpu_pct(_ticks(hyp1) - _ticks(self._hyp0), secs), 2)
+            "hypr_cpu_pct": round(cpu_pct(hyp1 - self._hyp0, secs), 2)
             if hyp1 is not None and self._hyp0 is not None else None,
             "threads": smp[-1]["threads"] if smp else None,
             "fds": smp[-1]["fds"] if smp else None,
@@ -193,7 +219,7 @@ class Sampler:
 # --- driver -----------------------------------------------------------------
 SHELL_PATH = "/usr/share/omarchy/shell"
 OUTSIDE_Y = 1250      # enter the dock from above so hover-enter effects fire
-DWELL = 0.15          # seconds per item while sweeping
+MIN_DWELL = 0.6       # seconds per item while sweeping; above the default tooltip delay
 
 SCENARIOS = [         # (name, seconds, description)
     ("S0", 30, "idle, pointer away from the dock"),
@@ -225,6 +251,50 @@ def pick_targets(items):
     multi = next((i for i in items if i["kind"] == "app" and i.get("windows", 0) >= 2), None)
     urgent = next((i for i in items if i.get("urgent")), None)
     return {"multi": multi, "urgent": urgent}
+
+
+def hover_dwell(config_path):
+    """Seconds to rest on each item so its tooltip opens (tooltipDelay + margin)."""
+    try:
+        with open(config_path) as f:
+            delay = json.load(f).get("tooltipDelay")
+    except (OSError, ValueError, AttributeError):
+        delay = None
+    if not isinstance(delay, (int, float)) or isinstance(delay, bool):
+        return MIN_DWELL
+    return max(MIN_DWELL, delay / 1000 + 0.15)
+
+
+def prepare_items(desktop, wait=0.5, tries=3):
+    """Reveal the dock and read item geometry once its slide-in is over.
+    itemGeometry reports nothing while the dock is hidden."""
+    for _ in range(tries):
+        desktop.ipc("reveal")
+        time.sleep(wait)
+        items = desktop.items()
+        if items:
+            return items
+    return []
+
+
+def full_state_error(desktop, expect_dock):
+    """None when the omadock layer matches the expected plugin state."""
+    mapped = desktop.layer() is not None
+    if expect_dock and not mapped:
+        return "omadock layer not mapped after enabling the plugin"
+    if not expect_dock and mapped:
+        return "omadock layer still mapped after disabling the plugin"
+    return None
+
+
+def pick_shell_pid(pgrep_output):
+    """The Omarchy shell's pid from `pgrep -a`; other quickshell instances
+    (a different config) must not be measured."""
+    for line in pgrep_output.splitlines():
+        pid, _, cmd = line.partition(" ")
+        if f"-p {SHELL_PATH}" in cmd and pid.isdigit():
+            return int(pid)
+    return None
 
 
 def first_free_workspace(used_ids):
@@ -275,8 +345,7 @@ class Desktop:
         return to_screen(raw, layer)
 
     def quickshell_pid(self):
-        out = _run(["pgrep", "-x", "quickshell"]).split()
-        return int(out[0]) if out else None
+        return pick_shell_pid(_run(["pgrep", "-a", "-x", "quickshell"]))
 
     def hyprland_pid(self):
         out = _run(["pgrep", "-x", "Hyprland"]).split()
@@ -307,14 +376,9 @@ def measure(desktop, seconds, action=None):
 
 
 def run_scenarios(desktop, repeat, events, log):
-    items = desktop.items()
-    for _ in range(3):          # a hidden dock reports no visible items
-        if items:
-            break
-        desktop.ipc("reveal")
-        time.sleep(1)
-        items = desktop.items()
+    items = prepare_items(desktop)
     targets = pick_targets(items)
+    dwell = hover_dwell(CONFIG)
     away = (desktop.layer() or {"x": 0, "w": 400})
     away_xy = (away["x"] + away["w"] // 2, OUTSIDE_Y // 2)
     results = {}
@@ -323,7 +387,7 @@ def run_scenarios(desktop, repeat, events, log):
         desktop.move(*away_xy)
 
     def sweep(deadline):
-        path = sweep_path(items)
+        path = sweep_path(prepare_items(desktop))
         if not path:
             return
         desktop.move(path[0][0], OUTSIDE_Y)
@@ -332,10 +396,11 @@ def run_scenarios(desktop, repeat, events, log):
                 if time.monotonic() >= deadline:
                     break
                 desktop.move(x, y)
-                time.sleep(DWELL)
+                time.sleep(dwell)
 
     def hover_multi(deadline):
-        t = targets["multi"]
+        fresh = pick_targets(prepare_items(desktop))["multi"]
+        t = fresh or targets["multi"]
         desktop.move(t["cx"], OUTSIDE_Y)
         time.sleep(0.2)
         desktop.move(t["cx"], t["cy"])
@@ -491,6 +556,7 @@ def run_full(desktop, log):
         log("full: disabling omadock")
         _run(["omarchy", "plugin", "disable", "omadock"], timeout=30)
         restart_shell(desktop, log)
+        result["error"] = full_state_error(desktop, False)
         result["disabled"] = measure(desktop, 30)
     finally:
         log("full: enabling omadock")
@@ -498,8 +564,11 @@ def run_full(desktop, log):
         with open(SHELL_JSON, "wb") as f:
             f.write(backup)
         restart_shell(desktop, log)
+    result["error"] = result["error"] or full_state_error(desktop, True)
     result["enabled"] = measure(desktop, 30)
-    result["dock_cost"] = dock_cost(result["disabled"], result["enabled"])
+    result["dock_cost"] = None if result["error"] else dock_cost(result["disabled"], result["enabled"])
+    if result["error"]:
+        log(f"full: invalid, {result['error']}")
     return result
 
 
@@ -518,6 +587,9 @@ def print_summary(report):
               f"{cell('vram_mib')} | {cell('fds')} | {cell('ctxsw_per_s')} |")
     if report.get("full"):
         c = report["full"]["dock_cost"]
+        if c is None:
+            print(f'\nDock cost: invalid ({report["full"]["error"]})')
+            return
         print(f'\nDock cost (enabled - disabled): vram {c["vram_mib"]} MiB, '
               f'rss {c["rss_mb"]} MB, cpu {c["cpu_pct"]} %')
 
@@ -537,8 +609,8 @@ def cmd_run(args):
               "args": vars(args) | {"func": None}, "full": None}
     try:
         report["load_before"] = wait_quiet(log)
+        prepare_items(desktop)
         report["conditions"] = conditions(desktop)
-        desktop.ipc("reveal")
         report["scenarios"] = run_scenarios(desktop, args.repeat, args.events, log)
         if args.full:
             report["full"] = run_full(desktop, log)

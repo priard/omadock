@@ -3568,7 +3568,8 @@ Item {
                  windows: windows || 0, urgent: urgent === true })
     }
     var card = root.dockCardComp
-    if (!card) return "[]"
+    // A hidden dock only slides off screen, so its items still look visible.
+    if (!card || !root.dockVisible) return "[]"
     var i, it
     for (i = 0; i < card.pinnedRowRepeater.count; i++) {
       var slot = card.pinnedRowRepeater.itemAt(i)
