@@ -454,6 +454,29 @@ function rowState(row, pinnedIds) {
   return { pins: pins, groups: groups }
 }
 
+// The row with a group dissolved: its apps take its place, in the group's
+// order, skipping any the row already shows as pinned.
+function ungroupRow(row, groupId) {
+  var items = toArray(row)
+  var shown = {}
+  for (var i = 0; i < items.length; i++) {
+    if (items[i] && items[i].kind === "app") shown[items[i].appId] = true
+  }
+  var out = []
+  for (var j = 0; j < items.length; j++) {
+    var it = items[j]
+    if (!it || it.kind !== "group" || it.id !== groupId) { out.push(it); continue }
+    var apps = toArray(it.group.apps)
+    for (var a = 0; a < apps.length; a++) {
+      var id = apps[a]
+      if (!id || shown[id]) continue
+      shown[id] = true
+      out.push({ kind: "app", appId: id })
+    }
+  }
+  return out
+}
+
 // Groups re-anchored for a change of pins: a group whose app is no longer
 // pinned moves before the next app after it in oldPins that still is.
 function reanchorGroups(groups, oldPins, newPins) {

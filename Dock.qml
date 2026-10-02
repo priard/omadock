@@ -1565,31 +1565,13 @@ Item {
     }
   }
 
+  // Dissolves a group: its apps become pins where the group stood. Removing
+  // a group (removeAppGroup) drops its apps from the dock instead, as
+  // dragging a pin off the dock unpins it.
   function ungroupAppGroup(groupId) {
     if (!groupId) return
-    var groups = root.appGroups || []
-    var next = []
-    var extractedApps = []
-    for (var i = 0; i < groups.length; i++) {
-      var g = groups[i]
-      if (g && g.id === groupId) {
-        extractedApps = DockModel.toArray(g.apps)
-      } else {
-        next.push(g)
-      }
-    }
-    root.appGroups = next
-
-    // Restore all extracted apps back to pinnedIds
-    var pins = (root.pinnedIds || []).slice()
-    for (var e = 0; e < extractedApps.length; e++) {
-      if (pins.indexOf(extractedApps[e]) < 0) {
-        pins.push(extractedApps[e])
-      }
-    }
-    root.setPinned(pins)
-    root.saveConfig()
     if (root.activeAppGroupId === groupId) root.closeAppGroup()
+    root.applyPinnedRow(DockModel.ungroupRow(root.pinnedRow, groupId))
   }
 
   function removeAppGroup(groupId) {

@@ -394,7 +394,17 @@ BorderSurface {
       }
 
       ContextRow {
-        text: "Ungroup / Remove Group"
+        text: "Ungroup"
+        onTriggered: {
+          if (root && root.contextAppGroupData) {
+            root.ungroupAppGroup(root.contextAppGroupData.id)
+            root.closeContext()
+          }
+        }
+      }
+
+      ContextRow {
+        text: "Remove Group"
         danger: true
         onTriggered: {
           if (root && root.contextAppGroupData) {
