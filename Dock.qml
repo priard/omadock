@@ -2148,6 +2148,14 @@ Item {
     root.dividerStyle = parsed && ["theme", "custom"].indexOf(parsed.dividerStyle) >= 0 ? parsed.dividerStyle : "simple"
     root.dividerWidth = parsed && typeof parsed.dividerWidth === "number" && isFinite(parsed.dividerWidth) ? Math.max(1, Math.min(6, Math.round(parsed.dividerWidth * 2) / 2)) : 1.5
     root.dividerOpacity = parsed && typeof parsed.dividerOpacity === "number" && isFinite(parsed.dividerOpacity) ? Math.max(0, Math.min(1, parsed.dividerOpacity)) : 0.4
+    // Theme dividers without a border, saved before they turned custom.
+    // Converted in place: saving here would write the rest of the config
+    // before it is read.
+    if (root.dividerStyle === "theme" && !root.showBorder) {
+      root.dividerWidth = root.borderWidth
+      root.dividerOpacity = Math.round(root.rimAlpha * 100) / 100
+      root.dividerStyle = "custom"
+    }
     if (parsed && typeof parsed.minimizeMode === "string") {
       root.minimizeMode = parsed.minimizeMode
     } else if (parsed && parsed.clickToMinimize === true) {
