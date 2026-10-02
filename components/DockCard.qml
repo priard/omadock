@@ -642,17 +642,18 @@ Item {
         id: leftTileSeparator
         visible: root ? root.hasLeftTileSeparator : false
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root ? root.iconCenterOffset : 0
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line, centred in its slot. With split sections the slot is
-        // the gap between two panels and no line is drawn.
+        // The line: 70% of the dock's height and centred on it, as on
+        // macOS. It overflows the slot, so it does not grow the row. With
+        // split sections the slot is the gap between two panels and no line
+        // is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.centerIn: parent
           width: Style.space(1)
-          height: parent.height
+          height: Math.round(dockCard.height * 0.7)
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -675,17 +676,18 @@ Item {
         id: separator
         visible: root ? root.hasSeparator : false
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root ? root.iconCenterOffset : 0
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line, centred in its slot. With split sections the slot is
-        // the gap between two panels and no line is drawn.
+        // The line: 70% of the dock's height and centred on it, as on
+        // macOS. It overflows the slot, so it does not grow the row. With
+        // split sections the slot is the gap between two panels and no line
+        // is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.centerIn: parent
           width: Style.space(1)
-          height: parent.height
+          height: Math.round(dockCard.height * 0.7)
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -751,17 +753,18 @@ Item {
         id: folderSeparator
         visible: root ? root.hasFolderSeparator : false
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root ? root.iconCenterOffset : 0
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line, centred in its slot. With split sections the slot is
-        // the gap between two panels and no line is drawn.
+        // The line: 70% of the dock's height and centred on it, as on
+        // macOS. It overflows the slot, so it does not grow the row. With
+        // split sections the slot is the gap between two panels and no line
+        // is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.centerIn: parent
           width: Style.space(1)
-          height: parent.height
+          height: Math.round(dockCard.height * 0.7)
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -806,17 +809,18 @@ Item {
         id: driveSeparator
         visible: root ? root.hasDriveSeparator : false
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: root ? root.iconCenterOffset : 0
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line, centred in its slot. With split sections the slot is
-        // the gap between two panels and no line is drawn.
+        // The line: 70% of the dock's height and centred on it, as on
+        // macOS. It overflows the slot, so it does not grow the row. With
+        // split sections the slot is the gap between two panels and no line
+        // is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.centerIn: parent
           width: Style.space(1)
-          height: parent.height
+          height: Math.round(dockCard.height * 0.7)
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
