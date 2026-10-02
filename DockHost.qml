@@ -179,5 +179,12 @@ Item {
       var id = d[0].presetIdByName(String(name))
       return (id !== "" && d[0].applyPreset(id)) ? "ok" : "not found"
     }
+
+    // Read-only: item rectangles of the focused monitor's dock (window
+    // coordinates), used by tests/bench/bench.py and the live tests.
+    function itemGeometry(): string {
+      var d = host.orderedDocks()
+      return d.length > 0 ? d[0].itemGeometry() : "[]"
+    }
   }
 }
