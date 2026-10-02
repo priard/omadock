@@ -9,7 +9,11 @@ import qs.Ui
 // the stack is active: a closed tooltip holds no buffers and loads no icons
 // (every dock item has a stack, and icon loads at shell start race inside
 // Qt). A card captures a single frame the first time it reaches the front
-// three and keeps it until the stack closes, so flipping never recaptures.
+// three and keeps it while it stays near the front: among the front three or
+// the last three flipped behind, the ones scrolling back returns to. Beyond
+// that it lets the buffer go, so at most six window-sized buffers (about 30
+// MB each for a 4K-wide window) live at once however many windows the app
+// has; a card coming back captures again, which takes a few milliseconds.
 Item {
   id: stack
 
@@ -42,9 +46,12 @@ Item {
       readonly property var win: stack.windows[index]
       readonly property int depth: (index - stack.frontIndex + stack.count) % stack.count
       readonly property bool shown: depth <= 2
-      // Latched once the card has been among the front three.
+      readonly property bool nearFront: depth <= 2 || depth >= stack.count - 3
+      // Set once the card has been among the front three; dropped when it
+      // leaves the front, so its buffer goes with it.
       property bool reached: false
       onShownChanged: if (shown) reached = true
+      onNearFrontChanged: if (!nearFront) reached = false
       Component.onCompleted: if (shown) reached = true
       readonly property real capturedAspect: (capture.item && capture.item.hasContent) ? capture.item.aspect : 0
 
