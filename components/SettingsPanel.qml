@@ -24,6 +24,14 @@ PanelWindow {
   // The row of a just-saved preset opens its name for editing.
   signal presetEditRequested(string id)
   function startPresetEdit(id) { panel.presetEditRequested(id) }
+  // Leaves a preset rename without saving it. Called before any action that
+  // rebuilds the preset rows, which would drop the field but not the state
+  // (and the Escape shortcut stays off while a rename is open).
+  function endPresetEdit() {
+    if (panel.editingPresetId === "") return
+    panel.editingPresetId = ""
+    keyCatcher.forceActiveFocus()
+  }
 
   // Update channel as reported by `omadock-switch status`; probed on open.
   property string channel: ""
@@ -343,11 +351,13 @@ PanelWindow {
     radius: Style.cornerRadius
 
     // Swallow clicks so they never reach the scrim. A click on empty space
-    // also cancels a group rename, since it would not move focus by itself.
+    // also cancels a group or preset rename, since it would not move focus
+    // by itself.
     MouseArea {
       anchors.fill: parent
       acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
       onPressed: {
+        panel.endPresetEdit()
         if (panel.editingGroupId === "") return
         panel.editingGroupId = ""
         keyCatcher.forceActiveFocus()
@@ -1320,19 +1330,19 @@ PanelWindow {
                     text: "Apply"
                     foreground: Color.menu.text
                     bordered: true
-                    onClicked: root.applyPreset(presetRow.modelData.id)
+                    onClicked: { panel.endPresetEdit(); root.applyPreset(presetRow.modelData.id) }
                   }
                   Button {
                     visible: !presetRow.confirming
                     text: "Update"
                     foreground: Color.menu.text
-                    onClicked: root.updatePreset(presetRow.modelData.id)
+                    onClicked: { panel.endPresetEdit(); root.updatePreset(presetRow.modelData.id) }
                   }
                   Button {
                     visible: !presetRow.confirming
                     text: "Delete"
                     foreground: Color.menu.text
-                    onClicked: panel.confirmDeletePresetId = presetRow.modelData.id
+                    onClicked: { panel.endPresetEdit(); panel.confirmDeletePresetId = presetRow.modelData.id }
                   }
                   Button {
                     visible: presetRow.confirming
@@ -1371,6 +1381,7 @@ PanelWindow {
               enabled: root ? root.canSavePreset : false
               opacity: enabled ? 1 : 0.5
               onClicked: {
+                panel.endPresetEdit()
                 var id = root.savePreset("")
                 if (id !== "") Qt.callLater(function() { panel.startPresetEdit(id) })
               }

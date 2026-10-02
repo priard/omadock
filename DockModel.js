@@ -584,8 +584,10 @@ function cleanPresetName(s) {
 // Persisted presets: valid id and name, an object look, unique ids, at most
 // MAX_PRESETS. Looks are reduced to the look keys.
 function boundPresets(arr) {
-  if (!isList(arr)) return []
-  var src = toArray(arr)
+  // Real arrays only: JSON gives nothing else, and an array-like object
+  // ({ "length": 1e9 }) would be walked to its claimed length.
+  if (!Array.isArray(arr)) return []
+  var src = arr
   var seen = Object.create(null)
   var out = []
   for (var i = 0; i < src.length && out.length < MAX_PRESETS; i++) {
