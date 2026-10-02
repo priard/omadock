@@ -116,5 +116,33 @@ class Report(unittest.TestCase):
         self.assertAlmostEqual(cost["rss_mb"], 38.5)
         self.assertIsNone(cost["cpu_pct"])
 
+def _report(cpu_runs, vram, commit="abc", pkgs=("quickshell 0.3.1-1",)):
+    runs = [{"valid": True, "cpu_pct": c, "vram_mib": vram} for c in cpu_runs]
+    return {"conditions": {"cpu": "X", "gpu": "G", "packages": list(pkgs),
+                           "config_sha256": "h", "monitors": ["DP-1"], "dock_commit": commit},
+            "scenarios": {"S0": {"runs": runs, "summary": bench.summarize_runs(runs), "skipped": None},
+                          "S2": {"runs": [], "summary": {}, "skipped": "no app"}}}
+
+
+class Compare(unittest.TestCase):
+    def test_rows_and_noise(self):
+        a = _report([1.0, 1.2, 1.1], 690)
+        b = _report([0.5, 0.6, 0.55], 520, commit="def")
+        rows, warnings = bench.compare_reports(a, b)
+        cpu = next(r for r in rows if r["scenario"] == "S0" and r["metric"] == "cpu_pct")
+        self.assertAlmostEqual(cpu["diff"], -0.55)
+        self.assertFalse(cpu["noise"])
+        self.assertEqual(warnings, [])
+        self.assertFalse(any(r["scenario"] == "S2" for r in rows))
+
+    def test_small_diff_is_noise(self):
+        rows, _ = bench.compare_reports(_report([1.0, 1.4], 690), _report([1.1, 1.3], 690))
+        cpu = next(r for r in rows if r["metric"] == "cpu_pct")
+        self.assertTrue(cpu["noise"])
+
+    def test_warns_on_different_conditions(self):
+        _, warnings = bench.compare_reports(_report([1], 1), _report([1], 1, pkgs=("quickshell 0.4.0-1",)))
+        self.assertTrue(any("packages" in w for w in warnings))
+
 if __name__ == "__main__":
     unittest.main()

@@ -556,6 +556,47 @@ def cmd_run(args):
     return smoke.returncode
 
 
+COMPARED_CONDITIONS = ["cpu", "gpu", "packages", "config_sha256", "monitors"]
+
+
+def compare_reports(a, b):
+    warnings = [f"conditions differ: {k}"
+                for k in COMPARED_CONDITIONS
+                if a["conditions"].get(k) != b["conditions"].get(k)]
+    rows = []
+    for name, sa in a["scenarios"].items():
+        sb = b["scenarios"].get(name)
+        if not sb or sa["skipped"] or sb["skipped"]:
+            continue
+        for k in NUMERIC:
+            ma, mb = sa["summary"].get(k, {}), sb["summary"].get(k, {})
+            va, vb = ma.get("median"), mb.get("median")
+            if va is None or vb is None:
+                continue
+            diff = vb - va
+            spread = max(ma["max"] - ma["min"], mb["max"] - mb["min"])
+            rows.append({"scenario": name, "metric": k, "a": va, "b": vb,
+                         "diff": round(diff, 3),
+                         "pct": round(100 * diff / va, 1) if va else None,
+                         "noise": abs(diff) <= spread})
+    return rows, warnings
+
+
+def cmd_compare(args):
+    a, b = (json.load(open(p)) for p in (args.a, args.b))
+    rows, warnings = compare_reports(a, b)
+    for w in warnings:
+        print(f"warning: {w}")
+    print(f'\n## {a["conditions"]["dock_commit"]} → {b["conditions"]["dock_commit"]}\n')
+    print("| scenario | metric | A | B | Δ | Δ % | |")
+    print("|---|---|---|---|---|---|---|")
+    for r in rows:
+        pct = "–" if r["pct"] is None else f'{r["pct"]:+g} %'
+        print(f'| {r["scenario"]} | {r["metric"]} | {r["a"]:g} | {r["b"]:g} | '
+              f'{r["diff"]:+g} | {pct} | {"noise" if r["noise"] else ""} |')
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="bench.py", description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -566,6 +607,10 @@ def main(argv=None):
     r.add_argument("--yes", action="store_true", help="do not ask before restarting the shell")
     r.add_argument("--out", default=os.path.join(REPO, "bench", "results"))
     r.set_defaults(func=cmd_run)
+    c = sub.add_parser("compare", help="compare two result files")
+    c.add_argument("a")
+    c.add_argument("b")
+    c.set_defaults(func=cmd_compare)
     args = p.parse_args(argv)
     return args.func(args)
 
