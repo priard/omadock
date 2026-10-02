@@ -947,6 +947,22 @@ Item {
   // of the text colour all but vanished on light docks. A light line on a
   // dark dock reads at a lower ratio than a dark one on a light dock, and
   // glares sooner, so it stops earlier.
+  // The dock's rim, shared by the panels and by "theme" dividers.
+  readonly property color rimColor: {
+    // Specular Frosted Glass Rim: Crisp highlight with high alpha for contrast on dark and light surfaces
+    var autoAlpha = (root.effectiveDockOpacity < 0.25 || root.dockBgColor === "none")
+      ? 0.48
+      : Math.max(0.24, root.effectiveDockOpacity * 0.35)
+    // Manual override from Settings → Appearance → Border opacity.
+    var rimAlpha = root.borderOpacity < 0 ? autoAlpha : Math.max(0.0, Math.min(1.0, root.borderOpacity))
+    return Util.alpha(root.dockForeground, rimAlpha)
+  }
+
+  // Divider lines: "simple" is a thin line in dividerColor, "theme" is drawn
+  // like the rim, in its colour and width.
+  readonly property color dividerLineColor: root.dividerStyle === "theme" ? root.rimColor : root.dividerColor
+  readonly property real dividerLineWidth: root.dividerStyle === "theme" ? root.borderWidth : Style.space(1)
+
   readonly property color dividerColor: {
     var bg = Qt.color(root.iconBackdropColor)
     var ink = root.blackOrWhiteOn(bg)
@@ -1043,6 +1059,7 @@ Item {
   property int sectionSpacing: 18
   // Length of the section divider lines, in percent of the dock's height.
   property int dividerHeight: 70
+  property string dividerStyle: "simple"
   property string minimizeMode: "active"
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
@@ -2121,6 +2138,7 @@ Item {
     root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" ? parsed.itemSpacing : 4
     root.sectionSpacing = parsed && typeof parsed.sectionSpacing === "number" ? Math.max(0, Math.min(48, Math.round(parsed.sectionSpacing))) : 18
     root.dividerHeight = parsed && typeof parsed.dividerHeight === "number" && isFinite(parsed.dividerHeight) ? Math.max(20, Math.min(100, Math.round(parsed.dividerHeight))) : 70
+    root.dividerStyle = parsed && parsed.dividerStyle === "theme" ? "theme" : "simple"
     if (parsed && typeof parsed.minimizeMode === "string") {
       root.minimizeMode = parsed.minimizeMode
     } else if (parsed && parsed.clickToMinimize === true) {
@@ -3356,6 +3374,7 @@ Item {
     conf.itemSpacing = root.itemSpacing
     conf.sectionSpacing = root.sectionSpacing
     conf.dividerHeight = root.dividerHeight
+    conf.dividerStyle = root.dividerStyle
     conf.minimizeMode = root.minimizeMode
     conf.clickToMinimize = root.minimizeMode !== "off"
     conf.showUrgentHint = root.showUrgentHint

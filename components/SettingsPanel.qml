@@ -1160,6 +1160,17 @@ PanelWindow {
               value: root ? root.dividerHeight : 70
               onCommitted: function(v) { root.setOption("dividerHeight", Math.round(v)) }
             }
+            ChoiceRow {
+              label: "Divider style"
+              hint: "Theme draws the lines like the dock's border, in its colour and width."
+              visible: root ? !root.splitSections : true
+              options: [
+                { value: "simple", label: "Simple" },
+                { value: "theme", label: "Theme" }
+              ]
+              value: root ? root.dividerStyle : "simple"
+              onPicked: function(v) { root.setOption("dividerStyle", v) }
+            }
           }
 
           // ================================================= Folders

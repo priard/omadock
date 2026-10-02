@@ -483,6 +483,7 @@ Item {
     // it, centred on the card on whole device pixels.
     readonly property real dividerRoom: Math.max(0, dockCard.height - dockCard.borderTop - dockCard.borderBottom)
     readonly property real dividerLength: dockCard.devSnap(dockCard.dividerRoom * (root ? root.dividerHeight : 70) / 100)
+    readonly property real dividerWidth: dockCard.devSnap(root ? root.dividerLineWidth : 1)
     readonly property real dividerTop: Math.round((dockCard.borderTop + (dockCard.dividerRoom - dockCard.dividerLength) / 2) * dockCard.dpr) / dockCard.dpr
 
     // The panels below paint the fill and the rim. The card keeps a clear
@@ -660,9 +661,9 @@ Item {
           visible: !(root && root.splitSections)
           anchors.horizontalCenter: parent.horizontalCenter
           y: dockCard.dividerTop - row.y - parent.y
-          width: Style.space(1)
+          width: dockCard.dividerWidth
           height: dockCard.dividerLength
-          color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
+          color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
 
@@ -695,9 +696,9 @@ Item {
           visible: !(root && root.splitSections)
           anchors.horizontalCenter: parent.horizontalCenter
           y: dockCard.dividerTop - row.y - parent.y
-          width: Style.space(1)
+          width: dockCard.dividerWidth
           height: dockCard.dividerLength
-          color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
+          color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
 
@@ -773,9 +774,9 @@ Item {
           visible: !(root && root.splitSections)
           anchors.horizontalCenter: parent.horizontalCenter
           y: dockCard.dividerTop - row.y - parent.y
-          width: Style.space(1)
+          width: dockCard.dividerWidth
           height: dockCard.dividerLength
-          color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
+          color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
 
@@ -830,9 +831,9 @@ Item {
           visible: !(root && root.splitSections)
           anchors.horizontalCenter: parent.horizontalCenter
           y: dockCard.dividerTop - row.y - parent.y
-          width: Style.space(1)
+          width: dockCard.dividerWidth
           height: dockCard.dividerLength
-          color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
+          color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
 

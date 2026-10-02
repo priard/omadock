@@ -20,16 +20,7 @@ BorderSurface {
     return root.dockBgColor
   }
 
-  readonly property color effectiveBorderColor: {
-    if (!root) return Util.alpha(Color.menu.border, 0.48)
-    // Specular Frosted Glass Rim: Crisp highlight with high alpha for contrast on dark and light surfaces
-    var autoAlpha = (root.effectiveDockOpacity < 0.25 || root.dockBgColor === "none")
-      ? 0.48
-      : Math.max(0.24, root.effectiveDockOpacity * 0.35)
-    // Manual override from Settings → Appearance → Border opacity.
-    var rimAlpha = root.borderOpacity < 0 ? autoAlpha : Math.max(0.0, Math.min(1.0, root.borderOpacity))
-    return Util.alpha(root.dockForeground, rimAlpha)
-  }
+  readonly property color effectiveBorderColor: root ? root.rimColor : Util.alpha(Color.menu.border, 0.48)
 
   // A gradient fill is drawn by the layer below instead of the card colour.
   readonly property bool gradientFill: root ? (root.showBackground && root.bgFill === "gradient") : false
