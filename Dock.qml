@@ -1080,6 +1080,9 @@ Item {
   property real dividerWidth: 1.5
   property real dividerOpacity: 0.4
   property string minimizeMode: "active"
+  // Hyprland warps the pointer into a window it activates (and on workspace
+  // switches); keepPointer suppresses that for focus changes the dock makes.
+  property bool keepPointer: true
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
   property bool urgentOnNotification: true
@@ -2187,6 +2190,7 @@ Item {
     } else {
       root.minimizeMode = "active"
     }
+    root.keepPointer = parsed ? parsed.keepPointer !== false : true
     root.showUrgentHint = parsed ? parsed.showUrgentHint !== false : true
     root.urgentOnNotification = parsed ? parsed.urgentOnNotification !== false : true
     root.urgentSound = parsed ? parsed.urgentSound !== false : true
@@ -2668,6 +2672,41 @@ Item {
     Hyprland.dispatch(Hyprland.usingLua ? lua : legacy)
   }
 
+  // Runs action with Hyprland's pointer warps switched off. Activation goes
+  // over Wayland and workspace switches over the IPC socket, so the setting
+  // has to land first: the actions wait for hyprctl to exit. The compositor
+  // restores the user's no_warps value on its own timer, which survives a
+  // shell crash; repeated calls extend the window instead of saving "true".
+  property var pendingNoWarpActions: []
+
+  function withoutPointerWarp(action) {
+    if (!root.keepPointer || !Hyprland.usingLua) {
+      action()
+      return
+    }
+    root.pendingNoWarpActions = root.pendingNoWarpActions.concat([action])
+    if (!noWarpProc.running) noWarpProc.running = true
+  }
+
+  Process {
+    id: noWarpProc
+    command: ["hyprctl", "eval",
+      'if _G.omadock_nowarp_saved == nil then _G.omadock_nowarp_saved = hl.get_config("cursor.no_warps") end\n'
+      + 'hl.config({ cursor = { no_warps = true } })\n'
+      + '_G.omadock_nowarp_gen = (_G.omadock_nowarp_gen or 0) + 1\n'
+      + 'local gen = _G.omadock_nowarp_gen\n'
+      + 'hl.timer(function()\n'
+      + '  if _G.omadock_nowarp_gen ~= gen then return end\n'
+      + '  hl.config({ cursor = { no_warps = _G.omadock_nowarp_saved } })\n'
+      + '  _G.omadock_nowarp_saved = nil\n'
+      + 'end, { timeout = 500, type = "oneshot" })']
+    onExited: {
+      var actions = root.pendingNoWarpActions
+      root.pendingNoWarpActions = []
+      for (var i = 0; i < actions.length; i++) actions[i]()
+    }
+  }
+
   // Wheel over the Omarchy logo walks workspaces in order. "e+1"/"e-1" are
   // standard Hyprland workspace selectors (nearest existing, relative).
   function cycleWorkspace(dir) {
@@ -2725,22 +2764,25 @@ Item {
         root.restoreWindow(addr, appId)
         return
       }
-      if (top) DockModel.focusWindow(top)
-      if (workspace && Hyprland.focusedWorkspace && workspace.id !== Hyprland.focusedWorkspace.id) {
-        var targetWs = root.workspaceTarget(workspace)
-        if (targetWs) {
-          root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(targetWs) + '" })',
-                            "workspace " + targetWs)
+      root.withoutPointerWarp(function() {
+        if (top) DockModel.focusWindow(top)
+        if (workspace && Hyprland.focusedWorkspace && workspace.id !== Hyprland.focusedWorkspace.id) {
+          var targetWs = root.workspaceTarget(workspace)
+          if (targetWs) {
+            root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(targetWs) + '" })',
+                              "workspace " + targetWs)
+          }
         }
-      }
+      })
     } else if (top) {
       root.focusToplevel(top, appId)
     }
   }
 
   // Brings a window forward cleanly. Native Wayland activation hands over focus
-  // and brings the window forward without warping the mouse pointer away from the dock
-  // or desynchronizing layer-shell input state. Switches workspace when target is on another workspace.
+  // and brings the window forward without desynchronizing layer-shell input
+  // state; withoutPointerWarp keeps Hyprland from moving the pointer to it.
+  // Switches workspace when target is on another workspace.
   function focusToplevel(toplevel, appId) {
     if (!toplevel) return
     var handle = root.hyprToplevelFor(toplevel)
@@ -2754,15 +2796,17 @@ Item {
       return
     }
 
-    DockModel.focusWindow(toplevel)
+    root.withoutPointerWarp(function() {
+      DockModel.focusWindow(toplevel)
 
-    if (workspace && Hyprland.focusedWorkspace && workspace.id !== Hyprland.focusedWorkspace.id) {
-      var targetWs = root.workspaceTarget(workspace)
-      if (targetWs) {
-        root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(targetWs) + '" })',
-                          "workspace " + targetWs)
+      if (workspace && Hyprland.focusedWorkspace && workspace.id !== Hyprland.focusedWorkspace.id) {
+        var targetWs = root.workspaceTarget(workspace)
+        if (targetWs) {
+          root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(targetWs) + '" })',
+                            "workspace " + targetWs)
+        }
       }
-    }
+    })
   }
 
   function minimizeToplevel(topOrAddr) {
@@ -2818,13 +2862,15 @@ Item {
       'hl.dsp.window.move({ window = "address:' + address + '", workspace = "'
         + root.luaString(target) + '", follow = false })',
       "movetoworkspacesilent " + target + ",address:" + address)
-    root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(target) + '" })',
-                      "workspace " + target)
+    root.withoutPointerWarp(function() {
+      root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(target) + '" })',
+                        "workspace " + target)
 
-    var top = root.liveToplevelForAddress(address)
-    if (top) {
-      DockModel.focusWindow(top)
-    }
+      var top = root.liveToplevelForAddress(address)
+      if (top) {
+        DockModel.focusWindow(top)
+      }
+    })
     return true
   }
 
@@ -2889,10 +2935,12 @@ Item {
 
     // Single workspace switch + single window activation after all moves.
     if (focusTarget) {
-      root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(focusTarget) + '" })',
-                        "workspace " + focusTarget)
-      var top = root.liveToplevelForAddress(focusAddr)
-      if (top) DockModel.focusWindow(top)
+      root.withoutPointerWarp(function() {
+        root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(focusTarget) + '" })',
+                          "workspace " + focusTarget)
+        var top = root.liveToplevelForAddress(focusAddr)
+        if (top) DockModel.focusWindow(top)
+      })
     }
   }
 
@@ -3436,6 +3484,7 @@ Item {
     conf.dividerOpacity = root.dividerOpacity
     conf.minimizeMode = root.minimizeMode
     conf.clickToMinimize = root.minimizeMode !== "off"
+    conf.keepPointer = root.keepPointer
     conf.showUrgentHint = root.showUrgentHint
     conf.urgentOnNotification = root.urgentOnNotification
     conf.urgentSound = root.urgentSound

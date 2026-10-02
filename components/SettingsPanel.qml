@@ -1000,6 +1000,12 @@ PanelWindow {
               value: root ? root.minimizeMode : "active"
               onPicked: function(v) { root.setOption("minimizeMode", v) }
             }
+            SwitchRow {
+              label: "Keep pointer in place"
+              hint: "Don't move the mouse pointer onto the window a click brings up."
+              checked: root ? root.keepPointer : true
+              onToggled: root.setOption("keepPointer", !root.keepPointer)
+            }
 
             SectionLabel { text: "Attention" }
 
