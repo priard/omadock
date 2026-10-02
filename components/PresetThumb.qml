@@ -73,6 +73,29 @@ Item {
   }
   // Stand-ins for colourful app icons in the original and pixel styles.
   readonly property var iconColors: ["#e5534b", "#3d8bfd", "#46a758", "#e0a526", "#8e6ad8", "#2fb5c2"]
+  // A 5x5 symbol per placeholder icon, so the styles have something to
+  // render: ring, diamond, cross, frame, plus, grid.
+  readonly property var glyphs: [
+    ".###.#...##...##...#.###.", "..#...###.#####.###...#..", "#...#.#.#...#...#.#.#...#",
+    "######...##.#.##...######", "..#....#..#####..#....#..", ".#.#.#####.#.#.#####.#.#."
+  ]
+  function num(key, fallback, lo, hi) {
+    var v = Number(val(key, fallback))
+    if (!isFinite(v)) v = fallback
+    return Math.max(lo, Math.min(hi, v))
+  }
+  function mix(a, b, t) {
+    return Qt.rgba(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, 1)
+  }
+  // Whether cell (r, c) of a g x g grid falls on icon n's symbol.
+  function glyphAt(n, r, c, g) {
+    var pattern = thumb.glyphs[n % thumb.glyphs.length]
+    return pattern.charAt(Math.floor(r * 5 / g) * 5 + Math.floor(c * 5 / g)) === "#"
+  }
+  readonly property real effectStrength: num("iconStrength", 1, 0, 1)
+  readonly property real effectContrast: num("iconContrast", 0, 0, 1)
+  // "Pixels/Dots across" (8..32), scaled to what reads at this size.
+  readonly property int cellsAcross: Math.max(4, Math.min(7, Math.round(num("iconGrid", 16, 8, 32) / 3)))
   readonly property string dividerStyle: String(val("dividerStyle", "simple"))
   readonly property color dividerColor: dividerStyle === "theme" ? Util.alpha(fg, rimAlpha)
     : dividerStyle === "custom" ? Util.alpha(fg, Number(val("dividerOpacity", 0.4)))
@@ -190,18 +213,57 @@ Item {
             Repeater {
               model: sectionSlot.modelData.count
               delegate: Item {
+                id: iconItem
                 required property int index
                 readonly property int n: sectionSlot.modelData.first + index
+                readonly property color own: thumb.iconColors[n % thumb.iconColors.length]
+                // Mono and dot matrix: the tint, blended with the icon's own
+                // colour as far as Strength leaves it.
+                readonly property color ink: thumb.mix(own, thumb.tint, thumb.effectStrength)
+                readonly property bool gridStyle: thumb.iconStyle === "pixel" || thumb.iconStyle === "dots"
                 width: thumb.iconSize
                 height: thumb.iconSize
 
+                // Original: a coloured tile. Mono: a faint tile that Contrast
+                // fades out. Pixel and dot matrix draw their own cells.
                 Rectangle {
+                  visible: !iconItem.gridStyle
                   anchors.fill: parent
-                  radius: thumb.iconStyle === "pixel" ? 0 : (thumb.iconStyle === "dots" ? width / 2 : width * 0.25)
-                  color: thumb.iconStyle === "original" || thumb.iconStyle === "pixel"
-                    ? thumb.iconColors[parent.n % thumb.iconColors.length]
-                    : thumb.tint
-                  opacity: thumb.iconStyle === "dots" ? 0.85 : 1
+                  radius: width * 0.25
+                  color: thumb.iconStyle === "mono"
+                    ? Util.alpha(iconItem.ink, 0.22 * (1 - thumb.effectContrast))
+                    : iconItem.own
+                }
+
+                Grid {
+                  id: cells
+                  readonly property int g: iconItem.gridStyle ? thumb.cellsAcross : 5
+                  readonly property real inset: iconItem.gridStyle ? 0 : parent.width * 0.2
+                  readonly property real gap: thumb.iconStyle === "dots" ? parent.width / g * 0.22 : 0
+                  readonly property real cell: (parent.width - 2 * inset - (g - 1) * gap) / g
+                  anchors.centerIn: parent
+                  columns: g
+                  spacing: gap
+                  Repeater {
+                    model: cells.g * cells.g
+                    delegate: Rectangle {
+                      required property int index
+                      readonly property int r: Math.floor(index / cells.g)
+                      readonly property int c: index % cells.g
+                      readonly property bool on: thumb.glyphAt(iconItem.n, r, c, cells.g)
+                      readonly property bool corner: (r === 0 || r === cells.g - 1) && (c === 0 || c === cells.g - 1)
+                      width: cells.cell
+                      height: cells.cell
+                      radius: thumb.iconStyle === "dots" ? width / 2 : 0
+                      color: {
+                        if (thumb.iconStyle === "original") return on ? Qt.rgba(1, 1, 1, 0.85) : "transparent"
+                        if (thumb.iconStyle === "mono") return on ? iconItem.ink : "transparent"
+                        if (corner) return "transparent"
+                        if (thumb.iconStyle === "pixel") return on ? Qt.lighter(iconItem.own, 1.55) : iconItem.own
+                        return on ? iconItem.ink : Util.alpha(iconItem.ink, 0.28 * (1 - thumb.effectContrast))
+                      }
+                    }
+                  }
                 }
                 Rectangle {
                   visible: parent.n === 0 || parent.n === 3

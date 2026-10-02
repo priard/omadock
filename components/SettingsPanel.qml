@@ -48,9 +48,9 @@ PanelWindow {
     { id: "behavior", label: "Behavior", glyph: "󰒓" },
     { id: "effects", label: "Effects", glyph: "󰨙" },
     { id: "size", label: "Size & Spacing", glyph: "󰩨" },
-    { id: "presets", label: "Presets", glyph: "󰆓" },
     { id: "folders", label: "Folders", glyph: "󰉋" },
     { id: "groups", label: "App Groups", glyph: "󰀻" },
+    { id: "presets", label: "Presets", glyph: "󰆓" },
     { id: "supporters", label: "Supporters", glyph: "󰆔" },
     { id: "about", label: "About", glyph: "󰋼" }
   ]
