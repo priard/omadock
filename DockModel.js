@@ -521,6 +521,86 @@ function boundPinnedFolders(arr) {
   })
 }
 
+// ---------------------------------------------------------------- presets
+// A preset is a named copy of the dock's look: the config keys below, as
+// saveConfig writes them. Values reach the dock only through
+// Dock.applyLook, the same parsing as the config file, so a preset can hold
+// nothing the file could not.
+var LOOK_KEYS = [
+  "showBackground", "bgColor", "bgFill", "gradientPreset", "gradientStrength",
+  "grain", "opacity", "blur", "showShadow", "shadowStrength", "showBorder",
+  "borderWidth", "borderOpacity", "shape", "cornerRadius", "splitSections",
+  "dividerHeight", "dividerStyle", "dividerWidth", "dividerOpacity",
+  "iconStyle", "iconTint", "iconHoverOriginal", "iconContrast", "iconStrength",
+  "iconGrid", "indicatorShape", "hoverEffect", "launchBounce", "groupStyle",
+  "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing"
+]
+var MAX_PRESETS = 6
+var MAX_PRESET_NAME = 40
+var MAX_PRESET_ID = 64
+var MAX_LOOK_STRING = 64
+
+// Exactly the look keys of a config-shaped object, scalars only, strings
+// capped. Values the config writes as a missing key are written out:
+// iconSize 0 (automatic) and cornerRadius -1 (follow the shape).
+function pickLook(conf) {
+  var src = (conf && typeof conf === "object") ? conf : {}
+  var out = {}
+  for (var i = 0; i < LOOK_KEYS.length; i++) {
+    var k = LOOK_KEYS[i]
+    if (!Object.prototype.hasOwnProperty.call(src, k)) continue
+    var v = src[k]
+    if (typeof v === "string") out[k] = v.slice(0, MAX_LOOK_STRING)
+    else if (typeof v === "boolean") out[k] = v
+    else if (typeof v === "number" && isFinite(v)) out[k] = v
+  }
+  if (!Object.prototype.hasOwnProperty.call(out, "iconSize")) out.iconSize = 0
+  if (!Object.prototype.hasOwnProperty.call(out, "cornerRadius")) out.cornerRadius = -1
+  return out
+}
+
+// Every look key the preset holds has the same value in cur. A preset
+// saved before a key existed still matches on the keys it has.
+function lookIncludes(cur, look) {
+  var x = cur || {}
+  var y = look || {}
+  for (var i = 0; i < LOOK_KEYS.length; i++) {
+    var k = LOOK_KEYS[i]
+    if (!Object.prototype.hasOwnProperty.call(y, k)) continue
+    if (JSON.stringify(x[k]) !== JSON.stringify(y[k])) return false
+  }
+  return true
+}
+
+// Trimmed, without control or bidi characters, at most MAX_PRESET_NAME.
+function cleanPresetName(s) {
+  var t = String(s == null ? "" : s)
+    .replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+  return t.slice(0, MAX_PRESET_NAME).trim()
+}
+
+// Persisted presets: valid id and name, an object look, unique ids, at most
+// MAX_PRESETS. Looks are reduced to the look keys.
+function boundPresets(arr) {
+  if (!isList(arr)) return []
+  var src = toArray(arr)
+  var seen = Object.create(null)
+  var out = []
+  for (var i = 0; i < src.length && out.length < MAX_PRESETS; i++) {
+    var p = src[i]
+    if (!p || typeof p !== "object") continue
+    var id = typeof p.id === "string" ? p.id : ""
+    if (!/^[A-Za-z0-9_]{1,64}$/.test(id) || seen[id]) continue
+    var name = cleanPresetName(p.name)
+    if (name === "" || !p.look || typeof p.look !== "object" || isList(p.look)) continue
+    seen[id] = true
+    out.push({ id: id, name: name, look: pickLook(p.look) })
+  }
+  return out
+}
+
 function serializePinned(pinnedIds) {
   var arr = toArray(pinnedIds)
   var cleaned = []

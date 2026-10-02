@@ -18,6 +18,7 @@ BorderSurface {
 
   // Folder menu page: "" (actions), "sort" (Sort By) or "view" (View As).
   property string folderPage: ""
+  property string dockPage: ""
   onFolderPageChanged: menuFlickable.contentY = 0
 
   visible: root ? (root.contextAppId !== "") : false
@@ -51,6 +52,7 @@ BorderSurface {
     function onContextAppIdChanged() {
       menuFlickable.contentY = 0
       contextMenu.folderPage = ""
+      contextMenu.dockPage = ""
     }
   }
 
@@ -92,7 +94,7 @@ BorderSurface {
     // every option the old category pages used to carry.
     Column {
       spacing: Style.space(2)
-      visible: root ? root.contextAppId === "__dock_settings__" : false
+      visible: root ? (root.contextAppId === "__dock_settings__" && contextMenu.dockPage === "") : false
 
       ContextRow {
         text: "Omadock"
@@ -103,6 +105,12 @@ BorderSurface {
         text: "Dock Settings…"
         textColor: Color.accent
         onTriggered: { if (root) root.openSettingsPanel() }
+      }
+
+      ContextRow {
+        visible: root ? root.presets.length > 0 : false
+        text: "Presets ›"
+        onTriggered: contextMenu.dockPage = "presets"
       }
 
       MenuDivider {}
@@ -120,6 +128,49 @@ BorderSurface {
             root.createAppGroupFromRunning()
             root.closeContext()
           }
+        }
+      }
+    }
+
+    // Dock menu: Presets page
+    Column {
+      spacing: Style.space(2)
+      visible: root ? (root.contextAppId === "__dock_settings__" && contextMenu.dockPage === "presets") : false
+
+      ContextRow {
+        text: "‹ Back"
+        textColor: Color.accent
+        onTriggered: contextMenu.dockPage = ""
+      }
+
+      ContextRow {
+        text: "Presets"
+        isHeader: true
+      }
+
+      Repeater {
+        model: root ? root.presets : []
+        delegate: ContextRow {
+          required property var modelData
+          text: modelData.name
+          checked: root ? root.activePresetId === modelData.id : false
+          onTriggered: {
+            if (!root) return
+            root.applyPreset(modelData.id)
+            root.closeContext()
+          }
+        }
+      }
+
+      MenuDivider {}
+
+      ContextRow {
+        text: "Manage Presets…"
+        onTriggered: {
+          if (!root) return
+          root.settingsPanelPage = "presets"
+          root.openSettingsPanel()
+          root.closeContext()
         }
       }
     }

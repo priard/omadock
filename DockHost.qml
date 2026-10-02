@@ -171,5 +171,13 @@ Item {
       var d = host.orderedDocks()
       if (d.length > 0) d[0].setDockPosition(pos)
     }
+
+    // Applies a saved appearance preset by name, ignoring case.
+    function applyPreset(name: string): string {
+      var d = host.orderedDocks()
+      if (d.length === 0) return "not found"
+      var id = d[0].presetIdByName(String(name))
+      return (id !== "" && d[0].applyPreset(id)) ? "ok" : "not found"
+    }
   }
 }

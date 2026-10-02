@@ -19,6 +19,11 @@ PanelWindow {
   // Id of the app group whose name is being edited; Esc then cancels the
   // edit instead of closing the panel.
   property string editingGroupId: ""
+  property string editingPresetId: ""
+  property string confirmDeletePresetId: ""
+  // The row of a just-saved preset opens its name for editing.
+  signal presetEditRequested(string id)
+  function startPresetEdit(id) { panel.presetEditRequested(id) }
 
   // Update channel as reported by `omadock-switch status`; probed on open.
   property string channel: ""
@@ -35,6 +40,7 @@ PanelWindow {
     { id: "behavior", label: "Behavior", glyph: "󰒓" },
     { id: "effects", label: "Effects", glyph: "󰨙" },
     { id: "size", label: "Size & Spacing", glyph: "󰩨" },
+    { id: "presets", label: "Presets", glyph: "󰆓" },
     { id: "folders", label: "Folders", glyph: "󰉋" },
     { id: "groups", label: "App Groups", glyph: "󰀻" },
     { id: "supporters", label: "Supporters", glyph: "󰆔" },
@@ -320,7 +326,7 @@ PanelWindow {
   Shortcut {
     sequence: "Escape"
     context: Qt.WindowShortcut
-    enabled: panel.editingGroupId === ""
+    enabled: panel.editingGroupId === "" && panel.editingPresetId === ""
     onActivated: panel.close()
   }
 
@@ -1191,6 +1197,183 @@ PanelWindow {
               suffix: "%"
               value: root ? root.dividerHeight : 70
               onCommitted: function(v) { root.setOption("dividerHeight", Math.round(v)) }
+            }
+          }
+
+          // ================================================= Presets
+          Column {
+            width: parent.width
+            visible: panel.page === "presets"
+
+            Row {
+              width: parent.width
+              SectionLabel { text: "Presets" }
+            }
+
+            Text {
+              width: parent.width
+              topPadding: Style.spacing.xs
+              bottomPadding: Style.spacing.lg
+              text: (root ? root.presets.length : 0) + " of 6 · A preset keeps the look: background, effects, border, dividers, icons, size and spacing."
+              textFormat: Text.PlainText
+              color: Util.alpha(Color.menu.text, 0.55)
+              wrapMode: Text.WordWrap
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+            }
+
+            Repeater {
+              model: root ? root.presets : []
+              delegate: Item {
+                id: presetRow
+                required property var modelData
+                readonly property bool editing: panel.editingPresetId === modelData.id
+                readonly property bool confirming: panel.confirmDeletePresetId === modelData.id
+
+                function startEdit() {
+                  panel.editingPresetId = presetRow.modelData.id
+                  presetName.text = presetRow.modelData.name || ""
+                  presetName.forceActiveFocus()
+                  presetName.selectAll()
+                }
+                function finishEdit(save) {
+                  if (!presetRow.editing) return
+                  var next = presetName.text
+                  panel.editingPresetId = ""
+                  keyCatcher.forceActiveFocus()
+                  if (save) root.renamePreset(presetRow.modelData.id, next)
+                }
+
+                Connections {
+                  target: panel
+                  function onPresetEditRequested(id) { if (id === presetRow.modelData.id) presetRow.startEdit() }
+                }
+
+                width: parent ? parent.width : Style.space(420)
+                implicitHeight: Math.max(thumbView.implicitHeight, presetTexts.implicitHeight) + Style.spacing.lg * 2
+
+                PresetThumb {
+                  id: thumbView
+                  rootRef: root
+                  look: presetRow.modelData.look
+                  anchors.left: parent.left
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Column {
+                  id: presetTexts
+                  anchors.left: thumbView.right
+                  anchors.leftMargin: Style.spacing.xl
+                  anchors.right: presetActions.left
+                  anchors.rightMargin: Style.spacing.lg
+                  anchors.verticalCenter: parent.verticalCenter
+                  spacing: Style.spacing.xxs
+
+                  Item {
+                    width: parent.width
+                    height: Math.max(presetLabel.implicitHeight, presetRow.editing ? presetName.implicitHeight : 0)
+
+                    Text {
+                      id: presetLabel
+                      visible: !presetRow.editing
+                      width: parent.width
+                      anchors.verticalCenter: parent.verticalCenter
+                      text: (presetRow.modelData.id === root.activePresetId ? "✓ " : "") + presetRow.modelData.name
+                      textFormat: Text.PlainText
+                      elide: Text.ElideRight
+                      color: presetMouse.containsMouse ? Color.accent : Color.menu.text
+                      font.family: Style.font.family
+                      font.pixelSize: Style.font.subtitle
+                    }
+                    MouseArea {
+                      id: presetMouse
+                      visible: !presetRow.editing
+                      anchors.fill: presetLabel
+                      hoverEnabled: true
+                      cursorShape: Qt.IBeamCursor
+                      onClicked: presetRow.startEdit()
+                    }
+                    TextField {
+                      id: presetName
+                      visible: presetRow.editing
+                      anchors.verticalCenter: parent.verticalCenter
+                      width: Math.min(parent.width, Style.space(220))
+                      maximumLength: 40
+                      placeholderText: "Preset name"
+                      foreground: Color.menu.text
+                      Keys.onReturnPressed: presetRow.finishEdit(true)
+                      Keys.onEnterPressed: presetRow.finishEdit(true)
+                      Keys.onEscapePressed: presetRow.finishEdit(false)
+                      onActiveFocusChanged: if (!activeFocus) presetRow.finishEdit(false)
+                    }
+                  }
+                }
+
+                Row {
+                  id: presetActions
+                  anchors.right: parent.right
+                  anchors.verticalCenter: parent.verticalCenter
+                  spacing: Style.spacing.md
+
+                  Button {
+                    visible: !presetRow.confirming
+                    text: "Apply"
+                    foreground: Color.menu.text
+                    bordered: true
+                    onClicked: root.applyPreset(presetRow.modelData.id)
+                  }
+                  Button {
+                    visible: !presetRow.confirming
+                    text: "Update"
+                    foreground: Color.menu.text
+                    onClicked: root.updatePreset(presetRow.modelData.id)
+                  }
+                  Button {
+                    visible: !presetRow.confirming
+                    text: "Delete"
+                    foreground: Color.menu.text
+                    onClicked: panel.confirmDeletePresetId = presetRow.modelData.id
+                  }
+                  Button {
+                    visible: presetRow.confirming
+                    // Button text is not pinned to PlainText: no name here.
+                    text: "Delete?"
+                    foreground: Color.urgent
+                    bordered: true
+                    onClicked: {
+                      panel.confirmDeletePresetId = ""
+                      root.deletePreset(presetRow.modelData.id)
+                    }
+                  }
+                  Button {
+                    visible: presetRow.confirming
+                    text: "Keep"
+                    foreground: Color.menu.text
+                    onClicked: panel.confirmDeletePresetId = ""
+                  }
+                }
+
+                Rectangle {
+                  anchors.bottom: parent.bottom
+                  width: parent.width
+                  height: 1
+                  color: Util.alpha(Color.menu.text, 0.10)
+                }
+              }
+            }
+
+            Item { width: 1; height: Style.spacing.xxl }
+
+            Button {
+              text: root && root.canSavePreset ? "Save current look" : "6 of 6 — delete one to save a new look"
+              foreground: Color.menu.text
+              bordered: true
+              enabled: root ? root.canSavePreset : false
+              opacity: enabled ? 1 : 0.5
+              onClicked: {
+                var id = root.savePreset("")
+                if (id !== "") Qt.callLater(function() { panel.startPresetEdit(id) })
+              }
             }
           }
 
