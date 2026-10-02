@@ -32,7 +32,7 @@ Item {
   property real magnifyScale: {
     if (!root) return 1
     if (root.waveHover) return root.magnifyScaleAt(ditem.homeCenter)
-    if (root.hoverEffect === "off") return 1
+    if (root.hoverEffect !== "zoom") return 1
     return driveArea.containsMouse ? root.zoomPeak : 1
   }
 
@@ -81,11 +81,15 @@ Item {
       dropShadow: root ? root.iconShadow : false
       shadowStrength: root ? root.shadowStrength : 0.4
       showOriginal: root ? (root.iconHoverOriginal && driveArea.containsMouse) : false
+      hovered: driveArea.containsMouse
+      hoverFx: root ? root.hoverFx : null
     }
 
-    Item {
+    HoverFx {
       anchors.fill: driveIconImg
       visible: iconSlot.themedSymbolic
+      hovered: driveArea.containsMouse
+      hoverFx: root ? root.hoverFx : null
 
       Image {
         id: symbolicImg

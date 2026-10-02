@@ -24,7 +24,7 @@ Item {
   property real magnifyScale: {
     if (!root) return 1
     if (root.waveHover) return root.magnifyScaleAt(btn.homeCenter)
-    if (root.hoverEffect === "off") return 1
+    if (root.hoverEffect !== "zoom") return 1
     return area.containsMouse ? root.zoomPeak : 1
   }
 
@@ -58,6 +58,8 @@ Item {
     dropShadow: root ? root.iconShadow : false
     shadowStrength: root ? root.shadowStrength : 0.4
     showOriginal: root ? (root.iconHoverOriginal && area.containsMouse) : false
+    hovered: area.containsMouse
+    hoverFx: root ? root.hoverFx : null
 
     // Probe at a fixed size to learn the glyph's ink-to-em ratio.
     TextMetrics {

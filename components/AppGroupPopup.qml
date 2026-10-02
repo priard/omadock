@@ -197,6 +197,7 @@ BorderSurface {
                 contrast: root ? root.iconContrast : 0
                 strength: root ? root.iconStrength : 1
                 showOriginal: root ? (root.iconHoverOriginal && cellMouseArea.containsMouse) : false
+                hoverFx: root ? root.hoverFx : null
               }
 
               Text {

@@ -17,6 +17,11 @@
 // its backdrop whether the icon is light or dark overall, and fades the
 // faint parts out; near 1 an icon reduces to a flat, poster-like shape.
 //
+// reveal (0..1) dithers the original icon (`original`) in over either style,
+// one grid cell at a time: a cell shows the original once reveal passes its
+// threshold, which mixes the cell's height (bottom rows first) with the same
+// Bayer matrix, so the original rises through the icon as a dithered front.
+//
 // Rebuild after editing:
 //   /usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 \
 //     -o iconstyle.frag.qsb iconstyle.frag
@@ -35,9 +40,11 @@ layout(std140, binding = 0) uniform buf {
     float dots;     // 1 for the dot matrix, 0 for monochrome
     float alphaCut; // cell coverage below which a cell is outside the shape
     float contrast; // 0..1, adaptive contrast (see above)
+    float reveal;   // 0..1, how far the original has dithered in
 };
 
 layout(binding = 1) uniform sampler2D source;
+layout(binding = 2) uniform sampler2D original;
 
 // 4x4 Bayer threshold, 0..1, centred in its step. Built from the 2x2 matrix
 // instead of a lookup table: some GLSL targets (e.g. NVIDIA's GL 1.x
@@ -78,6 +85,16 @@ vec4 iconAverage() {
 }
 
 void main() {
+    if (reveal > 0.0) {
+        vec2 rcell = floor(qt_TexCoord0 * grid);
+        float rise = 1.0 - (rcell.y + 0.5) / grid;
+        float threshold = 0.6 * rise + 0.4 * bayer4(rcell);
+        if (reveal >= threshold) {
+            fragColor = texture(original, qt_TexCoord0) * qt_Opacity;
+            return;
+        }
+    }
+
     vec4 avg = iconAverage();
     float meanTone = avg.a > 0.01 ? toneOf(avg) : 0.5;
     float dim = mix(dimLevel, dots < 0.5 ? 0.06 : 0.0, contrast);

@@ -1139,6 +1139,13 @@ PanelWindow {
               checked: root ? root.iconHoverOriginal : false
               onToggled: root.setOption("iconHoverOriginal", !root.iconHoverOriginal)
             }
+            SwitchRow {
+              label: "Dithered reveal"
+              hint: "The original icon appears cell by cell, rising from the bottom, instead of all at once."
+              visible: root ? (root.iconHoverOriginal && (root.iconStyle === "mono" || root.iconStyle === "dots")) : false
+              checked: root ? root.iconHoverReveal : false
+              onToggled: root.setOption("iconHoverReveal", !root.iconHoverReveal)
+            }
 
             SectionLabel { text: "Motion" }
 
@@ -1147,6 +1154,9 @@ PanelWindow {
               options: [
                 { value: "zoom", label: "Zoom" },
                 { value: "wave", label: "Wave" },
+                { value: "lift", label: "Lift" },
+                { value: "glow", label: "Glow" },
+                { value: "glitch", label: "Glitch" },
                 { value: "off", label: "None" }
               ]
               value: root ? root.hoverEffect : "zoom"

@@ -17,6 +17,11 @@ import qs.Commons
 // "show original on hover" option). The styled layers stay built while it is
 // on, so switching back and forth costs no decode or shader rebuild.
 //
+// hovered and hoverFx (the dock's object) drive the hover effects that keep
+// the icon's size; the drawn icon sits inside a HoverFx. With hoverFx.reveal
+// the mono and dots styles dither the original in (shaders/iconstyle.frag)
+// instead of switching to it at once.
+//
 // Instead of an image source, the icon can be any item declared inside
 // (e.g. a font glyph). Such content is already one colour, so "mono" shows it
 // as is (the caller colours it with the tint); "pixel" and "dots" work from
@@ -28,7 +33,14 @@ Item {
   property string iconStyle: "original"
   property bool showOriginal: false
   // The style actually drawn right now.
-  readonly property string shownStyle: art.showOriginal ? "original" : art.iconStyle
+  readonly property string shownStyle: (art.showOriginal && !art.revealMode) ? "original" : art.iconStyle
+  property bool hovered: false
+  property var hoverFx: null
+  // The styled shader draws the original itself, dithering it in.
+  readonly property bool revealMode: (art.hoverFx ? art.hoverFx.reveal === true : false)
+    && (art.iconStyle === "dots" || (art.iconStyle === "mono" && !art.hasCustom))
+  property real revealLevel: art.showOriginal ? 1 : 0
+  Behavior on revealLevel { NumberAnimation { duration: 450; easing.type: Easing.InOutQuad } }
   property color tint: Color.bar.text
   // Cells across the icon for the pixel and dots styles.
   property int grid: 16
@@ -56,8 +68,17 @@ Item {
   // The item the grid styles read from.
   readonly property Item styleSource: art.hasCustom ? custom : img
 
+  HoverFx {
+    id: fxHost
+    anchors.fill: parent
+    hovered: art.hovered
+    hoverFx: art.hoverFx
+  }
+
+  // Drawn inside fxHost, so hover effects move and outline it.
   Item {
     id: canvas
+    parent: fxHost.contentItem
     anchors.fill: parent
 
     layer.enabled: art.dropShadow
@@ -129,7 +150,7 @@ Item {
     Loader {
       anchors.fill: parent
       active: art.iconStyle === "dots" || (art.iconStyle === "mono" && !art.hasCustom)
-      visible: !art.showOriginal
+      visible: !art.showOriginal || art.revealMode
       sourceComponent: Item {
         // The dot matrix reads one texel per cell, so the icon is first
         // reduced to two texels per cell with smoothing: each cell then
@@ -141,6 +162,17 @@ Item {
           textureSize: art.iconStyle === "dots"
             ? Qt.size(art.cells * 2, art.cells * 2)
             : Qt.size(Math.max(16, art.renderSize * Screen.devicePixelRatio), Math.max(16, art.renderSize * Screen.devicePixelRatio))
+          smooth: true
+          live: true
+        }
+
+        // Full-resolution original for the dithered reveal; the dots texture
+        // above is reduced to the grid.
+        ShaderEffectSource {
+          id: originalTexture
+          visible: false
+          sourceItem: art.revealMode && art.iconStyle === "dots" ? art.styleSource : null
+          textureSize: Qt.size(Math.max(16, art.renderSize * Screen.devicePixelRatio), Math.max(16, art.renderSize * Screen.devicePixelRatio))
           smooth: true
           live: true
         }
@@ -158,6 +190,8 @@ Item {
           // Thin glyph strokes cover only part of a cell; count them in.
           property real alphaCut: art.hasCustom ? 0.12 : 0.35
           property real contrast: art.contrast
+          property real reveal: art.revealMode ? art.revealLevel : 0
+          property variant original: art.iconStyle === "dots" ? originalTexture : styleTexture
           fragmentShader: Qt.resolvedUrl("../shaders/iconstyle.frag.qsb")
         }
       }

@@ -50,7 +50,7 @@ Item {
   property real magnifyScale: {
     if (!root) return 1
     if (root.waveHover) return root.magnifyScaleAt(tile.homeCenter)
-    if (root.hoverEffect === "off") return 1
+    if (root.hoverEffect !== "zoom") return 1
     return (tileArea.containsMouse && !tile.tileMenuOpen) ? root.zoomPeak : 1
   }
   Behavior on magnifyScale {
@@ -79,11 +79,14 @@ Item {
 
   // Zoom mode scales this visual stack in place (the preview overlaps
   // neighbors exactly like magnified app icons); wave mode grows the
-  // tile itself, so the wrapper stays at scale 1 there.
-  Item {
+  // tile itself, so the wrapper stays at scale 1 there. The hover effects
+  // that keep the size come from HoverFx.
+  HoverFx {
     id: tileVisual
     anchors.fill: parent
     scale: (root && root.waveHover) ? 1 : tile.magnifyScale
+    hovered: tileArea.containsMouse && !tile.tileMenuOpen
+    hoverFx: root ? root.hoverFx : null
 
     // Stacked-card layers behind grouped tiles hint at the count.
     Rectangle {

@@ -793,10 +793,19 @@ Item {
   property bool showMinimizedTiles: true
   // "zoom" grows only the icon under the pointer and leaves the layout alone —
   // the behaviour this dock shipped with, and the default. "wave" is the
-  // falloff: neighbours respond and the row carries the extra width. "off" is
-  // no hover growth at all.
+  // falloff: neighbours respond and the row carries the extra width. The rest
+  // keep the icon's size (components/HoverFx.qml): "lift" raises it over a
+  // shadow, "glow" lights an accent halo around it, "glitch" runs a short
+  // RGB-split burst as the pointer arrives. "off" is no hover effect at all.
   property string hoverEffect: "wave"
   readonly property bool waveHover: root.hoverEffect === "wave"
+  // What HoverFx and DockIconArt read, in one object so each dock item
+  // passes a single property.
+  readonly property var hoverFx: ({
+    effect: root.hoverEffect,
+    reveal: root.iconHoverOriginal && root.iconHoverReveal,
+    glow: Color.accent
+  })
   property bool launchBounce: true
   property bool advancedTooltips: true
   property real borderOpacity: -1.0
@@ -902,6 +911,9 @@ Item {
   property real iconStrength: 1
   // With an icon style on: show the hovered icon as shipped.
   property bool iconHoverOriginal: false
+  // With iconHoverOriginal: the original dithers in cell by cell, rising
+  // from the bottom, instead of replacing the styled icon at once.
+  property bool iconHoverReveal: false
   // The mono / dots ink, kept readable against what sits behind the icons
   // (see readableOn): an accent tint over a theme gradient built from that
   // same accent would otherwise vanish into it.
@@ -2064,7 +2076,7 @@ Item {
   // Sets properties only; callers save and update the blur rule.
   function applyLook(parsed) {
     // Migrates the old boolean: an explicit magnification:false meant no growth.
-    root.hoverEffect = parsed && ["zoom", "wave", "off"].indexOf(parsed.hoverEffect) >= 0
+    root.hoverEffect = parsed && ["zoom", "wave", "lift", "glow", "glitch", "off"].indexOf(parsed.hoverEffect) >= 0
       ? parsed.hoverEffect
       : ((parsed && parsed.magnification === false) ? "off" : "zoom")
     root.launchBounce = parsed && parsed.launchBounce !== false
@@ -2102,6 +2114,7 @@ Item {
     root.iconStyle = (parsed && ["mono", "pixel", "dots"].indexOf(parsed.iconStyle) >= 0) ? parsed.iconStyle : "original"
     root.iconTint = (parsed && (parsed.iconTint === "accent" || parsed.iconTint === "bw")) ? parsed.iconTint : "text"
     root.iconHoverOriginal = parsed ? parsed.iconHoverOriginal === true : false
+    root.iconHoverReveal = parsed ? parsed.iconHoverReveal === true : false
     root.iconContrast = parsed && typeof parsed.iconContrast === "number" ? Math.max(0, Math.min(1, parsed.iconContrast)) : 0
     root.iconStrength = parsed && typeof parsed.iconStrength === "number" ? Math.max(0, Math.min(1, parsed.iconStrength)) : 1
     root.iconGrid = parsed && typeof parsed.iconGrid === "number"
@@ -3405,6 +3418,7 @@ Item {
     conf.iconStyle = root.iconStyle
     conf.iconTint = root.iconTint
     conf.iconHoverOriginal = root.iconHoverOriginal
+    conf.iconHoverReveal = root.iconHoverReveal
     conf.iconContrast = root.iconContrast
     conf.iconStrength = root.iconStrength
     conf.iconGrid = root.iconGrid

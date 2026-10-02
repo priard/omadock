@@ -64,7 +64,7 @@ Item {
   property real magnifyScale: {
     if (!root) return 1
     if (root.waveHover) return root.magnifyScaleAt(gitem.homeCenter)
-    if (root.hoverEffect === "off") return 1
+    if (root.hoverEffect !== "zoom") return 1
     return groupArea.containsMouse ? root.zoomPeak : 1
   }
 
@@ -121,11 +121,20 @@ Item {
         }
       }
 
+      // Hover effects apply to the whole tile, which is drawn inside this.
+      HoverFx {
+        id: tileFx
+        anchors.fill: parent
+        hovered: groupArea.containsMouse
+        hoverFx: root ? root.hoverFx : null
+      }
+
       // Folder tile (macOS / iOS Launchpad folder style). groupStyle picks
       // the frame: a softly rounded rim, a square rim, or none at all (just
       // the mini-icon grid).
       Rectangle {
         id: folderTile
+        parent: tileFx.contentItem
         readonly property string tileStyle: root ? root.groupStyle : "rounded"
         anchors.fill: parent
         radius: tileStyle === "rounded" ? Math.round(width * 0.18) : 0
@@ -188,6 +197,7 @@ Item {
                 contrast: root ? root.iconContrast : 0
                 strength: root ? root.iconStrength : 1
                 showOriginal: root ? (root.iconHoverOriginal && groupArea.containsMouse) : false
+                hoverFx: root ? root.hoverFx : null
               }
             }
           }

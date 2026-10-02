@@ -61,7 +61,7 @@ Item {
   property real magnifyScale: {
     if (!root) return 1
     if (root.waveHover) return root.magnifyScaleAt(item.homeCenter)
-    if (root.hoverEffect === "off") return 1
+    if (root.hoverEffect !== "zoom") return 1
     return ((area.containsMouse && !item.isDragging) || item.isFileDropTarget) ? root.zoomPeak : 1
   }
 
@@ -204,6 +204,8 @@ Item {
       dropShadow: root ? root.iconShadow : false
       shadowStrength: root ? root.shadowStrength : 0.4
       showOriginal: root ? (root.iconHoverOriginal && area.containsMouse) : false
+      hovered: area.containsMouse && !item.isDragging
+      hoverFx: root ? root.hoverFx : null
     }
   }
 

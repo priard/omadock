@@ -531,7 +531,7 @@ var LOOK_KEYS = [
   "grain", "opacity", "blur", "showShadow", "shadowStrength", "showBorder",
   "borderWidth", "borderOpacity", "shape", "cornerRadius", "splitSections",
   "dividerHeight", "dividerStyle", "dividerWidth", "dividerOpacity",
-  "iconStyle", "iconTint", "iconHoverOriginal", "iconContrast", "iconStrength",
+  "iconStyle", "iconTint", "iconHoverOriginal", "iconHoverReveal", "iconContrast", "iconStrength",
   "iconGrid", "indicatorShape", "hoverEffect", "launchBounce", "groupStyle",
   "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing"
 ]
