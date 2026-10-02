@@ -53,6 +53,17 @@ Item {
     return root ? my < -(root.iconSlot * 0.75) : false
   }
 
+  // Over the running apps that are not pinned: from the divider before
+  // them to the gap after the last one.
+  function overRunningAt(rx) {
+    var n = runningRepeater.count
+    var first = n > 0 ? runningRepeater.itemAt(0) : null
+    var last = n > 0 ? runningRepeater.itemAt(n - 1) : null
+    if (!first || !last) return false
+    var start = separator.visible ? separator.x : first.x - row.spacing / 2
+    return rx >= start && rx <= last.x + last.width + row.spacing / 2
+  }
+
   function handleDragMoved(aid, mx, my) {
     if (!root) return
     root.dropBeforeId = ""
@@ -61,8 +72,10 @@ Item {
     root.dragPointerX = mx
     root.dragPointerY = my
 
-    // Only a pin can be taken off; a running app that is not pinned stays.
-    root.dragRemoveArmed = root.dragSourceGroupId === "" && DockModel.isPinned(root.pinnedIds, aid) && cardWrapper.offDockAt(my)
+    // Only a pin can be taken off, by pulling it up off the dock or over to
+    // the running apps; a running app that is not pinned stays.
+    root.dragRemoveArmed = root.dragSourceGroupId === "" && DockModel.isPinned(root.pinnedIds, aid)
+      && (cardWrapper.offDockAt(my) || cardWrapper.overRunningAt(mx - row.x))
     if (root.dragRemoveArmed) return
 
     // Over the middle of a group: add to it. Over the middle of another
