@@ -318,6 +318,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "borderOpacity": "theme",
   "groupStyle": "rounded",
   "itemSpacing": 4,
+  "dividerHeight": 70,
   "iconSize": 0,
   "hoverEffect": "zoom",
   "showAppsButton": true,

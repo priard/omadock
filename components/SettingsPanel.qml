@@ -1149,6 +1149,17 @@ PanelWindow {
               value: root ? root.sectionSpacing : 18
               onCommitted: function(v) { root.setOption("sectionSpacing", Math.round(v)) }
             }
+            SliderRow {
+              label: "Divider height"
+              hint: "Length of the lines between sections, as a share of the dock's height."
+              visible: root ? !root.splitSections : true
+              minimum: 20
+              maximum: 100
+              step: 5
+              suffix: "%"
+              value: root ? root.dividerHeight : 70
+              onCommitted: function(v) { root.setOption("dividerHeight", Math.round(v)) }
+            }
           }
 
           // ================================================= Folders

@@ -1041,6 +1041,8 @@ Item {
   property int itemSpacing: 4
   // Gap between the panels when sections are split.
   property int sectionSpacing: 18
+  // Length of the section divider lines, in percent of the dock's height.
+  property int dividerHeight: 70
   property string minimizeMode: "active"
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
@@ -2118,6 +2120,7 @@ Item {
     root.folderColor = parsed && typeof parsed.folderColor === "string" ? parsed.folderColor : "theme"
     root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" ? parsed.itemSpacing : 4
     root.sectionSpacing = parsed && typeof parsed.sectionSpacing === "number" ? Math.max(0, Math.min(48, Math.round(parsed.sectionSpacing))) : 18
+    root.dividerHeight = parsed && typeof parsed.dividerHeight === "number" && isFinite(parsed.dividerHeight) ? Math.max(20, Math.min(100, Math.round(parsed.dividerHeight))) : 70
     if (parsed && typeof parsed.minimizeMode === "string") {
       root.minimizeMode = parsed.minimizeMode
     } else if (parsed && parsed.clickToMinimize === true) {
@@ -3352,6 +3355,7 @@ Item {
     conf.folderColor = root.folderColor
     conf.itemSpacing = root.itemSpacing
     conf.sectionSpacing = root.sectionSpacing
+    conf.dividerHeight = root.dividerHeight
     conf.minimizeMode = root.minimizeMode
     conf.clickToMinimize = root.minimizeMode !== "off"
     conf.showUrgentHint = root.showUrgentHint

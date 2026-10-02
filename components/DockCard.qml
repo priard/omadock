@@ -645,15 +645,15 @@ Item {
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line: 70% of the dock's height and centred on it, as on
-        // macOS. It overflows the slot, so it does not grow the row. With
-        // split sections the slot is the gap between two panels and no line
-        // is drawn.
+        // The line: a share of the dock's height (70% by default, as on
+        // macOS), centred on it. It overflows the slot, so it does not grow
+        // the row. With split sections the slot is the gap between two
+        // panels and no line is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.centerIn: parent
           width: Style.space(1)
-          height: Math.round(dockCard.height * 0.7)
+          height: Math.round(dockCard.height * (root ? root.dividerHeight : 70) / 100)
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -679,15 +679,15 @@ Item {
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line: 70% of the dock's height and centred on it, as on
-        // macOS. It overflows the slot, so it does not grow the row. With
-        // split sections the slot is the gap between two panels and no line
-        // is drawn.
+        // The line: a share of the dock's height (70% by default, as on
+        // macOS), centred on it. It overflows the slot, so it does not grow
+        // the row. With split sections the slot is the gap between two
+        // panels and no line is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.centerIn: parent
           width: Style.space(1)
-          height: Math.round(dockCard.height * 0.7)
+          height: Math.round(dockCard.height * (root ? root.dividerHeight : 70) / 100)
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -756,15 +756,15 @@ Item {
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line: 70% of the dock's height and centred on it, as on
-        // macOS. It overflows the slot, so it does not grow the row. With
-        // split sections the slot is the gap between two panels and no line
-        // is drawn.
+        // The line: a share of the dock's height (70% by default, as on
+        // macOS), centred on it. It overflows the slot, so it does not grow
+        // the row. With split sections the slot is the gap between two
+        // panels and no line is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.centerIn: parent
           width: Style.space(1)
-          height: Math.round(dockCard.height * 0.7)
+          height: Math.round(dockCard.height * (root ? root.dividerHeight : 70) / 100)
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -812,15 +812,15 @@ Item {
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line: 70% of the dock's height and centred on it, as on
-        // macOS. It overflows the slot, so it does not grow the row. With
-        // split sections the slot is the gap between two panels and no line
-        // is drawn.
+        // The line: a share of the dock's height (70% by default, as on
+        // macOS), centred on it. It overflows the slot, so it does not grow
+        // the row. With split sections the slot is the gap between two
+        // panels and no line is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.centerIn: parent
           width: Style.space(1)
-          height: Math.round(dockCard.height * 0.7)
+          height: Math.round(dockCard.height * (root ? root.dividerHeight : 70) / 100)
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
