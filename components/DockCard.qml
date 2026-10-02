@@ -479,12 +479,11 @@ Item {
     readonly property real effectiveBorderWidth: dockCard.devSnap(root ? root.borderWidth : 1.5)
 
     // Section divider lines, in card coordinates: a share of the height
-    // inside the rim, less a small gap at each end so that even 100% stops
-    // short of the edge, centred on the card on whole device pixels.
-    readonly property real dividerGap: dockCard.devSnap(Style.space(2))
-    readonly property real dividerRoom: Math.max(0, dockCard.height - dockCard.borderTop - dockCard.borderBottom - 2 * dockCard.dividerGap)
+    // inside the rim, so 100% runs from the rim to the rim without covering
+    // it, centred on the card on whole device pixels.
+    readonly property real dividerRoom: Math.max(0, dockCard.height - dockCard.borderTop - dockCard.borderBottom)
     readonly property real dividerLength: dockCard.devSnap(dockCard.dividerRoom * (root ? root.dividerHeight : 70) / 100)
-    readonly property real dividerTop: Math.round((dockCard.borderTop + dockCard.dividerGap + (dockCard.dividerRoom - dockCard.dividerLength) / 2) * dockCard.dpr) / dockCard.dpr
+    readonly property real dividerTop: Math.round((dockCard.borderTop + (dockCard.dividerRoom - dockCard.dividerLength) / 2) * dockCard.dpr) / dockCard.dpr
 
     // The panels below paint the fill and the rim. The card keeps a clear
     // rim of the same width, so its content insets do not depend on how many
