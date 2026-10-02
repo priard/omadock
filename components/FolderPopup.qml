@@ -70,8 +70,14 @@ BorderSurface {
     root.closeFolderStack()
   }
 
+  function dragStart() {
+    if (root) root.fileDragOut = true
+  }
+
   function dragDone(action) {
-    if (action !== Qt.IgnoreAction && root) root.closeFolderStack()
+    if (!root) return
+    root.fileDragOut = false
+    if (action !== Qt.IgnoreAction) root.closeFolderStack()
   }
 
   // A new directory starts at the top.
@@ -216,6 +222,7 @@ BorderSurface {
         symbolicColor: root ? root.symbolicColorOn(Color.menu.background) : "#ffffff"
         appLibrary: root ? root.appLibrary : null
         onTriggered: folderStackPopover.activate(modelData)
+        onDragStarted: folderStackPopover.dragStart()
         onDragFinished: function(action) { folderStackPopover.dragDone(action) }
       }
     }
@@ -243,6 +250,7 @@ BorderSurface {
         symbolicColor: root ? root.symbolicColorOn(Color.menu.background) : "#ffffff"
         appLibrary: root ? root.appLibrary : null
         onTriggered: folderStackPopover.activate(modelData)
+        onDragStarted: folderStackPopover.dragStart()
         onDragFinished: function(action) { folderStackPopover.dragDone(action) }
       }
     }

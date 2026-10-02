@@ -2284,6 +2284,11 @@ Item {
   // handlers do not fire during a drag, so the drop areas report it here to
   // keep (or bring) the dock in view.
   property bool externalDragOver: false
+  // A file is being dragged out of the open folder stack. The dismiss area
+  // collapses meanwhile: it spans nearly the whole screen, and while it is in
+  // the input mask the compositor offers the drag to the dock instead of the
+  // window under the pointer.
+  property bool fileDragOut: false
   // While a folder is dragged over the dock: its path once confirmed to be a
   // directory (dropCandidatePath), and where among the pinned folders it
   // would land (0..count). Opening a dragged item with an app comes first
@@ -3761,6 +3766,7 @@ Item {
     root.activeStackPath = ""
     root.activeStackTrail = []
     root.activeStackEntries = []
+    root.fileDragOut = false
     root.syncVisibility()
   }
 
@@ -4021,8 +4027,9 @@ Item {
     // Global dismiss area - catches clicks outside context menu, folder stack, or app group popup
     Item {
       id: globalDismiss
-      width: (root.contextAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.dockDragActive) ? dockWindow.width : 0
-      height: (root.contextAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.dockDragActive) ? dockWindow.height : 0
+      readonly property bool armed: !root.fileDragOut && (root.contextAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.dockDragActive)
+      width: armed ? dockWindow.width : 0
+      height: armed ? dockWindow.height : 0
 
       MouseArea {
         anchors.fill: parent

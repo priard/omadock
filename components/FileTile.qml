@@ -24,6 +24,7 @@ Item {
   property var appLibrary: null
 
   signal triggered()
+  signal dragStarted()
   signal dragFinished(int action)
 
   readonly property string fileUri: "file://" + tile.path.split("/").map(encodeURIComponent).join("/")
@@ -139,6 +140,7 @@ Item {
     hoverEnabled: true
     cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
     drag.target: tile.path !== "" ? dragProxy : null
+    drag.onActiveChanged: if (drag.active) tile.dragStarted()
     onClicked: tile.triggered()
   }
 }

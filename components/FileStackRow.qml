@@ -15,6 +15,7 @@ Item {
   signal triggered()
   // Drag-and-drop out of the stack finished (action is the Qt.DropAction the
   // target chose, Qt.IgnoreAction when it was dropped nowhere).
+  signal dragStarted()
   signal dragFinished(int action)
 
   // file:// URI for drag-and-drop. Each path segment is percent-encoded so
@@ -168,6 +169,7 @@ Item {
     hoverEnabled: true
     cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
     drag.target: frow.path !== "" ? dragProxy : null
+    drag.onActiveChanged: if (drag.active) frow.dragStarted()
     onClicked: frow.triggered()
   }
 }
