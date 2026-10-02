@@ -458,6 +458,14 @@ Item {
     function devSnap(v) { return v <= 0 ? 0 : Math.max(1, Math.round(v * dockCard.dpr)) / dockCard.dpr }
     readonly property real effectiveBorderWidth: dockCard.devSnap(root ? root.borderWidth : 1.5)
 
+    // Section divider lines, in card coordinates: a share of the height
+    // inside the rim, less a small gap at each end so that even 100% stops
+    // short of the edge, centred on the card on whole device pixels.
+    readonly property real dividerGap: dockCard.devSnap(Style.space(2))
+    readonly property real dividerRoom: Math.max(0, dockCard.height - dockCard.borderTop - dockCard.borderBottom - 2 * dockCard.dividerGap)
+    readonly property real dividerLength: dockCard.devSnap(dockCard.dividerRoom * (root ? root.dividerHeight : 70) / 100)
+    readonly property real dividerTop: Math.round((dockCard.borderTop + dockCard.dividerGap + (dockCard.dividerRoom - dockCard.dividerLength) / 2) * dockCard.dpr) / dockCard.dpr
+
     // The panels below paint the fill and the rim. The card keeps a clear
     // rim of the same width, so its content insets do not depend on how many
     // panels there are.
@@ -625,15 +633,16 @@ Item {
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line: a share of the dock's height (70% by default, as on
-        // macOS), centred on it. It overflows the slot, so it does not grow
-        // the row. With split sections the slot is the gap between two
-        // panels and no line is drawn.
+        // The line, placed by dockCard (70% of its height by default, as on
+        // macOS). It overflows the slot, so it does not grow the row. With
+        // split sections the slot is the gap between two panels and no line
+        // is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
-          anchors.centerIn: parent
+          anchors.horizontalCenter: parent.horizontalCenter
+          y: dockCard.dividerTop - row.y - parent.y
           width: Style.space(1)
-          height: Math.round(dockCard.height * (root ? root.dividerHeight : 70) / 100)
+          height: dockCard.dividerLength
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -659,15 +668,16 @@ Item {
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line: a share of the dock's height (70% by default, as on
-        // macOS), centred on it. It overflows the slot, so it does not grow
-        // the row. With split sections the slot is the gap between two
-        // panels and no line is drawn.
+        // The line, placed by dockCard (70% of its height by default, as on
+        // macOS). It overflows the slot, so it does not grow the row. With
+        // split sections the slot is the gap between two panels and no line
+        // is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
-          anchors.centerIn: parent
+          anchors.horizontalCenter: parent.horizontalCenter
+          y: dockCard.dividerTop - row.y - parent.y
           width: Style.space(1)
-          height: Math.round(dockCard.height * (root ? root.dividerHeight : 70) / 100)
+          height: dockCard.dividerLength
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -736,15 +746,16 @@ Item {
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line: a share of the dock's height (70% by default, as on
-        // macOS), centred on it. It overflows the slot, so it does not grow
-        // the row. With split sections the slot is the gap between two
-        // panels and no line is drawn.
+        // The line, placed by dockCard (70% of its height by default, as on
+        // macOS). It overflows the slot, so it does not grow the row. With
+        // split sections the slot is the gap between two panels and no line
+        // is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
-          anchors.centerIn: parent
+          anchors.horizontalCenter: parent.horizontalCenter
+          y: dockCard.dividerTop - row.y - parent.y
           width: Style.space(1)
-          height: Math.round(dockCard.height * (root ? root.dividerHeight : 70) / 100)
+          height: dockCard.dividerLength
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -792,15 +803,16 @@ Item {
         width: root ? root.separatorWidth : Style.space(1)
         height: root ? (root.iconSize * 0.7) : 24
 
-        // The line: a share of the dock's height (70% by default, as on
-        // macOS), centred on it. It overflows the slot, so it does not grow
-        // the row. With split sections the slot is the gap between two
-        // panels and no line is drawn.
+        // The line, placed by dockCard (70% of its height by default, as on
+        // macOS). It overflows the slot, so it does not grow the row. With
+        // split sections the slot is the gap between two panels and no line
+        // is drawn.
         Rectangle {
           visible: !(root && root.splitSections)
-          anchors.centerIn: parent
+          anchors.horizontalCenter: parent.horizontalCenter
+          y: dockCard.dividerTop - row.y - parent.y
           width: Style.space(1)
-          height: Math.round(dockCard.height * (root ? root.dividerHeight : 70) / 100)
+          height: dockCard.dividerLength
           color: root ? root.dividerColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
