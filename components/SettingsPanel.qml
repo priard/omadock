@@ -1062,7 +1062,7 @@ PanelWindow {
             }
             SwitchRow {
               label: "Window previews"
-              hint: "Live thumbnails of an app's windows in its tooltip."
+              hint: "Thumbnails of an app's windows in its tooltip; scroll over the icon to flip through them."
               checked: root ? root.advancedTooltips : true
               onToggled: root.setOption("advancedTooltips", !root.advancedTooltips)
             }

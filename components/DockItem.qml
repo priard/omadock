@@ -504,8 +504,44 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
       }
 
+      // Window previews: a card stack the wheel rotates; a click on the icon
+      // focuses the front card's window.
+      WindowCardStack {
+        id: cardStack
+        readonly property bool wanted: root ? (root.advancedTooltips && item.tooltipWindows.length > 0) : false
+        visible: wanted
+        width: wanted ? implicitWidth : 0
+        height: wanted ? implicitHeight : 0
+        anchors.horizontalCenter: parent.horizontalCenter
+        rootRef: item.rootRef
+        windows: item.tooltipWindows
+        active: wanted && itemTooltip.visible
+        fallbackIcon: iconImg.source
+        frontIndex: {
+          var wins = item.tooltipWindows
+          if (item.selectedWindowIdx >= 0 && item.selectedWindowIdx < wins.length) return item.selectedWindowIdx
+          for (var i = 0; i < wins.length; i++)
+            if (item.isWinActive(wins[i])) return i
+          return 0
+        }
+      }
+
+      Text {
+        visible: cardStack.wanted
+        width: Math.min(implicitWidth, cardStack.width)
+        anchors.horizontalCenter: parent.horizontalCenter
+        horizontalAlignment: Text.AlignHCenter
+        text: (cardStack.wanted && root) ? root.windowRowLabel(item.tooltipWindows[cardStack.frontIndex]) : ""
+        textFormat: Text.PlainText
+        color: Util.alpha(Color.tooltip.text, 0.80)
+        font.family: Style.font.family
+        font.pixelSize: Math.max(10, Style.font.caption - 1)
+        elide: Text.ElideRight
+        maximumLineCount: 1
+      }
+
       Repeater {
-        model: (root && root.advancedTooltips && item.tooltipWindows.length > 0)
+        model: (root && !root.advancedTooltips && item.tooltipWindows.length > 0)
           ? Math.min(item.tooltipWindows.length, 8) : 0
         delegate: Row {
           spacing: Style.space(5)
@@ -543,7 +579,7 @@ Item {
       }
 
       Text {
-        visible: root ? (root.advancedTooltips && item.tooltipWindows.length > 8) : false
+        visible: root ? (!root.advancedTooltips && item.tooltipWindows.length > 8) : false
         anchors.horizontalCenter: parent.horizontalCenter
         text: "+" + (item.tooltipWindows.length - 8) + " more"
         textFormat: Text.PlainText
