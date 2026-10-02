@@ -5,9 +5,11 @@ import qs.Ui
 
 // Still thumbnails of an app's windows, stacked like cards: the front card
 // shows windows[frontIndex], up to two more peek out above it, and changing
-// frontIndex slides the cards into their new places. A card holds a capture
-// only while the stack is active and the card is among the front three, and
-// takes a single frame, so an idle dock never keeps window buffers alive.
+// frontIndex slides the cards into their new places. Cards exist only while
+// the stack is active: a closed tooltip holds no buffers and loads no icons
+// (every dock item has a stack, and icon loads at shell start race inside
+// Qt). A card captures a single frame the first time it reaches the front
+// three and keeps it until the stack closes, so flipping never recaptures.
 Item {
   id: stack
 
@@ -32,7 +34,7 @@ Item {
   implicitHeight: frameHeight + peek * peeking
 
   Repeater {
-    model: stack.count
+    model: stack.active ? stack.count : 0
 
     delegate: Item {
       id: card
@@ -40,6 +42,10 @@ Item {
       readonly property var win: stack.windows[index]
       readonly property int depth: (index - stack.frontIndex + stack.count) % stack.count
       readonly property bool shown: depth <= 2
+      // Latched once the card has been among the front three.
+      property bool reached: false
+      onShownChanged: if (shown) reached = true
+      Component.onCompleted: if (shown) reached = true
       readonly property real capturedAspect: (capture.item && capture.item.hasContent) ? capture.item.aspect : 0
 
       function adoptAspect() {
@@ -82,7 +88,7 @@ Item {
       Loader {
         id: capture
         anchors.centerIn: parent
-        active: stack.active && card.shown && !!card.win
+        active: card.reached && !!card.win
         sourceComponent: ScreencopyView {
           // Letterbox the window into the frame by its own aspect ratio.
           readonly property real aspect: (sourceSize.width > 0 && sourceSize.height > 0)
