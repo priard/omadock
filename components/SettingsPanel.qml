@@ -1006,6 +1006,16 @@ PanelWindow {
               checked: root ? root.keepPointer : true
               onToggled: root.setOption("keepPointer", !root.keepPointer)
             }
+            SliderRow {
+              label: "Wheel step delay"
+              hint: "Scrolling over an app flips through its windows; this paces the steps."
+              minimum: 0
+              maximum: 500
+              step: 10
+              suffix: " ms"
+              value: root ? root.wheelStepDelay : 150
+              onCommitted: function(v) { root.setOption("wheelStepDelay", Math.round(v)) }
+            }
 
             SectionLabel { text: "Attention" }
 

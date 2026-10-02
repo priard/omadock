@@ -30,7 +30,6 @@ Item {
   signal dragStarted(string appId)
   signal dragMoved(string appId, real x, real y)
   signal dragDropped(string appId)
-  signal wheelScrolled(string appId, int direction)
 
   // Only the wave lets a slot grow; zoom keeps the layout still and simply
   // draws its icon larger.
@@ -328,9 +327,11 @@ Item {
     cursorShape: item.isDragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
+    // The wheel only flips through the app's windows in the tooltip (or the
+    // open menu); a click brings the chosen one up.
     onWheel: function(wheel) {
-      if (wheel.angleDelta.y !== 0) {
-        var dir = wheel.angleDelta.y > 0 ? -1 : 1
+      var dir = root ? root.wheelStep("app:" + item.appId, wheel.angleDelta.y) : 0
+      if (dir !== 0) {
         var wins = item.tooltipWindows || []
         if (wins.length > 1) {
           var cur = 0
@@ -351,8 +352,6 @@ Item {
           }
 
           itemTooltip.shown = true
-        } else {
-          item.wheelScrolled(item.appId, dir)
         }
       }
     }

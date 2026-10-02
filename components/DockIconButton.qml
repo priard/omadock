@@ -17,7 +17,6 @@ Item {
   property real glyphFill: 0.62
   signal pressed()
   signal middleClicked()
-  signal wheelScrolled(int dir)
   signal menuRequested(real x, real y)
 
   property real homeCenter: 0
@@ -107,9 +106,6 @@ Item {
       } else {
         btn.pressed()
       }
-    }
-    onWheel: function(wheel) {
-      if (wheel.angleDelta.y !== 0) btn.wheelScrolled(wheel.angleDelta.y > 0 ? -1 : 1)
     }
   }
 

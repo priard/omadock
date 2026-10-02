@@ -279,11 +279,10 @@ omarchy-shell omadock applyPreset "Night"
 | :--- | :--- | :--- |
 | **Left Click** | ❖ Omarchy Logo | Opens Omarchy Application Launcher |
 | **Right Click** | ❖ Omarchy Logo | Opens Omadock Preferences Menu |
-| **Scroll Wheel** | ❖ Omarchy Logo | Cycles active Hyprland workspaces |
 | **Middle Click** | ❖ Omarchy Logo | Spawns default terminal emulator |
 | **Left Click** | Application Icon | Launches app / focuses / restores window |
 | **Middle Click** | Application Icon | Launches a **new instance** of the application |
-| **Scroll Wheel** | Application Icon | Cycles focus through open instances |
+| **Scroll Wheel** | Application Icon | Flips through the app's windows in its tooltip; a click focuses the chosen one |
 | **Right Click** | Application Icon | Context menu (Window list, Desktop Actions, Pin, Close) |
 | **Left Click** | Folder Stack | Toggles recent-files popover |
 | **Right Click** | Folder Stack | Folder options (Open in File Manager, Unpin) |

@@ -718,8 +718,9 @@ BorderSurface {
         z: 10
         acceptedButtons: Qt.NoButton
         onWheel: function(wheel) {
-          if (!root || wheel.angleDelta.y === 0 || root.contextWindowList.length <= 1) return
-          var dir = wheel.angleDelta.y > 0 ? -1 : 1
+          if (!root || root.contextWindowList.length <= 1) return
+          var dir = root.wheelStep("menu", wheel.angleDelta.y)
+          if (dir === 0) return
           var len = root.contextWindowList.length
           if (appContextMenuColumn.selectedWindowIdx < 0) {
             var cur = 0

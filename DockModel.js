@@ -944,45 +944,6 @@ function allWindowsMinimized(windowList, liveWsOf, minWs) {
   return true
 }
 
-// Which window a click or a wheel step should land on. Pure: the caller
-// decides how to bring it forward.
-function pickAppWindow(toplevels, activeToplevel, appId, direction) {
-  var want = stripDesktop(appId)
-  if (!want) return null
-  var list = toArray(toplevels)
-  var matching = []
-
-  for (var i = 0; i < list.length; i++) {
-    var t = list[i]
-    if (t && (stripDesktop(t.appId) === want || isAppMatch(t.appId, want) || (!t.appId && t.title && (stripDesktop(t.title) === want || isAppMatch(t.title, want))))) {
-      matching.push(t)
-    }
-  }
-
-  if (matching.length === 0) return null
-  if (matching.length === 1) return matching[0]
-
-  if (direction === 0) {
-    for (var j = 0; j < matching.length; j++) {
-      if (matching[j] === activeToplevel || matching[j].activated) return matching[j]
-    }
-    return matching[0]
-  }
-
-  var dir = (typeof direction === "number" && direction < 0) ? -1 : 1
-  var activeIdx = -1
-  for (var j = 0; j < matching.length; j++) {
-    if (matching[j] === activeToplevel || matching[j].activated) {
-      activeIdx = j
-      break
-    }
-  }
-
-  // Nothing of this app is focused: enter the list from the end we came from.
-  if (activeIdx < 0) return matching[dir > 0 ? 0 : matching.length - 1]
-  return matching[(activeIdx + dir + matching.length) % matching.length]
-}
-
 function focusWindow(toplevel) {
   try {
     if (toplevel && typeof toplevel.activate === "function") toplevel.activate()
