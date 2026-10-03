@@ -23,9 +23,11 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   presets, hover effects, keep-pointer, wheel pacing, window previews,
   hardening, perf fixes, popup windows (dock VRAM 194 -> 26 MiB).
 
+- #26 tooltip fade, linger and cross-fade (merged 2026-10-03).
+
 ## Open
 
-- #26 tooltip fade, linger and cross-fade (`feat/tooltip-motion`).
+- none.
 
 ## Fork only
 
