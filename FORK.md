@@ -32,6 +32,8 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 - #29 CI: security grep and shader source check (`feat/ci-static-checks`).
 - #30 stacks: "20000+" and "Folder could not be read" (`feat/stack-limits`).
 - #31 warn when a drive is pulled out while mounted (`feat/unsafe-removal`).
+- #32 more unit tests (`feat/more-unit-tests`).
+- #33 live checks, IPC itemGeometry/state and the benchmark (`feat/live-tooling`).
 
 ## Fork only
 
