@@ -186,5 +186,19 @@ Item {
       var d = host.orderedDocks()
       return d.length > 0 ? d[0].itemGeometry() : "[]"
     }
+
+    // Read-only summary for the live tests.
+    function state(): string {
+      var d = host.orderedDocks()
+      if (d.length === 0) return "{}"
+      return JSON.stringify({
+        visible: d[0].dockVisible,
+        settingsOpen: d[0].settingsPanelOpen,
+        settingsPage: d[0].settingsPanelPage,
+        activePreset: d[0].activePresetId || "",
+        items: JSON.parse(d[0].itemGeometry()).length,
+        docks: d.length
+      })
+    }
   }
 }
