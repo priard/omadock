@@ -80,7 +80,7 @@ Item {
   // 2 = missing / non-regular / unreadable, 3 = oversized (parity: empty).
   readonly property string gateScript: [
     '[ -f "$1" ] && [ -r "$1" ] || exit 2',
-    's=$(stat -c %s -- "$1" 2>/dev/null) || exit 2',
+    's=$(stat -L -c %s -- "$1" 2>/dev/null) || exit 2',
     '[ "$s" -le "$2" ] || exit 3',
     'timeout 2 head -c "$s" -- "$1"',
   ].join("\n")

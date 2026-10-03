@@ -41,9 +41,14 @@ qs -p "$SHELL_PATH" ipc show 2>/dev/null | grep -q "target omadock" \
   || fail "IPC target 'omadock' is not registered in 'qs ipc show'"
 
 # 3. The shell log must not carry omadock QML runtime errors.
+# Omadock's own console.warn diagnostics are deliberate (invariant: every
+# catch block logs) and carry engine exception text like "Parse error" —
+# they must not count as runtime errors. Real QML faults never carry the
+# "[omadock]" warn prefix; they cite file:line instead, so filter on it.
 suspects="$(quickshell log -p "$SHELL_PATH" -t 30 2>&1 \
   | grep -iE "error|TypeError|ReferenceError|is not a type|unavailable" \
-  | grep -iE "dock|omadock|settings" | head -n 3)"
+  | grep -iE "dock|omadock|settings" \
+  | grep -v "\[omadock\]" | head -n 3)"
 if [ -n "$suspects" ]; then
   printf '%s\n' "$suspects" >&2
   fail "omadock QML errors found in the shell log (see above)"

@@ -24,6 +24,21 @@ Item {
   property bool active: false
   property bool pinned: false
 
+  // Badge counts are filed under whichever id the matching entry carries.
+  // DockModel owns the id spellings, so this only sums the aliases it is told.
+  readonly property int notificationCount: {
+    if (!root || !root.showNotificationBadges || !item.pinned) return 0
+    var ids = DockModel.notificationAliasIds(item.appId)
+    var seen = ({})
+    var count = 0
+    for (var i = 0; i < ids.length; i++) {
+      if (seen[ids[i]]) continue
+      seen[ids[i]] = true
+      count += root.notificationBadges[ids[i]] || 0
+    }
+    return count
+  }
+
   signal activateRequested(string appId)
   signal newWindowRequested(string appId)
   signal menuRequested(string appId, real cx, real cy)
@@ -256,6 +271,31 @@ Item {
       hovered: area.containsMouse && !item.isDragging
       hoverFx: root ? root.hoverFx : null
     }
+
+    Rectangle {
+      visible: item.notificationCount > 0
+      anchors.right: iconImg.right
+      anchors.top: iconImg.top
+      anchors.rightMargin: -Style.space(3)
+      anchors.topMargin: -Style.space(3)
+      width: Math.max(Style.space(17), badgeText.implicitWidth + Style.space(8))
+      height: Style.space(17)
+      radius: height / 2
+      color: Color.accent
+      border.width: 1
+      border.color: Color.bar.background
+      z: 2
+      Text {
+        id: badgeText
+        anchors.centerIn: parent
+        text: item.notificationCount > 99 ? "99+" : String(item.notificationCount)
+        textFormat: Text.PlainText
+        color: root && root.isLight(Color.accent) ? "#12100f" : "#f2efec"
+        font.family: Style.font.family
+        font.pixelSize: Style.space(10)
+        font.bold: true
+      }
+    }
   }
 
   readonly property bool isFocused: {
@@ -394,10 +434,20 @@ Item {
             item.selectedWindowIdx = (item.selectedWindowIdx + dir + wins.length) % wins.length
           }
 
-          // If context menu is open for this app, synchronize its selection
+          // If context menu is open for this app, synchronize its selection.
+          // The menu's rows index item.windowList (parked windows included),
+          // while this selection was computed over tooltipWindows (visible
+          // only) — translate it by address or the highlight and the click
+          // land on the wrong window.
           if (root && root.contextAppId === item.appId) {
-            if (typeof appContextMenuColumn !== "undefined" && appContextMenuColumn)
-              appContextMenuColumn.selectedWindowIdx = item.selectedWindowIdx
+            if (typeof appContextMenuColumn !== "undefined" && appContextMenuColumn) {
+              var selAddr = wins[item.selectedWindowIdx] ? wins[item.selectedWindowIdx].address : ""
+              var menuIdx = -1
+              for (var mi = 0; item.windowList && mi < item.windowList.length; mi++) {
+                if (item.windowList[mi] && item.windowList[mi].address === selAddr) { menuIdx = mi; break }
+              }
+              appContextMenuColumn.selectedWindowIdx = menuIdx
+            }
             return
           }
 
@@ -461,17 +511,23 @@ Item {
       } else if (mouse.button === Qt.LeftButton) {
         // If context menu is open for this app:
         if (root && root.contextAppId === item.appId) {
-          var chosenIdx = item.selectedWindowIdx
-          if (typeof appContextMenuColumn !== "undefined" && appContextMenuColumn
-              && appContextMenuColumn.selectedWindowIdx >= 0) {
-            chosenIdx = appContextMenuColumn.selectedWindowIdx
+          // Two index spaces meet here: the menu column indexes the full
+          // windowList (set by the menu's own wheel or the translated sync
+          // above), while item.selectedWindowIdx indexes tooltipWindows
+          // (visible only). Resolve each in its own space, or a click picks
+          // a different window than the one highlighted.
+          var chosenWin = null
+          var menuIdx = -1
+          if (typeof appContextMenuColumn !== "undefined" && appContextMenuColumn)
+            menuIdx = appContextMenuColumn.selectedWindowIdx
+          if (menuIdx >= 0 && item.windowList && menuIdx < item.windowList.length) {
+            chosenWin = item.windowList[menuIdx]
+          } else if (item.selectedWindowIdx >= 0 && item.tooltipWindows && item.selectedWindowIdx < item.tooltipWindows.length) {
+            chosenWin = item.tooltipWindows[item.selectedWindowIdx]
           }
 
-          if (chosenIdx >= 0 && item.windowList && chosenIdx < item.windowList.length) {
-            var chosenWin = item.windowList[chosenIdx]
-            if (chosenWin && chosenWin.address) {
-              root.focusWindowByAddress(chosenWin.address, item.appId)
-            }
+          if (chosenWin && chosenWin.address) {
+            root.focusWindowByAddress(chosenWin.address, item.appId)
           }
           item.selectedWindowIdx = -1
           if (typeof appContextMenuColumn !== "undefined" && appContextMenuColumn)

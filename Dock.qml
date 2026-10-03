@@ -191,6 +191,7 @@ Item {
         if (!values) return []
         return values.filter(function(e) { return !e.noDisplay })
       } catch (e) {
+        console.warn("[omadock] Failed reading desktop entries:", e)
         return []
       }
     }
@@ -263,6 +264,16 @@ Item {
       // Redirect stdout and stderr to /dev/null so spawned applications don't inherit
       // transient QProcess pipes that close when gtk-launch exits (causing EPIPE crashes).
       var args = ["bash", "-c", "exec uwsm-app -- gtk-launch -- \"$1\" >/dev/null 2>&1", "_", id + ".desktop"]
+      var desktop = DockModel.entryFor(root.appRows, id)
+      // GTK's generic terminal launch loses the CLI app-id, so a known CLI
+      // product would come back wearing its terminal's identity. Route only
+      // those two through Omarchy's TUI wrapper with the already parsed argv;
+      // every other terminal entry keeps its normal launch path.
+      if (desktop && DockModel.isKnownCli(id) && desktop.runInTerminal && desktop.command && desktop.command.length > 0) {
+        var tuiCommand = ["omarchy-launch-tui", "--app-id=org.omarchy." + id].concat(DockModel.toArray(desktop.command))
+        args = ["bash", "-c", 'cd -- "$1" || exit; shift; exec "$@" >/dev/null 2>&1',
+                "_", desktop.workingDirectory || Quickshell.env("HOME")].concat(tuiCommand)
+      }
       // gtk-launch exits non-zero up front when the desktop file no longer
       // resolves (stale pin, uninstalled app), but execDetached cannot
       // observe exit codes. Launches run through launchProc so failures
@@ -325,6 +336,12 @@ Item {
   // Build the index once at load, but only when the host withheld its own
   // library — with a host library present the index would be dead weight.
   Component.onCompleted: {
+    // Apply the config now: a missing omadock.json never fires onLoaded (the
+    // capped gate rejects it), so without this the loadConfig defaults (pinned
+    // Downloads folder, documented hover effect, blur-rule reconcile) never
+    // ran on a fresh install. Real values re-apply unchanged once the async
+    // gate lands them.
+    root.loadConfig()
     if (root.appLibrary === localAppLibrary) iconIndexScan.running = true
     // Fills HyprlandMonitor.scale for outputScale.
     Hyprland.refreshMonitors()
@@ -562,6 +579,7 @@ Item {
     try {
       customColor = Qt.color(custom)
     } catch (e) {
+      console.warn("[omadock] Invalid dock background colour, using theme:", custom, e)
       return Color.bar.text
     }
     var cardIsLight = root.isLight(customColor)
@@ -581,6 +599,8 @@ Item {
 
   property var pinnedIds: []
   property var appRows: []
+  property var terminalHosts: ({})
+  property var terminalApps: ({})
   property var dockModel: ({ pinned: [], running: [] })
   // Height a popup may use above the card: the screen above the dock, less
   // the margin the full-screen layer used to leave (Style.space(36)).
@@ -623,13 +643,14 @@ Item {
     if (root.filterByMonitor) tops = tops.filter(root.isToplevelOnThisMonitor)
     var next = root.appLibrary
       ? DockModel.buildEntries(root.pinnedIds, tops, root.appRows,
-                               root.appLibrary, root.hyprToplevelFor, root.minimizedWorkspace, root.minimizedOrigins, root.appGroups)
+                               root.appLibrary, root.hyprToplevelFor, root.minimizedWorkspace, root.minimizedOrigins, root.appGroups, root.terminalHosts, root.terminalApps)
       : { pinned: [], running: [] }
     // An equal model would only re-run every delegate's bindings.
     if (!DockModel.sameModel(next, root.dockModel)) root.dockModel = next
     root.rescanMinimizedWindows()
     root.pruneLaunching()
     root.pruneWindowState()
+    notificationBadgeTimer.restart()
   }
 
   function rescanMinimizedWindows() {
@@ -662,7 +683,7 @@ Item {
     // every tile delegate on unrelated events, eating clicks and forcing
     // pointless capture re-negotiations.
     var sig = ""
-    for (var s = 0; s < mins.length; s++) sig += mins[s].address + ","
+    for (var s = 0; s < mins.length; s++) sig += JSON.stringify([mins[s].address, mins[s].title, mins[s].appId]) + ","
     if (sig !== root._minimizedSig) {
       root._minimizedSig = sig
       root.minimizedWindows = mins
@@ -804,12 +825,9 @@ Item {
   property bool showTooltips: true
   property bool showMinimizedTiles: true
   // "zoom" grows only the icon under the pointer and leaves the layout alone —
-  // the behaviour this dock shipped with, and the default. "wave" is the
-  // falloff: neighbours respond and the row carries the extra width. The rest
-  // keep the icon's size (components/HoverFx.qml): "lift" raises it over a
-  // shadow, "glow" lights an accent halo around it, "glitch" runs a short
-  // RGB-split burst as the pointer arrives. "off" is no hover effect at all.
-  property string hoverEffect: "wave"
+  // the default. "wave" grows neighbours; lift, glow and glitch keep the
+  // icon's size. "off" disables hover effects.
+  property string hoverEffect: "zoom"
   readonly property bool waveHover: root.hoverEffect === "wave"
   // What HoverFx and DockIconArt read, in one object so each dock item
   // passes a single property.
@@ -1087,6 +1105,7 @@ Item {
   // Gap between the panels when sections are split.
   property int sectionSpacing: 18
   // Length of the section divider lines, in percent of the dock's height.
+  property string dividerGeometry: "classic"
   property int dividerHeight: 70
   property string dividerStyle: "simple"
   property real dividerWidth: 1.5
@@ -1098,6 +1117,9 @@ Item {
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
   property bool urgentOnNotification: true
+  property bool showNotificationBadges: true
+  property var notificationBadges: ({})
+  property var notificationPopupRows: []
   property bool urgentSound: true
   property string urgentSoundName: "bell"
   property var notifService: null
@@ -1133,6 +1155,31 @@ Item {
     id: modelTimer
     interval: 40
     onTriggered: root.refreshDock()
+  }
+
+  // Process identity survives TUI app-id overrides. Scan on window-list changes;
+  // the helper bounds each descendant walk to known CLI names.
+  Timer {
+    id: terminalHostDebounce
+    interval: 100
+    onTriggered: if (!terminalIdentityScan.running) terminalIdentityScan.running = true
+  }
+
+  Process {
+    id: terminalIdentityScan
+    command: ["python3", decodeURIComponent(Qt.resolvedUrl("scripts/terminal-hosts.py").toString().replace(/^file:\/\//, ""))]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        try {
+          var identities = JSON.parse(text) || ({})
+          root.terminalHosts = identities.terminals || ({})
+          root.terminalApps = identities.apps || ({})
+          modelTimer.restart()
+        } catch (e) {
+          console.warn("[omadock] Failed resolving terminal and CLI identities:", e)
+        }
+      }
+    }
   }
 
   // One-shot deferred rebuild after park/restore moves and configreloaded events,
@@ -1834,6 +1881,7 @@ Item {
     target: Hyprland.toplevels
     function onValuesChanged() {
       modelTimer.restart()
+      terminalHostDebounce.restart()
     }
   }
 
@@ -1873,7 +1921,13 @@ Item {
       // A config reload drops runtime layer rules along with the Lua state.
       if (n === "configreloaded") {
         root.applyBlurRule(true)
+        modelSettleTimer.restart()
+        terminalHostDebounce.restart()
         return
+      }
+      if (n === "windowtitlev2") {
+        terminalHostDebounce.restart()
+        modelTimer.restart()
       }
       if (n === "openwindow") {
         var rawAddr = String(event.data || "").split(",")[0].trim()
@@ -2003,6 +2057,46 @@ Item {
     }
   }
 
+  function refreshNotificationBadges() {
+    var rows = root.showNotificationBadges ? root.notificationPopupRows : []
+    var popups = root.notifService ? root.notifService.popupModel : null
+    if (root.showNotificationBadges && popups) {
+      rows = []
+      for (var i = 0; i < Math.min(popups.count, 512); i++) rows.push(popups.get(i))
+    }
+    root.notificationBadges = DockModel.notificationCounts(
+      root.pinnedSection.concat(root.runningSection), root.appRows, rows)
+  }
+
+  // Overlay plugins may not receive the first-party notification service.
+  // The shell's active-popup files offer a read-only, event-driven fallback.
+  Process {
+    id: notificationPopupWatch
+    running: root.showNotificationBadges && !root.notifService
+    command: ["python3", decodeURIComponent(Qt.resolvedUrl("scripts/notification-popups.py").toString().replace(/^file:\/\//, ""))]
+    stdout: SplitParser {
+      splitMarker: "\n"
+      onRead: function(line) {
+        try {
+          var rows = JSON.parse(line)
+          root.notificationPopupRows = Array.isArray(rows) ? rows : []
+          notificationBadgeTimer.restart()
+        } catch (e) {
+          console.warn("[omadock] Failed reading notification popup snapshot:", e)
+        }
+      }
+    }
+  }
+
+  // Several role changes can describe one replacement notification.
+  Timer {
+    id: notificationBadgeTimer
+    interval: 20
+    onTriggered: root.refreshNotificationBadges()
+  }
+  onNotifServiceChanged: notificationBadgeTimer.restart()
+  onShowNotificationBadgesChanged: notificationBadgeTimer.restart()
+
   function handleNotificationReceived(row) {
     if (!row) return
     var ts = row.timestamp || row.id || 0
@@ -2068,13 +2162,18 @@ Item {
   Connections {
     target: root.notifService ? root.notifService.popupModel : null
     function onRowsInserted(parent, first, last) {
+      notificationBadgeTimer.restart()
       if (!root.showUrgentHint || !root.urgentOnNotification || !root.notifService || !root.notifService.popupModel) return
       for (var i = first; i <= last; i++) {
         var row = root.notifService.popupModel.get(i)
         if (row) root.handleNotificationReceived(row)
       }
     }
+    function onRowsRemoved(parent, first, last) { notificationBadgeTimer.restart() }
+    function onDataChanged(topLeft, bottomRight, roles) { notificationBadgeTimer.restart() }
+    function onModelReset() { notificationBadgeTimer.restart() }
     function onCountChanged() {
+      notificationBadgeTimer.restart()
       if (!root.showUrgentHint || !root.urgentOnNotification || !root.notifService || !root.notifService.popupModel) return
       if (root.notifService.popupModel.count > 0) {
         var row = root.notifService.popupModel.get(0)
@@ -2156,6 +2255,7 @@ Item {
     root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" && isFinite(parsed.itemSpacing)
       ? Math.max(0, Math.min(32, Math.round(parsed.itemSpacing))) : 4
     root.sectionSpacing = parsed && typeof parsed.sectionSpacing === "number" ? Math.max(0, Math.min(48, Math.round(parsed.sectionSpacing))) : 18
+    root.dividerGeometry = parsed && parsed.dividerGeometry === "long" ? "long" : "classic"
     root.dividerHeight = parsed && typeof parsed.dividerHeight === "number" && isFinite(parsed.dividerHeight) ? Math.max(20, Math.min(100, Math.round(parsed.dividerHeight))) : 70
     root.dividerStyle = parsed && ["theme", "custom"].indexOf(parsed.dividerStyle) >= 0 ? parsed.dividerStyle : "simple"
     root.dividerWidth = parsed && typeof parsed.dividerWidth === "number" && isFinite(parsed.dividerWidth) ? Math.max(1, Math.min(6, Math.round(parsed.dividerWidth * 2) / 2)) : 1.5
@@ -2177,6 +2277,7 @@ Item {
       try {
         parsed = JSON.parse(raw)
       } catch (e) {
+        console.warn("[omadock] Failed parsing omadock.json, using defaults:", e)
         parsed = {}
       }
     }
@@ -2214,6 +2315,7 @@ Item {
     root.keepPointer = parsed ? parsed.keepPointer !== false : true
     root.showUrgentHint = parsed ? parsed.showUrgentHint !== false : true
     root.urgentOnNotification = parsed ? parsed.urgentOnNotification !== false : true
+    root.showNotificationBadges = parsed ? parsed.showNotificationBadges !== false : true
     root.urgentSound = parsed ? parsed.urgentSound !== false : true
     root.urgentSoundName = DockModel.cleanSoundName(parsed ? parsed.urgentSoundName : "bell")
     root.revealDelay = parsed && typeof parsed.revealDelay === "number"
@@ -2235,6 +2337,7 @@ Item {
   }
 
   function rescanApps() {
+    terminalHostDebounce.restart()
     root.appRows = root.appLibrary ? root.appLibrary.sortedEntries("") : []
     root.refreshDock()
   }
@@ -2731,7 +2834,8 @@ Item {
       + '  hl.config({ cursor = { no_warps = _G.omadock_nowarp_saved } })\n'
       + '  _G.omadock_nowarp_saved = nil\n'
       + 'end, { timeout = 500, type = "oneshot" })']
-    onExited: {
+    onExited: function(exitCode) {
+      if (exitCode !== 0) console.warn("[omadock] Pointer-warp suppression failed:", exitCode)
       var actions = root.pendingNoWarpActions
       root.pendingNoWarpActions = []
       for (var i = 0; i < actions.length; i++) actions[i]()
@@ -2788,9 +2892,13 @@ Item {
         return
       }
       root.withoutPointerWarp(function() {
-        if (top) DockModel.focusWindow(top)
-        if (workspace && Hyprland.focusedWorkspace && workspace.id !== Hyprland.focusedWorkspace.id) {
-          var targetWs = root.workspaceTarget(workspace)
+        var live = root.liveToplevelForAddress(addr)
+        var h = root.liveHyprToplevelForAddress(addr)
+        if (!live) return
+        DockModel.focusWindow(live)
+        var ws = h ? h.workspace : null
+        if (ws && Hyprland.focusedWorkspace && ws.id !== Hyprland.focusedWorkspace.id) {
+          var targetWs = root.workspaceTarget(ws)
           if (targetWs) {
             root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(targetWs) + '" })',
                               "workspace " + targetWs)
@@ -2810,6 +2918,10 @@ Item {
     if (!toplevel) return
     var handle = root.hyprToplevelFor(toplevel)
     var addr = root.windowAddress(handle)
+    if (!addr) {
+      DockModel.focusWindow(toplevel)
+      return
+    }
     var aid = appId || (toplevel.appId ? DockModel.normalizeId(toplevel.appId) : "")
     root.clearUrgentApp(aid, addr)
     var workspace = handle ? handle.workspace : null
@@ -2819,11 +2931,15 @@ Item {
       return
     }
 
+    // Resolve by address after the subprocess: a window may close meanwhile.
     root.withoutPointerWarp(function() {
-      DockModel.focusWindow(toplevel)
-
-      if (workspace && Hyprland.focusedWorkspace && workspace.id !== Hyprland.focusedWorkspace.id) {
-        var targetWs = root.workspaceTarget(workspace)
+      var live = addr ? root.liveToplevelForAddress(addr) : null
+      if (!live) return
+      DockModel.focusWindow(live)
+      var h = root.liveHyprToplevelForAddress(addr)
+      var ws = h ? h.workspace : null
+      if (ws && Hyprland.focusedWorkspace && ws.id !== Hyprland.focusedWorkspace.id) {
+        var targetWs = root.workspaceTarget(ws)
         if (targetWs) {
           root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(targetWs) + '" })',
                             "workspace " + targetWs)
@@ -3052,6 +3168,8 @@ Item {
       }
       st.acc = 0
     }
+    // Reuse one slot per current target rather than retaining every app ever scrolled.
+    root.wheelState = ({})
     root.wheelState[key] = st
     return step
   }
@@ -3426,7 +3544,12 @@ Item {
     }
     var targetId = (deskEntry && deskEntry.id) ? deskEntry.id : appId
     var targetName = (deskEntry && deskEntry.name) ? deskEntry.name : (target && target.name ? target.name : appId)
-    if (deskEntry && deskEntry.id) {
+    if (deskEntry && deskEntry.id && DockModel.isKnownCli(deskEntry.id) && deskEntry.runInTerminal && deskEntry.command && deskEntry.command.length > 0) {
+      var command = ["omarchy-launch-tui", "--app-id=org.omarchy." + deskEntry.id]
+        .concat(DockModel.toArray(deskEntry.command))
+      Quickshell.execDetached(["bash", "-c", 'cd -- "$1" || exit; shift; exec "$@"',
+        "_", deskEntry.workingDirectory || Quickshell.env("HOME")].concat(command))
+    } else if (deskEntry && deskEntry.id) {
       root.appLibrary.launch(deskEntry.id, targetName)
     } else {
       var webAppMatch = String(appId).match(/^(?:google-chrome|google-chrome-stable|chrome|chromium|brave|edge|microsoft-edge|helium|helium-browser|opera|vivaldi)-(.*?)__?-(?:default|profile.*)$/i)
@@ -3471,10 +3594,9 @@ Item {
     if (remaining === 0) launchPruneTimer.stop()
   }
 
-  // Every setting written onto base and returned; reads no file, so a
-  // binding can use it.
+  // Reads no file, so bindings can use the current configuration.
   function buildConfig(base) {
-    var conf = base || {}
+    var conf = base && typeof base === "object" && !Array.isArray(base) ? base : {}
     conf.alignment = root.alignment || "center"
     delete conf.position
     conf.showRemovableDrives = root.showRemovableDrives
@@ -3527,6 +3649,7 @@ Item {
     conf.folderColor = root.folderColor
     conf.itemSpacing = root.itemSpacing
     conf.sectionSpacing = root.sectionSpacing
+    conf.dividerGeometry = root.dividerGeometry
     conf.dividerHeight = root.dividerHeight
     conf.dividerStyle = root.dividerStyle
     conf.dividerWidth = root.dividerWidth
@@ -3536,6 +3659,7 @@ Item {
     conf.keepPointer = root.keepPointer
     conf.showUrgentHint = root.showUrgentHint
     conf.urgentOnNotification = root.urgentOnNotification
+    conf.showNotificationBadges = root.showNotificationBadges
     conf.urgentSound = root.urgentSound
     conf.urgentSoundName = root.urgentSoundName
     conf.revealDelay = root.revealDelay
@@ -3550,13 +3674,16 @@ Item {
   readonly property var currentLook: DockModel.pickLook(root.buildConfig({}))
 
   function saveConfig() {
+    // configBase returns null for a file holding anything other than a JSON
+    // object (a typo, an array, an oversize paste): rewriting from {} would
+    // silently drop every key the dock does not own, so skip the save.
     var conf = configFile.oversized ? null
       : DockModel.configBase(DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES))
     if (conf === null) {
       console.warn("[omadock] omadock.json is not a readable JSON object (or is over the size cap); not saving so its other keys survive. Fix the file to save settings again.")
       return
     }
-    root.buildConfig(conf)
+    conf = root.buildConfig(conf)
     root._savingConfig = true
     configFile.setText(JSON.stringify(conf, null, 2))
     Qt.callLater(function() { root._savingConfig = false })
@@ -4110,7 +4237,6 @@ Item {
       root.activeStackPath = ""
       root.activeStackEntries = []
     })
-    root.syncVisibility()
   }
 
   function openFolderContext(path, name, cx, cy) {
@@ -4390,9 +4516,8 @@ Item {
     // Clears a drag released outside the card (popups dismiss through their focus grabs).
     Item {
       id: globalDismiss
-      readonly property bool armed: !root.fileDragOut && root.dockDragActive
-      width: armed ? dockWindow.width : 0
-      height: armed ? dockWindow.height : 0
+      width: root.dockDragActive ? dockWindow.width : 0
+      height: root.dockDragActive ? dockWindow.height : 0
 
       MouseArea {
         anchors.fill: parent

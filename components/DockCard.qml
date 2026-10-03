@@ -660,9 +660,10 @@ Item {
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.horizontalCenter: parent.horizontalCenter
-          y: dockCard.dividerTop - row.y - parent.y
+          y: root && root.dividerGeometry === "long"
+            ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
           width: dockCard.dividerWidth
-          height: dockCard.dividerLength
+          height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
           color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -695,9 +696,10 @@ Item {
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.horizontalCenter: parent.horizontalCenter
-          y: dockCard.dividerTop - row.y - parent.y
+          y: root && root.dividerGeometry === "long"
+            ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
           width: dockCard.dividerWidth
-          height: dockCard.dividerLength
+          height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
           color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -772,9 +774,10 @@ Item {
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.horizontalCenter: parent.horizontalCenter
-          y: dockCard.dividerTop - row.y - parent.y
+          y: root && root.dividerGeometry === "long"
+            ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
           width: dockCard.dividerWidth
-          height: dockCard.dividerLength
+          height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
           color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
         }
       }
@@ -829,9 +832,10 @@ Item {
         Rectangle {
           visible: !(root && root.splitSections)
           anchors.horizontalCenter: parent.horizontalCenter
-          y: dockCard.dividerTop - row.y - parent.y
+          y: root && root.dividerGeometry === "long"
+            ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
           width: dockCard.dividerWidth
-          height: dockCard.dividerLength
+          height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
           color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
         }
       }

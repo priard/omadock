@@ -54,6 +54,8 @@ If Omadock earns a place on your desktop, [**sponsoring me**](https://github.com
 
 *(running total so far: **−₹499** for my coding-agent subscription — borrowed from my mom 😅. Updated monthly; honesty is the least I can offer)*
 
+**Freebuff wallet (2026-10-03):** OmaDock creator [thepathless](https://github.com/thepathless) reports adding **₹1,000 to their Freebuff wallet** to fund continued development.
+
 To everyone who donates — really, truly, thank you. 🙏
 
 ---
@@ -77,6 +79,8 @@ Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live wi
 - **🖥️ Multi-monitor** — one dock per monitor, each showing its own monitor's windows.
 - **💾 Removable media** — USB drives dock themselves; safe eject included.
 - **🔔 Attention glow & chimes** — bouncing alerts and audio pings.
+- **🔴 Pinned notification badges** — counts matching active popups on pinned apps; dismiss or expire a popup to clear it. These are not unread-message counts.
+- **🖥️ CLI app identity** — Antigravity and btop keep their own icons when launched in a terminal; the terminal icon is only a fallback.
 - **⌨️ Keybindings & IPC** — wired for `~/.config/hypr/bindings.lua` out of the box.
 
 ---
@@ -330,6 +334,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "borderOpacity": "theme",
   "groupStyle": "rounded",
   "itemSpacing": 4,
+  "dividerGeometry": "classic",
   "dividerHeight": 70,
   "dividerStyle": "simple",
   "dividerWidth": 1.5,
@@ -342,6 +347,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "launchBounce": true,
   "showUrgentHint": true,
   "urgentOnNotification": true,
+  "showNotificationBadges": true,
   "urgentSound": true,
   "urgentSoundName": "bell",
   "folderColor": "theme",
@@ -397,6 +403,8 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `iconHoverOriginal` | `bool` | `false` | With an icon style on, the hovered icon (dock, group tiles, an opened group) shows as shipped. |
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
 | `hoverEffect` | `string` | `"zoom"` | Hover growth mode: `"zoom"`, `"wave"`, or `"off"`. |
+| `dividerGeometry` | `string` | `"classic"` | Section divider length: `"classic"` keeps the original short lines; `"long"` uses the adjustable `dividerHeight` share. |
+| `showNotificationBadges` | `bool` | `true` | Count matching active popups on pinned icons (not unread messages); cleared when the notification leaves the popup stack. |
 | `revealDelay` | `int` | `160` | Edge dwell time in milliseconds before unhiding ($0$–$2000$). |
 | `tooltipDelay` | `int` | `450` | Tooltip hover dwell delay in milliseconds ($0$–$5000$). |
 

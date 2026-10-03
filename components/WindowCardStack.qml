@@ -32,16 +32,18 @@ Item {
   readonly property real frameHeight: Math.round(frameWidth / frontAspect)
   Behavior on frontAspect { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
   readonly property real peek: count > 1 ? Style.space(10) : 0
-  readonly property int peeking: Math.min(count - 1, 2)
+  readonly property int peeking: Math.max(0, Math.min(count - 1, 2))
 
   implicitWidth: frameWidth
   implicitHeight: frameHeight + peek * peeking
 
   Repeater {
+    id: cards
     model: stack.active ? stack.count : 0
 
     delegate: Item {
       id: card
+      required property int index
 
       readonly property var win: stack.windows[index]
       readonly property int depth: (index - stack.frontIndex + stack.count) % stack.count
@@ -53,7 +55,9 @@ Item {
       onShownChanged: if (shown) reached = true
       onNearFrontChanged: if (!nearFront) reached = false
       Component.onCompleted: if (shown) reached = true
-      readonly property real capturedAspect: (capture.item && capture.item.hasContent) ? capture.item.aspect : 0
+      readonly property bool captured: !!(capture.item && capture.item.hasContent)
+      readonly property bool capturing: !!(capture.item && capture.item.live)
+      readonly property real capturedAspect: captured ? capture.item.aspect : 0
 
       function adoptAspect() {
         if (card.depth === 0 && card.capturedAspect > 0)
@@ -106,6 +110,7 @@ Item {
           height: width / aspect
           live: true
           captureSource: (card.win && stack.root) ? stack.root.liveToplevelForAddress(card.win.address) : null
+          onCaptureSourceChanged: live = true
           onHasContentChanged: if (hasContent) live = false
           onStopped: captureSource = null
         }

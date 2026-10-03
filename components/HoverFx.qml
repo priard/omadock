@@ -77,7 +77,7 @@ Item {
     Loader {
       id: glowLoader
       readonly property real pad: fx.minSide * 0.4
-      active: fx.effect === "glow" && (fx.hoverLevel > 0.001 || fx.ring > 0)
+      active: fx.effect === "glow" && (fx.hoverLevel > 0.001 || ringAnim.running)
       anchors.fill: parent
       anchors.margins: -pad
       sourceComponent: Item {
@@ -114,7 +114,7 @@ Item {
     Loader {
       id: glitchLoader
       readonly property real bleed: Math.round(fx.minSide * 0.15)
-      active: fx.effect === "glitch"
+      active: fx.glitching
       anchors.fill: parent
       anchors.margins: -bleed
       sourceComponent: Item {

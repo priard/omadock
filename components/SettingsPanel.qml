@@ -51,7 +51,6 @@ PanelWindow {
     { id: "folders", label: "Folders", glyph: "󰉋" },
     { id: "groups", label: "App Groups", glyph: "󰀻" },
     { id: "presets", label: "Presets", glyph: "󰆓" },
-    { id: "supporters", label: "Supporters", glyph: "󰆔" },
     { id: "about", label: "About", glyph: "󰋼" }
   ]
 
@@ -801,6 +800,14 @@ PanelWindow {
               onCommitted: function(v) { root.setBorderOpacity(Math.round(v * 100) / 100) }
             }
             ChoiceRow {
+              label: "Divider length style"
+              hint: "Classic preserves the original icon-height lines. Long uses an adjustable share of the dock height."
+              visible: root ? !root.splitSections : true
+              options: [{ value: "classic", label: "Classic" }, { value: "long", label: "Long" }]
+              value: root ? root.dividerGeometry : "classic"
+              onPicked: function(v) { root.setOption("dividerGeometry", v) }
+            }
+            ChoiceRow {
               label: "Divider style"
               hint: "Theme draws the lines like the border, in its colour, opacity and width. Custom sets the width and opacity by hand."
               visible: root ? !root.splitSections : true
@@ -1020,6 +1027,12 @@ PanelWindow {
             SectionLabel { text: "Attention" }
 
             SwitchRow {
+              label: "Notification badges"
+              hint: "Count active notification popups on pinned apps; clears on dismissal or expiry."
+              checked: root ? root.showNotificationBadges : true
+              onToggled: root.setOption("showNotificationBadges", !root.showNotificationBadges)
+            }
+            SwitchRow {
               label: "Urgent highlights"
               hint: "Mark apps whose windows ask for attention."
               checked: root ? root.showUrgentHint : true
@@ -1226,7 +1239,7 @@ PanelWindow {
             SliderRow {
               label: "Divider height"
               hint: "Length of the lines between sections, as a share of the dock's height."
-              visible: root ? !root.splitSections : true
+              visible: root ? (!root.splitSections && root.dividerGeometry === "long") : false
               minimum: 20
               maximum: 100
               step: 5
@@ -1753,12 +1766,48 @@ PanelWindow {
             }
           }
 
-          // ================================================= Supporters
+          // ================================================= About
           Column {
             width: parent.width
-            visible: panel.page === "supporters"
+            visible: panel.page === "about" || panel.page === "supporters"
 
-            SectionLabel { text: "Made with love" }
+            SectionLabel { text: "OmaDock" }
+
+            SettingRow {
+              label: "Version"
+              hint: "Free and open-source application dock for Omarchy · MIT license"
+              Text {
+                text: (root && root.manifest && root.manifest.version) ? "v" + root.manifest.version : "unknown"
+                textFormat: Text.PlainText
+                color: Color.menu.text
+                font.family: Style.font.family
+                font.pixelSize: Style.font.subtitle
+              }
+            }
+            SettingRow {
+              label: "Project & feedback"
+              hint: "Report bugs, follow development, or contribute."
+              Button {
+                text: "GitHub"
+                foreground: Color.menu.text
+                bordered: true
+                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/thepathless/omadock"))
+              }
+            }
+
+            SectionLabel { text: "Updates" }
+            ChoiceRow {
+              label: "Update channel"
+              hint: "Stable receives verified releases; Experimental gets features early. Switching reloads the shell immediately."
+              options: [{ value: "stable", label: "Stable" }, { value: "experiment", label: "Experimental" }]
+              value: panel.channel !== "" ? panel.channel : "stable"
+              onPicked: function(v) {
+                if (panel.channel === "" || v === panel.channel) return
+                Quickshell.execDetached(["omadock-switch", v === "stable" ? "stable" : "experiment"])
+              }
+            }
+
+            SectionLabel { text: "Supporters & acknowledgments" }
 
             Text {
               width: parent.width
@@ -1921,54 +1970,6 @@ PanelWindow {
             }
           }
 
-          // ================================================= About
-          Column {
-            width: parent.width
-            visible: panel.page === "about"
-
-            SectionLabel { text: "Updates" }
-
-            ChoiceRow {
-              label: "Update channel"
-              hint: "Stable receives verified releases; Experimental gets features early. Switching reloads the shell immediately."
-              options: [
-                { value: "stable", label: "Stable" },
-                { value: "experiment", label: "Experimental" }
-              ]
-              value: panel.channel !== "" ? panel.channel : "stable"
-              onPicked: function(v) {
-                if (panel.channel === "" || v === panel.channel) return
-                Quickshell.execDetached(["omadock-switch", v === "stable" ? "stable" : "experiment"])
-              }
-            }
-
-            SectionLabel { text: "Project" }
-
-            SettingRow {
-              label: "Version"
-              hint: "The Omadock release this dock is running."
-
-              Text {
-                text: (root && root.manifest && root.manifest.version) ? "v" + root.manifest.version : "unknown"
-                textFormat: Text.PlainText
-                color: Color.menu.text
-                font.family: Style.font.family
-                font.pixelSize: Style.font.subtitle
-              }
-            }
-
-            SettingRow {
-              label: "Omadock"
-              hint: "A fluid, zero-CPU dock for Omarchy. Report bugs, follow development, or star the repository."
-
-              Button {
-                text: "GitHub"
-                foreground: Color.menu.text
-                bordered: true
-                onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/thepathless/omadock"))
-              }
-            }
-          }
         }
       }
     }

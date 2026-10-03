@@ -46,7 +46,7 @@ Item {
     var raw = DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES).trim()
     var parsed = {}
     if (raw) {
-      try { parsed = JSON.parse(raw) || {} } catch (e) { parsed = {} }
+      try { parsed = JSON.parse(raw) || {} } catch (e) { console.warn("[omadock] Failed parsing omadock.json in host:", e); parsed = {} }
     }
     host.multiMonitor = parsed.multiMonitor === true
     host.screenName = typeof parsed.screen === "string" ? parsed.screen : ""
@@ -85,7 +85,7 @@ Item {
     model: host.multiMonitor ? host.realScreens : ["single"]
 
     delegate: Dock {
-      property var modelData
+      required property var modelData
       readonly property bool perScreen: typeof modelData !== "string"
 
       shell: host.shell
@@ -114,6 +114,27 @@ Item {
 
   IpcHandler {
     target: "omadock"
+
+    // Read-only diagnostics for bug reports and live verification.
+    function status(): string {
+      return JSON.stringify({
+        version: host.manifest ? host.manifest.version : "unknown",
+        docks: host.orderedDocks().map(function(d) {
+          return {
+            screen: d.dockScreen ? d.dockScreen.name : "",
+            visible: d.dockVisible,
+            dividerGeometry: d.dividerGeometry,
+            dividerStyle: d.dividerStyle,
+            hoverEffect: d.hoverEffect,
+            activePresetId: d.activePresetId,
+            terminalHosts: d.terminalHosts,
+            terminalApps: d.terminalApps,
+            notificationBadges: d.notificationBadges,
+            model: d.dockModel
+          }
+        })
+      })
+    }
 
     function minimizeActive(): void {
       var d = host.orderedDocks()

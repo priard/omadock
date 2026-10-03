@@ -108,7 +108,7 @@ def quote_segment(segment):
 
 
 def natural_key(name):
-    return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", name.casefold())]
+    return [int(part) if part.isdecimal() else part for part in re.split(r"(\d+)", name.casefold())]
 
 
 def main():

@@ -35,13 +35,16 @@ except Exception:
 
 def app_info(desktop_id):
     for candidate in (desktop_id, desktop_id.lower()):
-        name = candidate if candidate.endswith(".desktop") else candidate + ".desktop"
-        try:
-            info = DesktopAppInfo.new(name)
-        except TypeError:
-            info = None
-        if info:
-            return info
+        candidates = [candidate + ".desktop"]
+        if candidate.endswith(".desktop"):
+            candidates.append(candidate)
+        for name in candidates:
+            try:
+                info = DesktopAppInfo.new(name)
+            except TypeError:
+                info = None
+            if info:
+                return info
     return None
 
 
