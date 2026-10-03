@@ -73,6 +73,27 @@ surface, which Hyprland recomposites and blurs at 120 Hz. The input mask
 - All popups, drag-and-drop paths and dismissal behave as before (user
   tests clicks and drags).
 
+### Amendment (2026-10-03, approved): full-width, short dock window
+
+A spike measured the dock's VRAM by window size (fresh shell, plugin off =
+368 MiB): full screen 194 MiB, full width x 300 px 50 MiB, **full width x
+160 px 26 MiB**. A popup surface costs ~4 MiB while open and is freed on
+close. So the dock window keeps `anchors { bottom; left; right }` and only
+its height shrinks to the card plus headroom for magnification, bounce and
+the drag "Unpin" bubble. This keeps every window-space coordinate contract
+(popup x clamps, intelligent-autohide overlap maths, pixel snapping at scale
+1.5, alignment) unchanged, and still meets the <= 40 MiB target.
+
+Also confirmed by the spike: `PopupWindow` anchored to the dock layer
+positions correctly when the anchor rect is computed in `anchor.onAnchoring`
+(the pattern of Omarchy's `Ui/PopupCard.qml`), and Hyprland blurs layer
+popups when the layer rule has `blur_popups = true`.
+
+Tooltips (including the window-preview card stack) move to input-transparent
+popups too; they are display-only. The branch is based on
+`feat/window-previews` (PR #22) because the tooltip it changes carries the
+card stack.
+
 ## B. `feat/perf-fixes`: CPU per event and idle guarantees
 
 | # | where | fix |
