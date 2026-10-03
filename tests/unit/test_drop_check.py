@@ -5,11 +5,17 @@ import sys
 import unittest
 
 SCRIPT = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "drop-check.py"
-spec = importlib.util.spec_from_file_location("drop_check", SCRIPT)
-drop_check = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(drop_check)
+# The MIME matching needs GIO (PyGObject), which a bare CI runner lacks;
+# without it the script answers "no", which the CLI tests still check.
+HAVE_GI = importlib.util.find_spec("gi") is not None
+drop_check = None
+if HAVE_GI:
+    spec = importlib.util.spec_from_file_location("drop_check", SCRIPT)
+    drop_check = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(drop_check)
 
 
+@unittest.skipUnless(HAVE_GI, "PyGObject (gi) is not installed")
 class Supported(unittest.TestCase):
     def test_exact_and_inherited_types(self):
         self.assertTrue(drop_check.supported("text/plain", ["text/plain"]))
