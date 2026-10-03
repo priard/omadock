@@ -22,7 +22,9 @@ PopupWindow {
   readonly property real gap: Style.space(6)
 
   color: "transparent"
-  visible: open && body !== null && body.width > 0 && body.height > 0
+  // Not gated on the body's size: menus measure their visible rows, and
+  // nothing inside a hidden window is visible, so the size would stay 0.
+  visible: open && body !== null
   implicitWidth: Math.max(1, body ? Math.ceil(body.width) : 1)
   implicitHeight: Math.max(1, body ? Math.ceil(body.height) : 1)
 
