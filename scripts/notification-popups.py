@@ -44,8 +44,13 @@ def snapshots(directory):
                     row = json.loads(data)
                     if not isinstance(row, dict):
                         continue
-                    rows.append({key: row.get(key, '')[:4096] if isinstance(row.get(key, ''), str) else ''
-                                 for key in ('app', 'appIcon', 'summary', 'body')})
+                    item = {key: row.get(key, '')[:4096] if isinstance(row.get(key, ''), str) else ''
+                            for key in ('app', 'appIcon', 'summary', 'body')}
+                    # The popup's timestamp tells a new notification from one
+                    # already seen (urgency fires once per new popup).
+                    stamp = row.get('timestamp', 0)
+                    item['timestamp'] = stamp if isinstance(stamp, int) and not isinstance(stamp, bool) and stamp > 0 else 0
+                    rows.append(item)
                 except (OSError, ValueError, RecursionError):
                     continue
     except OSError:
