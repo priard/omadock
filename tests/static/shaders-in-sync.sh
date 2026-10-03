@@ -6,13 +6,18 @@ set -u
 cd "$(dirname "$0")/../.."
 QSB=/usr/lib/qt6/bin/qsb
 dir=${SHADER_DIR:-shaders}
-[ -x "$QSB" ] || { echo "skip: $QSB missing"; exit 0; }
+if [ ! -x "$QSB" ]; then
+  # CI sets REQUIRE_QSB so a missing tool fails instead of passing silently.
+  [ -n "${REQUIRE_QSB:-}" ] && { echo "qsb missing: $QSB"; exit 1; }
+  echo "skip: $QSB missing"; exit 0
+fi
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 rc=0
 for src in "$dir"/*.frag; do
   if ! "$QSB" --glsl "100 es,120,150" --hlsl 50 --msl 12 -o "$tmp/out.qsb" "$src" >/dev/null 2>&1; then
     echo "compile failed: $src"; rc=1; continue
   fi
-  cmp -s "$tmp/out.qsb" "$src.qsb" || { echo "out of sync: $src.qsb"; rc=1; }
+  # sha256sum (coreutils) rather than cmp: minimal CI images lack diffutils.
+  [ "$(sha256sum < "$tmp/out.qsb")" = "$(sha256sum < "$src.qsb")" ] || { echo "out of sync: $src.qsb"; rc=1; }
 done
 exit $rc
