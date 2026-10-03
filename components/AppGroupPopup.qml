@@ -9,8 +9,8 @@ BorderSurface {
 
   property var rootRef: null
   readonly property var root: rootRef
-  property var targetCard: root ? (root.dockCardComp || root.dockCard) : null
-  property var targetWindow: root ? root.contentItemRef : null
+  // The DockPopupWindow hosting this popup; maps drag positions to the dock.
+  property var popupWindow: null
 
   readonly property var activeGroup: root ? root.activeAppGroupData : null
   readonly property var appList: (activeGroup && DockModel.isList(activeGroup.apps)) ? DockModel.toArray(activeGroup.apps) : []
@@ -42,9 +42,6 @@ BorderSurface {
   width: (root && root.activeAppGroupId !== "") ? contentW : 0
   height: (root && root.activeAppGroupId !== "") ? contentH : 0
 
-  anchors.bottom: targetCard ? targetCard.top : undefined
-  anchors.bottomMargin: Style.space(6)
-  x: Math.max(Style.gapsOut, Math.min((targetWindow ? targetWindow.width : 1920) - width - Style.gapsOut, (root ? root.activeAppGroupX : 0) - width / 2))
 
   Column {
     id: mainColumn
@@ -247,9 +244,12 @@ BorderSurface {
                       root.dropTargetGroupId = ""
                     }
                   }
-                  if (cellItem.isDragging && root && root.dockCardComp) {
-                    var cardPt = cellItem.mapToItem(root.dockCardComp, mouse.x, mouse.y)
-                    root.dockCardComp.handleDragMoved(cellItem.appId, cardPt.x)
+                  if (cellItem.isDragging && root && root.dockCardComp && appGroupPopup.popupWindow) {
+                    // The popup is its own surface: go through dock-window
+                    // coordinates to reach the card.
+                    var winPt = appGroupPopup.popupWindow.toDockWindow(cellItem, mouse.x, mouse.y)
+                    var cardPt = root.dockCardComp.mapFromItem(root.contentItemRef, winPt.x, winPt.y)
+                    root.dockCardComp.handleDragMoved(cellItem.appId, cardPt.x, cardPt.y)
                   }
                 }
               }

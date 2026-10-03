@@ -262,6 +262,5 @@ Item {
     showTooltips: root ? root.showTooltips : true
     tooltipDelay: root ? root.tooltipDelay : 450
     contextAppId: root ? root.contextAppId : ""
-    y: -height - Style.space(8)
   }
 }

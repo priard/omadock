@@ -3,7 +3,10 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 
-BorderSurface {
+// Hover bubble for an item: shows after tooltipDelay, above its parent, in
+// its own popup surface (TooltipWindow), so the dock layer needs no room
+// for it. The item itself has no size; place it anywhere inside the target.
+Item {
   id: bubble
 
   property string text: ""
@@ -15,26 +18,8 @@ BorderSurface {
   property int tooltipDelay: 450
   property string contextAppId: ""
 
-  visible: bubble.shown && bubble.text !== "" && bubble.showTooltips
-    && !bubble.blocked && bubble.contextAppId === ""
-  z: 300
-  color: Color.tooltip.background
-  borderSpec: Border.surfaceSpec("tooltip", "border", Color.tooltip.border, 1)
-  radius: Style.cornerRadius
-  padding: Style.space(4)
-  width: bubbleLabel.implicitWidth + contentLeftInset + contentRightInset
-  height: bubbleLabel.implicitHeight + contentTopInset + contentBottomInset
-  x: {
-    var p = parent
-    var localCenter = p ? ((p.width - width) / 2) : 0
-    var targetWin = (typeof root !== "undefined" && root) ? root.contentItemRef : null
-    if (!p || !targetWin) return localCenter
-    var pt = p.mapToItem(targetWin, 0, 0)
-    if (!pt) return localCenter
-    var winX = pt.x + localCenter
-    var clampedWinX = Math.max(Style.gapsOut, Math.min(targetWin.width - width - Style.gapsOut, winX))
-    return clampedWinX - pt.x
-  }
+  width: 0
+  height: 0
 
   onHoveredChanged: {
     if (bubble.hovered) dwell.restart()
@@ -55,16 +40,38 @@ BorderSurface {
     onTriggered: bubble.shown = true
   }
 
-  Text {
-    id: bubbleLabel
-    x: bubble.contentLeftInset
-    y: bubble.contentTopInset
-    width: bubble.width - bubble.contentLeftInset - bubble.contentRightInset
-    text: bubble.text
-    textFormat: Text.PlainText
-    color: Color.tooltip.text
-    font.family: Style.font.family
-    font.pixelSize: Style.font.caption
-    horizontalAlignment: Text.AlignHCenter
+  // The popup window exists only while the bubble is shown.
+  LazyLoader {
+    active: bubble.shown && bubble.text !== "" && bubble.showTooltips && !bubble.blocked && bubble.contextAppId === ""
+
+    TooltipWindow {
+      target: bubble.parent
+      gap: Style.space(8)
+      shown: true
+      body: bubbleSurface
+
+      BorderSurface {
+        id: bubbleSurface
+        color: Color.tooltip.background
+        borderSpec: Border.surfaceSpec("tooltip", "border", Color.tooltip.border, 1)
+        radius: Style.cornerRadius
+        padding: Style.space(4)
+        width: bubbleLabel.implicitWidth + contentLeftInset + contentRightInset
+        height: bubbleLabel.implicitHeight + contentTopInset + contentBottomInset
+
+        Text {
+          id: bubbleLabel
+          x: bubbleSurface.contentLeftInset
+          y: bubbleSurface.contentTopInset
+          text: bubble.text
+          textFormat: Text.PlainText
+          color: Color.tooltip.text
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+          horizontalAlignment: Text.AlignHCenter
+        }
+      }
+    }
   }
+
 }

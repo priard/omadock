@@ -20,10 +20,11 @@ Item {
   readonly property alias hitboxHover: dockCardComp.hitboxHover
   readonly property alias minimizedTilesRepeater: dockCardComp.minimizedTilesRepeater
   readonly property alias foldersRepeater: dockCardComp.foldersRepeater
-  readonly property alias contextMenu: contextMenuComp
-  readonly property alias folderStackPopover: folderStackPopoverComp
+  readonly property var contextMenu: contextMenuLoader.item ? contextMenuLoader.item.body : null
+  readonly property var folderStackPopover: folderStackLoader.item ? folderStackLoader.item.body : null
   readonly property alias contentItemRef: dockWindow.contentItem
-  readonly property alias appContextMenuColumnRef: contextMenuComp.appContextMenuColumn
+  readonly property alias dockWindowRef: dockWindow
+  readonly property var appContextMenuColumnRef: root.contextMenu ? root.contextMenu.appContextMenuColumn : null
   readonly property alias customFolderPickerProc: customFolderPickerProc
   readonly property alias folderStackScanner: folderStackScanner
 
@@ -581,6 +582,11 @@ Item {
   property var pinnedIds: []
   property var appRows: []
   property var dockModel: ({ pinned: [], running: [] })
+  // Height a popup may use above the card: the screen above the dock, less
+  // the margin the full-screen layer used to leave (Style.space(36)).
+  readonly property real popupMaxHeight: Math.max(240,
+    (root.dockScreen ? root.dockScreen.height : 1080) - Style.space(36)
+    - Style.gapsOut - (dockCardComp ? dockCardComp.dockCard.height : 0) - Style.space(16))
   // Live scan of parked windows for the preview-tile section. Built straight
   // off Hyprland's own toplevel list, so it cannot go stale the way cached
   // model primitives can.
@@ -2318,6 +2324,7 @@ Item {
       var lua = "if _G.omadock_blur_rule then _G.omadock_blur_rule:set_enabled(false) end"
       if (root.blurMode !== "system") {
         lua += " _G.omadock_blur_rule = hl.layer_rule({ match = { namespace = \"^omadock$\" }, blur = "
+          + (root.blurMode === "on" ? "true" : "false") + ", blur_popups = "
           + (root.blurMode === "on" ? "true" : "false") + ", ignore_alpha = 0.05 })"
       }
       Quickshell.execDetached(["hyprctl", "eval", lua])
@@ -4259,7 +4266,7 @@ Item {
     color: "transparent"
     WlrLayershell.namespace: "omadock"
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: (appGroupPopupComp && appGroupPopupComp.isEditingName)
+    WlrLayershell.keyboardFocus: (appGroupLoader.item && appGroupLoader.item.body.isEditingName)
       ? WlrKeyboardFocus.OnDemand
       : WlrKeyboardFocus.None
     exclusionMode: (!root.autohide) ? ExclusionMode.Normal : ExclusionMode.Ignore
@@ -4269,17 +4276,37 @@ Item {
       left: true
       right: true
     }
-    implicitHeight: Math.max(650, Math.round((root.dockScreen ? root.dockScreen.height : 1080) - Style.space(36)))
+    // Only the card plus room above it for magnification, the launch/urgent
+    // bounce and the drag "Unpin" bubble; menus and tooltips are popups.
+    // Even logical height keeps the layer origin on the physical pixel grid
+    // at scale 1.5 (DockIndicator snaps to it).
+    readonly property real dockHeadroom: Style.space(56)
+    implicitHeight: {
+      var h = Math.ceil((dockCardComp ? dockCardComp.dockCard.height : 64) + Style.gapsOut + dockWindow.dockHeadroom)
+      return h + (h % 2)
+    }
 
     mask: Region {
       item: (root.dockVisible && dockCardComp && dockCardComp.dockHitbox) ? dockCardComp.dockHitbox : dockCardComp.dockCard
       regions: [
-        Region { item: contextMenuComp },
-        Region { item: folderStackPopoverComp },
-        Region { item: appGroupPopupComp },
         Region { item: revealStrip },
-        Region { item: globalDismiss }
+        Region { item: globalDismiss },
+        Region { item: maskTracker }
       ]
+    }
+
+    // A Region rebuilds only when its own item's x/y/width/height change, not
+    // when an ancestor moves. The hitbox sits inside the card, which slides
+    // in (anchors.bottomMargin) and moves with the alignment, so without this
+    // zero-size follower the mask kept the card's hidden position from start
+    // up and the dock got no pointer input. (Popups anchored to the card used
+    // to trigger the rebuild by accident.)
+    Item {
+      id: maskTracker
+      x: dockCardComp ? dockCardComp.x : 0
+      y: dockCardComp ? dockCardComp.y : 0
+      width: 0
+      height: 0
     }
 
     // Bottom edge reveal strip — thin edge trigger with zero click-swallowing
@@ -4329,10 +4356,10 @@ Item {
       }
     }
 
-    // Global dismiss area - catches clicks outside context menu, folder stack, or app group popup
+    // Clears a drag released outside the card (popups dismiss through their focus grabs).
     Item {
       id: globalDismiss
-      readonly property bool armed: !root.fileDragOut && (root.contextAppId !== "" || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.dockDragActive)
+      readonly property bool armed: !root.fileDragOut && root.dockDragActive
       width: armed ? dockWindow.width : 0
       height: armed ? dockWindow.height : 0
 
@@ -4340,21 +4367,7 @@ Item {
         anchors.fill: parent
         z: -1
         hoverEnabled: true
-        // Accept every button: the layer-shell mask routes all clicks here
-        // while a menu is open, so a right-click on empty space must dismiss
-        // the menu too instead of being swallowed with no effect.
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        onClicked: function(mouse) {
-          if (root.contextAppId !== "") {
-            root.closeContext()
-          }
-          if (root.activeStackFolder !== "") {
-            root.closeFolderStack()
-          }
-          if (root.activeAppGroupId !== "") {
-            root.closeAppGroup()
-          }
-        }
         onReleased: function(mouse) {
           if (root.dragAppId !== "") {
             root.dragAppId = ""
@@ -4376,21 +4389,70 @@ Item {
     }
 
     // ------------------------------------------------------------ Folder Stack Popover
-    FolderPopup {
-      id: folderStackPopoverComp
-      rootRef: root
+    // Created only while open: idle popup windows cost a QQuickWindow each,
+    // and several hidden ones next to the dock broke its hover handling.
+    LazyLoader {
+      id: folderStackLoader
+      active: root.activeStackFolder !== "" && root.dockVisible
+
+      DockPopupWindow {
+        id: folderStackWindow
+        dockRoot: root
+        open: true
+        centerX: root.activeStackX
+        body: folderStackPopoverComp
+        onDismissed: root.closeFolderStack()
+
+        FolderPopup {
+          id: folderStackPopoverComp
+          rootRef: root
+        }
+      }
     }
 
     // ------------------------------------------------------------ App Group Popover
-    AppGroupPopup {
-      id: appGroupPopupComp
-      rootRef: root
+    // Created only while open: idle popup windows cost a QQuickWindow each,
+    // and several hidden ones next to the dock broke its hover handling.
+    LazyLoader {
+      id: appGroupLoader
+      active: root.activeAppGroupId !== "" && root.dockVisible
+
+      DockPopupWindow {
+        id: appGroupWindow
+        dockRoot: root
+        open: true
+        centerX: root.activeAppGroupX
+        body: appGroupPopupComp
+        onDismissed: root.closeAppGroup()
+
+        AppGroupPopup {
+          id: appGroupPopupComp
+          rootRef: root
+          popupWindow: appGroupWindow
+        }
+      }
     }
 
     // ------------------------------------------------------------ context menu
-    DockContextMenu {
-      id: contextMenuComp
-      rootRef: root
+    // Created only while open: idle popup windows cost a QQuickWindow each,
+    // and several hidden ones next to the dock broke its hover handling.
+    LazyLoader {
+      id: contextMenuLoader
+      active: root.contextAppId !== ""
+
+      DockPopupWindow {
+        id: contextMenuWindow
+        dockRoot: root
+        open: true
+        centerX: root.contextX
+        body: contextMenuComp
+        onDismissed: root.closeContext()
+
+        DockContextMenu {
+          id: contextMenuComp
+          rootRef: root
+        }
+      }
     }
   }
 

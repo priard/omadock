@@ -12,8 +12,6 @@ BorderSurface {
 
   property var rootRef: null
   readonly property var root: rootRef
-  property var targetCard: root ? (root.dockCardComp || root.dockCard) : null
-  property var targetWindow: root ? root.contentItemRef : null
 
   readonly property bool isOpen: root ? (root.activeStackFolder !== "" && root.dockVisible) : false
   readonly property bool gridView: root ? root.activeStackView === "grid" : false
@@ -30,9 +28,7 @@ BorderSurface {
   radius: Style.cornerRadius
   padding: Style.space(4)
 
-  readonly property real maxAllowedHeight: targetCard
-    ? Math.max(240, targetCard.y - Style.space(16))
-    : (parent ? (parent.height - Style.space(80)) : 500)
+  readonly property real maxAllowedHeight: root ? root.popupMaxHeight : 500
 
   // Grid geometry: up to five columns, never wider than the entries need.
   readonly property real tileWidth: Style.space(92)
@@ -50,9 +46,6 @@ BorderSurface {
     ? Math.min(maxAllowedHeight, headerColumn.implicitHeight + bodyContentHeight + footerColumn.implicitHeight + contentTopInset + contentBottomInset + Style.space(4))
     : 0
 
-  anchors.bottom: targetCard ? targetCard.top : undefined
-  anchors.bottomMargin: Style.space(6)
-  x: Math.max(Style.gapsOut, Math.min((targetWindow ? targetWindow.width : 1920) - width - Style.gapsOut, (root ? root.activeStackX : 0) - width / 2))
 
   function homePath(p) {
     return String(p || "").replace(/^~/, Quickshell.env("HOME"))

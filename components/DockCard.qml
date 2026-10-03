@@ -901,7 +901,9 @@ Item {
       width: removeLabel.implicitWidth + contentLeftInset + contentRightInset
       height: removeLabel.implicitHeight + contentTopInset + contentBottomInset
       x: Math.round((root ? root.dragPointerX : 0) - width / 2)
-      y: Math.round((root ? root.dragPointerY : 0) - height - Style.space(16))
+      // The layer is short now: keep the bubble below its top edge.
+      readonly property real windowTop: -((root && root.dockWindowRef ? root.dockWindowRef.height : 0) - Style.gapsOut - dockCard.height)
+      y: Math.max(windowTop + Style.space(2), Math.round((root ? root.dragPointerY : 0) - height - Style.space(16)))
 
       Text {
         id: removeLabel

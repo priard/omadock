@@ -11,8 +11,6 @@ BorderSurface {
 
   property var rootRef: null
   readonly property var root: rootRef
-  property var targetCard: root ? (root.dockCardComp || root.dockCard) : null
-  property var targetWindow: root ? root.contentItemRef : null
 
   property alias appContextMenuColumn: appContextMenuColumn
 
@@ -39,9 +37,6 @@ BorderSurface {
     ? Math.min(540, menuColumn.implicitHeight + contentTopInset + contentBottomInset)
     : 0
 
-  anchors.bottom: targetCard ? targetCard.top : undefined
-  anchors.bottomMargin: Style.space(6)
-  x: Math.max(Style.gapsOut, Math.min((targetWindow ? targetWindow.width : 1920) - width - Style.gapsOut, (root ? root.contextX : 0) - width / 2))
 
   onVisibleChanged: {
     if (!visible) menuFlickable.contentY = 0

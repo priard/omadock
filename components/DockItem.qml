@@ -401,7 +401,7 @@ Item {
             return
           }
 
-          itemTooltip.shown = true
+          itemTooltip.tipShown = true
         }
       }
     }
@@ -494,36 +494,22 @@ Item {
     }
   }
 
-  BorderSurface {
+  // The item's tooltip: tipShown is the dwell, wanted the hover condition.
+  // The popup window that shows it exists only while it is shown.
+  Item {
     id: itemTooltip
-    property bool shown: false
+    width: 0
+    height: 0
+    property bool tipShown: false
     readonly property bool wanted: area.containsMouse && !item.isDragging
       && item.name !== "" && (root ? (root.showTooltips && root.contextAppId === "") : true)
-    visible: itemTooltip.shown && itemTooltip.wanted
-    z: 300
-    color: Color.tooltip.background
-    borderSpec: Border.surfaceSpec("tooltip", "border", Color.tooltip.border, 1)
-    radius: Style.cornerRadius > 0 ? Style.cornerRadius : 8
-    padding: Style.space(6)
-    x: {
-      var targetWin = root ? root.contentItemRef : null
-      var localCenter = (item.width - width) / 2
-      if (!targetWin) return localCenter
-      var pt = item.mapToItem(targetWin, 0, 0)
-      if (!pt) return localCenter
-      var winX = pt.x + localCenter
-      var clampedWinX = Math.max(Style.gapsOut, Math.min(targetWin.width - width - Style.gapsOut, winX))
-      return clampedWinX - pt.x
-    }
-    y: -height - Style.space(10)
-    width: tooltipContent.implicitWidth + contentLeftInset + contentRightInset
-    height: tooltipContent.implicitHeight + contentTopInset + contentBottomInset
+    readonly property bool showing: itemTooltip.tipShown && itemTooltip.wanted
 
     onWantedChanged: {
       if (itemTooltip.wanted) tooltipDwell.restart()
       else {
         tooltipDwell.stop()
-        itemTooltip.shown = false
+        itemTooltip.tipShown = false
         if (root && root.contextAppId !== item.appId) {
           item.selectedWindowIdx = -1
         }
@@ -533,108 +519,129 @@ Item {
     Timer {
       id: tooltipDwell
       interval: root ? root.tooltipDelay : 450
-      onTriggered: itemTooltip.shown = true
+      onTriggered: itemTooltip.tipShown = true
     }
 
-    Column {
-      id: tooltipContent
-      x: itemTooltip.contentLeftInset
-      y: itemTooltip.contentTopInset
-      spacing: Style.space(3)
+    LazyLoader {
+      active: itemTooltip.showing
 
-      Text {
-        text: item.tooltipText !== "" ? item.tooltipText : item.name
-        textFormat: Text.PlainText
-        color: Color.tooltip.text
-        font.family: Style.font.family
-        font.pixelSize: Style.font.caption
-        font.bold: root ? (root.advancedTooltips && item.running) : false
-        horizontalAlignment: Text.AlignHCenter
-        anchors.horizontalCenter: parent.horizontalCenter
-      }
+      TooltipWindow {
+        target: item
+        gap: Style.space(10)
+        shown: true
+        body: itemTooltipSurface
 
-      // Window previews: a card stack the wheel rotates; a click on the icon
-      // focuses the front card's window.
-      WindowCardStack {
-        id: cardStack
-        readonly property bool wanted: root ? (root.advancedTooltips && item.tooltipWindows.length > 0) : false
-        visible: wanted
-        width: wanted ? implicitWidth : 0
-        height: wanted ? implicitHeight : 0
-        anchors.horizontalCenter: parent.horizontalCenter
-        rootRef: item.rootRef
-        windows: item.tooltipWindows
-        active: wanted && itemTooltip.visible
-        fallbackIcon: iconImg.source
-        frontIndex: {
-          var wins = item.tooltipWindows
-          if (item.selectedWindowIdx >= 0 && item.selectedWindowIdx < wins.length) return item.selectedWindowIdx
-          for (var i = 0; i < wins.length; i++)
-            if (item.isWinActive(wins[i])) return i
-          return 0
-        }
-      }
+        BorderSurface {
+          id: itemTooltipSurface
+          color: Color.tooltip.background
+          borderSpec: Border.surfaceSpec("tooltip", "border", Color.tooltip.border, 1)
+          radius: Style.cornerRadius > 0 ? Style.cornerRadius : 8
+          padding: Style.space(6)
+          width: tooltipContent.implicitWidth + contentLeftInset + contentRightInset
+          height: tooltipContent.implicitHeight + contentTopInset + contentBottomInset
 
-      Text {
-        visible: cardStack.wanted
-        width: Math.min(implicitWidth, cardStack.width)
-        anchors.horizontalCenter: parent.horizontalCenter
-        horizontalAlignment: Text.AlignHCenter
-        text: (cardStack.wanted && root) ? root.windowRowLabel(item.tooltipWindows[cardStack.frontIndex]) : ""
-        textFormat: Text.PlainText
-        color: Util.alpha(Color.tooltip.text, 0.80)
-        font.family: Style.font.family
-        font.pixelSize: Math.max(10, Style.font.caption - 1)
-        elide: Text.ElideRight
-        maximumLineCount: 1
-      }
+          Column {
+            id: tooltipContent
+            x: itemTooltipSurface.contentLeftInset
+            y: itemTooltipSurface.contentTopInset
+            spacing: Style.space(3)
 
-      Repeater {
-        model: (root && !root.advancedTooltips && item.tooltipWindows.length > 0)
-          ? Math.min(item.tooltipWindows.length, 8) : 0
-        delegate: Row {
-          spacing: Style.space(5)
-          anchors.horizontalCenter: parent.horizontalCenter
-          readonly property bool isSelected: item.selectedWindowIdx === index
-          readonly property bool isWinFocused: item.isWinActive(item.tooltipWindows[index])
-
-          Rectangle {
-            width: Style.space(5)
-            height: Style.space(5)
-            radius: width / 2
-            anchors.verticalCenter: parent.verticalCenter
-            color: isSelected ? Color.accent : (isWinFocused ? Color.accent : Util.alpha(Color.tooltip.text, 0.5))
-            border.color: isSelected ? Color.accent : "transparent"
-            border.width: 1
-          }
-
-          Text {
-            text: {
-              var w = item.tooltipWindows[index]
-              var t = (w && root) ? root.windowRowLabel(w) : ""
-              var prefix = isSelected ? "› " : ""
-              var str = prefix + t
-              return str.length > 32 ? str.slice(0, 30) + "…" : str
+            Text {
+              text: item.tooltipText !== "" ? item.tooltipText : item.name
+              textFormat: Text.PlainText
+              color: Color.tooltip.text
+              font.family: Style.font.family
+              font.pixelSize: Style.font.caption
+              font.bold: root ? (root.advancedTooltips && item.running) : false
+              horizontalAlignment: Text.AlignHCenter
+              anchors.horizontalCenter: parent.horizontalCenter
             }
-            textFormat: Text.PlainText
-            color: isSelected ? Color.accent : (isWinFocused ? Color.tooltip.text : Util.alpha(Color.tooltip.text, 0.80))
-            font.family: Style.font.family
-            font.pixelSize: Math.max(10, Style.font.caption - 1)
-            font.bold: isSelected || isWinFocused
-            elide: Text.ElideRight
-            maximumLineCount: 1
+
+            // Window previews: a card stack the wheel rotates; a click on the icon
+            // focuses the front card's window.
+            WindowCardStack {
+              id: cardStack
+              readonly property bool wanted: root ? (root.advancedTooltips && item.tooltipWindows.length > 0) : false
+              visible: wanted
+              width: wanted ? implicitWidth : 0
+              height: wanted ? implicitHeight : 0
+              anchors.horizontalCenter: parent.horizontalCenter
+              rootRef: item.rootRef
+              windows: item.tooltipWindows
+              active: wanted && itemTooltip.showing
+              fallbackIcon: iconImg.source
+              frontIndex: {
+                var wins = item.tooltipWindows
+                if (item.selectedWindowIdx >= 0 && item.selectedWindowIdx < wins.length) return item.selectedWindowIdx
+                for (var i = 0; i < wins.length; i++)
+                  if (item.isWinActive(wins[i])) return i
+                return 0
+              }
+            }
+
+            Text {
+              visible: cardStack.wanted
+              width: Math.min(implicitWidth, cardStack.width)
+              anchors.horizontalCenter: parent.horizontalCenter
+              horizontalAlignment: Text.AlignHCenter
+              text: (cardStack.wanted && root) ? root.windowRowLabel(item.tooltipWindows[cardStack.frontIndex]) : ""
+              textFormat: Text.PlainText
+              color: Util.alpha(Color.tooltip.text, 0.80)
+              font.family: Style.font.family
+              font.pixelSize: Math.max(10, Style.font.caption - 1)
+              elide: Text.ElideRight
+              maximumLineCount: 1
+            }
+
+            Repeater {
+              model: (root && !root.advancedTooltips && item.tooltipWindows.length > 0)
+                ? Math.min(item.tooltipWindows.length, 8) : 0
+              delegate: Row {
+                spacing: Style.space(5)
+                anchors.horizontalCenter: parent.horizontalCenter
+                readonly property bool isSelected: item.selectedWindowIdx === index
+                readonly property bool isWinFocused: item.isWinActive(item.tooltipWindows[index])
+
+                Rectangle {
+                  width: Style.space(5)
+                  height: Style.space(5)
+                  radius: width / 2
+                  anchors.verticalCenter: parent.verticalCenter
+                  color: isSelected ? Color.accent : (isWinFocused ? Color.accent : Util.alpha(Color.tooltip.text, 0.5))
+                  border.color: isSelected ? Color.accent : "transparent"
+                  border.width: 1
+                }
+
+                Text {
+                  text: {
+                    var w = item.tooltipWindows[index]
+                    var t = (w && root) ? root.windowRowLabel(w) : ""
+                    var prefix = isSelected ? "› " : ""
+                    var str = prefix + t
+                    return str.length > 32 ? str.slice(0, 30) + "…" : str
+                  }
+                  textFormat: Text.PlainText
+                  color: isSelected ? Color.accent : (isWinFocused ? Color.tooltip.text : Util.alpha(Color.tooltip.text, 0.80))
+                  font.family: Style.font.family
+                  font.pixelSize: Math.max(10, Style.font.caption - 1)
+                  font.bold: isSelected || isWinFocused
+                  elide: Text.ElideRight
+                  maximumLineCount: 1
+                }
+              }
+            }
+
+            Text {
+              visible: root ? (!root.advancedTooltips && item.tooltipWindows.length > 8) : false
+              anchors.horizontalCenter: parent.horizontalCenter
+              text: "+" + (item.tooltipWindows.length - 8) + " more"
+              textFormat: Text.PlainText
+              color: Util.alpha(Color.tooltip.text, 0.6)
+              font.family: Style.font.family
+              font.pixelSize: Math.max(9, Style.font.caption - 3)
+            }
           }
         }
-      }
-
-      Text {
-        visible: root ? (!root.advancedTooltips && item.tooltipWindows.length > 8) : false
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: "+" + (item.tooltipWindows.length - 8) + " more"
-        textFormat: Text.PlainText
-        color: Util.alpha(Color.tooltip.text, 0.6)
-        font.family: Style.font.family
-        font.pixelSize: Math.max(9, Style.font.caption - 3)
       }
     }
   }
