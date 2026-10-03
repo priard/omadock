@@ -47,9 +47,12 @@ def snapshots(directory):
                     item = {key: row.get(key, '')[:4096] if isinstance(row.get(key, ''), str) else ''
                             for key in ('app', 'appIcon', 'summary', 'body')}
                     # The popup's timestamp tells a new notification from one
-                    # already seen (urgency fires once per new popup).
-                    stamp = row.get('timestamp', 0)
-                    item['timestamp'] = stamp if isinstance(stamp, int) and not isinstance(stamp, bool) and stamp > 0 else 0
+                    # already seen (urgency fires once per new popup). A row
+                    # without a valid one carries no field at all, so it is
+                    # never mistaken for a popup stamped 0.
+                    stamp = row.get('timestamp')
+                    if isinstance(stamp, int) and not isinstance(stamp, bool) and stamp > 0:
+                        item['timestamp'] = stamp
                     rows.append(item)
                 except (OSError, ValueError, RecursionError):
                     continue

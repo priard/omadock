@@ -43,8 +43,7 @@ class PopupTests(unittest.TestCase):
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]['app'], 'Firefox')
             self.assertEqual(len(rows[0]['body']), 4096)
-            self.assertEqual(set(rows[0]), {'app', 'appIcon', 'summary', 'body', 'timestamp'})
-            self.assertEqual(rows[0]['timestamp'], 0)
+            self.assertEqual(set(rows[0]), {'app', 'appIcon', 'summary', 'body'})
 
     def test_timestamp_identifies_each_popup(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -52,8 +51,8 @@ class PopupTests(unittest.TestCase):
             (base / 'a.json').write_text(json.dumps({'app': 'A', 'timestamp': 1791036122238}))
             (base / 'b.json').write_text(json.dumps({'app': 'B', 'timestamp': '17'}))
             (base / 'c.json').write_text(json.dumps({'app': 'C', 'timestamp': True}))
-            stamps = {row['app']: row['timestamp'] for row in popups.snapshots(folder)}
-            self.assertEqual(stamps, {'A': 1791036122238, 'B': 0, 'C': 0})
+            stamps = {row['app']: row.get('timestamp') for row in popups.snapshots(folder)}
+            self.assertEqual(stamps, {'A': 1791036122238, 'B': None, 'C': None})
 
     def test_row_limit_and_missing_directory(self):
         self.assertEqual(popups.snapshots('/nonexistent/omadock-test'), [])
@@ -88,7 +87,7 @@ class PopupTests(unittest.TestCase):
                 directory.mkdir(parents=True)
                 notice = directory / 'one.json'
                 notice.write_text('{"app":"Firefox"}')
-                row = {'app': 'Firefox', 'appIcon': '', 'summary': '', 'body': '', 'timestamp': 0}
+                row = {'app': 'Firefox', 'appIcon': '', 'summary': '', 'body': ''}
                 self.read_until(process, [row])
                 notice.write_text('{"app":"btop"}')
                 self.read_until(process, [{**row, 'app': 'btop'}])
