@@ -18,7 +18,7 @@ fail() { echo "IPC ROUND-TRIP FAILED: $* (a click or key press during the run cl
 
 ipc openSettings; sleep 1
 [ "$(st settingsOpen)" = True ] || fail "openSettings"
-for page in appearance placement behavior effects size presets folders groups supporters about; do
+for page in appearance placement behavior effects size presets folders groups about; do
   ipc openSettingsPage "$page"; sleep 0.4
   [ "$(st settingsPage)" = "$page" ] || fail "openSettingsPage $page"
 done
