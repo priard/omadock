@@ -28,6 +28,7 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 ## Open
 
 - #27 urgency on notifications through the popup-file watch (`feat/notification-urgency`).
+- #28 notification badge follows the icon's hover effects (`feat/badge-follows-icon`).
 
 ## Fork only
 
