@@ -27,7 +27,7 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 
 ## Open
 
-- none.
+- #27 urgency on notifications through the popup-file watch (`feat/notification-urgency`).
 
 ## Fork only
 
