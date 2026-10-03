@@ -29,6 +29,9 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 
 - #27 urgency on notifications through the popup-file watch (`feat/notification-urgency`).
 - #28 notification badge follows the icon's hover effects (`feat/badge-follows-icon`).
+- #29 CI: security grep and shader source check (`feat/ci-static-checks`).
+- #30 stacks: "20000+" and "Folder could not be read" (`feat/stack-limits`).
+- #31 warn when a drive is pulled out while mounted (`feat/unsafe-removal`).
 
 ## Fork only
 
