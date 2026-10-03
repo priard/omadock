@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# OmaDock tests. --offline (default): unit and static checks, nothing
+# outside temp dirs is touched. --live: checks against the running shell
+# (backs up and restores omadock.json, no clicks, no keyboard). --all: both.
+set -u
+cd "$(dirname "$0")/.."
+mode=${1:---offline}
+fail=0
+step() {
+  local name=$1; shift
+  printf '\n== %s\n' "$name"
+  if "$@"; then printf 'ok   %s\n' "$name"; else printf 'FAIL %s\n' "$name"; fail=1; fi
+}
+offline() {
+  step "DockModel (node)" node --test tests/unit/*.test.mjs
+  step "scripts (python)" python3 -m unittest discover -s tests/unit -p 'test_*.py'
+  step "bench helpers" python3 -m unittest tests/bench/test_bench.py
+  step "capped read gate" bash tests/unit/test_capped_gate.sh
+  step "shaders in sync" bash tests/static/shaders-in-sync.sh
+  step "manifest" bash tests/static/manifest.sh
+  step "qmllint baseline" bash tests/static/qmllint.sh
+  step "security grep" python3 tests/static/security_grep.py
+}
+live() {
+  step "smoke" bash tests/smoke-test.sh
+  step "ipc round-trip" bash tests/live/ipc-roundtrip.sh
+  step "config fuzz" bash tests/live/config-fuzz.sh
+  step "launch ids" python3 tests/launch-harness.py
+}
+case $mode in
+  --offline) offline ;;
+  --live) live ;;
+  --all) offline; live ;;
+  *) echo "usage: $0 [--offline|--live|--all]"; exit 2 ;;
+esac
+printf '\n%s\n' "$([ $fail = 0 ] && echo 'ALL PASSED' || echo 'SOME FAILED')"
+exit $fail

@@ -1,0 +1,5 @@
+{
+ "hyprctl-eval::Dock.qml": 3,
+ "notify-send::Dock.qml": 1,
+ "notify-send::scripts/eject-drive.py": 1
+}
