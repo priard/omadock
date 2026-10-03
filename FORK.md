@@ -19,3 +19,16 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 - #13 dock polish, stacks, icon styles, blur/shadow controls (landed in v4.0.0).
 - #14 split panels, folder and group reordering, drag improvements, drive
   section (merged 2026-10-02).
+- #15-#25 merged 2026-10-03: file drag-out, ungroup/unpin, dividers,
+  presets, hover effects, keep-pointer, wheel pacing, window previews,
+  hardening, perf fixes, popup windows (dock VRAM 194 -> 26 MiB).
+
+## Open
+
+- #26 tooltip fade, linger and cross-fade (`feat/tooltip-motion`).
+
+## Fork only
+
+- `tests/bench/` benchmark, `bench/results/` history, `tests/run-all.sh`
+  with static checks and live tests (`tests/README.md`).
+- IPC `itemGeometry()` and `state()` for the benchmark and live tests.
