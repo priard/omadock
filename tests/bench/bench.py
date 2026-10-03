@@ -669,6 +669,93 @@ def cmd_compare(args):
     return 0
 
 
+# --- soak ---------------------------------------------------------------------
+
+def slope_per_hour(xs, ys):
+    """Least-squares slope of ys over xs (seconds), per hour; None if undefined."""
+    pts = [(x, y) for x, y in zip(xs, ys) if x is not None and y is not None]
+    if len(pts) < 2:
+        return None
+    n = len(pts)
+    mx = sum(p[0] for p in pts) / n
+    my = sum(p[1] for p in pts) / n
+    den = sum((p[0] - mx) ** 2 for p in pts)
+    if den == 0:
+        return None
+    return sum((p[0] - mx) * (p[1] - my) for p in pts) / den * 3600
+
+
+SOAK_METRICS = ["rss_mb", "pss_mb", "vram_mib", "fds", "threads", "hypr_vram_mib"]
+
+
+def soak_summary(samples):
+    """Trend per metric for each run of samples with the same shell pid
+    (a shell restart starts a new segment)."""
+    segments, current = [], []
+    for s in samples:
+        if current and s.get("pid") != current[-1].get("pid"):
+            segments.append(current)
+            current = []
+        current.append(s)
+    if current:
+        segments.append(current)
+    out = []
+    for seg in segments:
+        xs = [s["t"] for s in seg]
+        row = {"pid": seg[0].get("pid"), "samples": len(seg),
+               "hours": round((xs[-1] - xs[0]) / 3600, 2)}
+        for k in SOAK_METRICS:
+            ys = [s.get(k) for s in seg]
+            known = [y for y in ys if y is not None]
+            row[k + "_start"] = known[0] if known else None
+            row[k + "_end"] = known[-1] if known else None
+            slope = slope_per_hour(xs, ys)
+            row[k + "_per_h"] = round(slope, 3) if slope is not None else None
+        out.append(row)
+    return {"segments": out}
+
+
+def cmd_soak(args):
+    log = lambda m: print(f"[soak] {m}", file=sys.stderr, flush=True)
+    desktop = Desktop()
+    os.makedirs(args.out, exist_ok=True)
+    host = socket.gethostname()
+    path = os.path.join(args.out, time.strftime("soak-%Y-%m-%d-%H%M", time.localtime())
+                        + f"-{host}-{args.label}.json")
+    report = {"schema": 1, "kind": "soak", "label": args.label,
+              "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+              "interval_s": args.interval, "conditions": conditions(desktop), "samples": []}
+    t0 = time.monotonic()
+    end = t0 + args.minutes * 60
+    log(f"sampling every {args.interval} s for {args.minutes} min into {path}")
+    try:
+        while time.monotonic() < end:
+            pid = desktop.quickshell_pid()
+            hyp = desktop.hyprland_pid()
+            sample = {"t": round(time.monotonic() - t0, 1), "wall": time.strftime("%H:%M:%S"), "pid": pid}
+            proc = read_proc_sample(pid) if pid else None
+            if proc:
+                vram = read_vram()
+                sample.update({"rss_mb": round(proc["rss_kb"] / 1024, 1), "pss_mb": round(proc["pss_kb"] / 1024, 1),
+                               "threads": proc["threads"], "fds": proc["fds"],
+                               "vram_mib": vram.get(pid), "hypr_vram_mib": vram.get(hyp) if hyp else None,
+                               "ticks": read_proc_ticks(pid), "hypr_ticks": read_proc_ticks(hyp) if hyp else None})
+            report["samples"].append(sample)
+            report["summary"] = soak_summary([s for s in report["samples"] if "rss_mb" in s])
+            with open(path, "w") as f:      # rewritten each time: an interrupted soak keeps its data
+                json.dump(report, f, indent=1)
+            time.sleep(max(0, min(args.interval, end - time.monotonic())))
+    except KeyboardInterrupt:
+        log("interrupted; samples so far are saved")
+    for seg in report.get("summary", {}).get("segments", []):
+        print(f"segment pid {seg['pid']}: {seg['hours']} h, {seg['samples']} samples; "
+              f"rss {seg['rss_mb_start']} -> {seg['rss_mb_end']} MB ({seg['rss_mb_per_h']} MB/h), "
+              f"vram {seg['vram_mib_start']} -> {seg['vram_mib_end']} MiB ({seg['vram_mib_per_h']} MiB/h), "
+              f"fds {seg['fds_start']} -> {seg['fds_end']}")
+    print(f"Saved {path}")
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="bench.py", description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -683,6 +770,12 @@ def main(argv=None):
     c.add_argument("a")
     c.add_argument("b")
     c.set_defaults(func=cmd_compare)
+    k = sub.add_parser("soak", help="sample the shell over a long time without touching the desktop")
+    k.add_argument("--minutes", type=float, default=120)
+    k.add_argument("--interval", type=float, default=60)
+    k.add_argument("--label", default="on", help="e.g. on / off: whether the plugin is enabled")
+    k.add_argument("--out", default=os.path.join(REPO, "bench", "results"))
+    k.set_defaults(func=cmd_soak)
     args = p.parse_args(argv)
     return args.func(args)
 

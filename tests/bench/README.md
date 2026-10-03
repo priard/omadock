@@ -9,6 +9,7 @@ fixed scenarios, and compares runs. Fork tooling, Python stdlib only.
     python3 tests/bench/bench.py run --events        # + S5 workspace switching
     python3 tests/bench/bench.py run --full          # + dock on/off (restarts the shell 2x)
     python3 tests/bench/bench.py compare A.json B.json
+    python3 tests/bench/bench.py soak --minutes 120 --interval 60 --label on
 
 Results land in `bench/results/<date>-<host>.json`; commit the ones worth
 keeping (baselines, before/after of an optimisation).
@@ -76,6 +77,18 @@ hardware, versions, config or monitors differ.
   focus-follows-mouse this can move keyboard focus to the window there.
 - `--full` checks that the dock layer really disappears and comes back;
   otherwise the dock cost is reported as invalid.
+
+## Soak
+
+`soak` only watches: it never moves the pointer or touches the shell, so
+keep working normally. Every interval it records the shell's RSS, PSS,
+VRAM, threads and fds (and Hyprland's VRAM and CPU ticks) and rewrites
+`bench/results/soak-<date>-<host>-<label>.json`, so an interrupted run
+keeps its data. A shell restart (new pid) starts a new segment; each
+segment gets a least-squares trend per metric (MB per hour). Run it once
+with the plugin enabled (`--label on`) and once disabled (`--label off`,
+after `omarchy plugin disable omadock`) to see whether a slow growth
+comes from the dock or from the shell itself.
 
 ## Unit tests
 

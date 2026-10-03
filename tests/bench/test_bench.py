@@ -255,5 +255,28 @@ class ShellPid(unittest.TestCase):
         self.assertIsNone(bench.pick_shell_pid("2969780 /usr/bin/quickshell\n"))
         self.assertIsNone(bench.pick_shell_pid(""))
 
+class Soak(unittest.TestCase):
+    def test_slope_per_hour(self):
+        # 2 MB more every 30 minutes = 4 MB per hour
+        xs = [0, 1800, 3600, 5400]
+        ys = [100, 102, 104, 106]
+        self.assertAlmostEqual(bench.slope_per_hour(xs, ys), 4.0)
+
+    def test_slope_needs_two_points(self):
+        self.assertIsNone(bench.slope_per_hour([0], [1]))
+        self.assertIsNone(bench.slope_per_hour([5, 5], [1, 2]))
+
+    def test_soak_summary_splits_at_restarts(self):
+        samples = [
+            {"t": 0, "pid": 1, "rss_mb": 100, "vram_mib": 400, "fds": 10},
+            {"t": 3600, "pid": 1, "rss_mb": 110, "vram_mib": 400, "fds": 10},
+            {"t": 3700, "pid": 2, "rss_mb": 50, "vram_mib": 300, "fds": 8},
+            {"t": 7300, "pid": 2, "rss_mb": 51, "vram_mib": 300, "fds": 8},
+        ]
+        out = bench.soak_summary(samples)
+        self.assertEqual(len(out["segments"]), 2)
+        self.assertAlmostEqual(out["segments"][0]["rss_mb_per_h"], 10.0)
+        self.assertAlmostEqual(out["segments"][1]["rss_mb_per_h"], 1.0)
+
 if __name__ == "__main__":
     unittest.main()
