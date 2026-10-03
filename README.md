@@ -130,6 +130,11 @@ When a window is parked on `special:minimized`, Omadock generates a live visual 
 - **📦** In `"all"` mode, same-app windows stack into one card with a count badge.
 - **🧩** Unpinned apps collapse into their tile — the dock stays uncluttered.
 
+**Window previews in tooltips.** Hovering an app shows thumbnails of its
+windows, including ones minimized to the dock's hidden workspace. They are
+captured into GPU memory only while the tooltip is open and are never
+written to disk. Turn them off in Settings → Behavior → Window previews.
+
 ---
 
 ### 🔄 3. Minimize on Click Modes
