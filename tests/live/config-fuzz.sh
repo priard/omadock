@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Live: malformed omadock.json contents must neither break the dock nor
-# be rewritten by it. Backs up the config and restores it on exit.
+# Live: malformed omadock.json contents must not break the dock, and a
+# settings save (setAlignment) must leave a file that is not a readable JSON
+# object untouched; readable objects are saved with their values bounded.
+# Backs up the config and restores it on exit.
 set -u
 cd "$(dirname "$0")/../.."
 . tests/live/common.sh
@@ -29,12 +31,37 @@ for name, text in cases.items():
     (w / name).write_text(text)
 EOF
 
+# Files that must survive a save byte for byte: rewriting them from {}
+# would drop every key the dock does not own. "infinity" belongs here: QML's
+# JSON.parse rejects 1e999, so to the dock that file is unreadable too.
+keep=" garbage null array string oversize infinity "
 for f in "$work"/*; do
   name=$(basename "$f")
   cp "$f" "$CFG"
   sleep 1.5
   hyprctl layers | grep -q "namespace: omadock" || { echo "FAIL $name: dock layer gone"; rc=1; }
-  cmp -s "$f" "$CFG" || { echo "FAIL $name: the dock rewrote the file"; rc=1; }
+  omarchy-shell omadock setAlignment center >/dev/null
+  sleep 1
+  if [ "${keep#* $name }" != "$keep" ]; then
+    cmp -s "$f" "$CFG" || { echo "FAIL $name: a save rewrote a file it cannot read"; rc=1; }
+  else
+    python3 - "$CFG" "$name" <<'PY' || rc=1
+import json, sys
+path, name = sys.argv[1], sys.argv[2]
+try:
+    d = json.load(open(path))
+except ValueError as e:
+    sys.exit(f"FAIL {name}: saved file is not JSON ({e})")
+if not isinstance(d, dict):
+    sys.exit(f"FAIL {name}: saved file is not an object")
+if not 0 <= d.get("systemBlurSize", 0) <= 100:
+    sys.exit(f"FAIL {name}: systemBlurSize {d['systemBlurSize']} saved unbounded")
+if d.get("urgentSoundName", "bell") != "bell" and name == "bad-sound":
+    sys.exit(f"FAIL {name}: urgentSoundName {d['urgentSoundName']!r} saved")
+if any(not str(f.get("path", "")).startswith(("/", "~")) for f in d.get("pinnedFolders", [])):
+    sys.exit(f"FAIL {name}: relative pinned folder saved")
+PY
+  fi
 done
 
 cp "$bak" "$CFG"; sleep 1.5
