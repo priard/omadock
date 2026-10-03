@@ -3583,7 +3583,8 @@ Item {
       out.push({ id: String(id || ""), kind: kind,
                  x: Math.round(p.x), y: Math.round(p.y),
                  w: Math.round(it.width), h: Math.round(it.height),
-                 windows: windows || 0, urgent: urgent === true })
+                 windows: windows || 0, urgent: urgent === true,
+                 animating: it.urgentFresh === true || it.pulsing === true })
     }
     var card = root.dockCardComp
     // A hidden dock only slides off screen, so its items still look visible.
