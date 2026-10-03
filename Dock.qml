@@ -183,7 +183,6 @@ Item {
     // survives that because it consults this index first; the fallback library
     // has to do the same or it is strictly more fragile than the host.
     property var iconIndex: ({})
-    property var pendingIconIndex: ({})
 
     function sortedEntries(query) {
       try {
@@ -240,28 +239,18 @@ Item {
       if (!iconIndexScan.running) iconIndexScan.running = true
     }
 
-    function indexIconLine(path) {
-      var value = String(path || "").trim()
-      if (value.length === 0) return
-      var slash = value.lastIndexOf("/")
-      var file = slash >= 0 ? value.slice(slash + 1) : value
-      var dot = file.lastIndexOf(".")
-      var name = dot > 0 ? file.slice(0, dot) : file
-      if (name.length > 0 && localAppLibrary.pendingIconIndex[name] === undefined)
-        localAppLibrary.pendingIconIndex[name] = value
-    }
-
-    // SVGs before PNGs so the first hit per name is the scalable one.
+    // SVGs before PNGs so the first hit per name is the scalable one; awk
+    // keeps only that first hit, so QML parses ~2 300 lines instead of ~23 600.
     function iconIndexScanCommand() {
       return [
         'dirs="$HOME/.icons $HOME/.local/share/icons";',
         'IFS=":"; for d in ${XDG_DATA_DIRS:-/usr/local/share:/usr/share}; do dirs="$dirs $d/icons"; done; unset IFS;',
-        'for ext in svg png; do',
+        '{ for ext in svg png; do',
         '  for base in $dirs; do',
         '    [[ -d $base ]] && find "$base" \\( -path "*/apps/*" -o -path "*/devices/*" -o -path "*/places/*" -o -path "*/mimetypes/*" \\) -name "*.$ext" 2>/dev/null;',
         '  done;',
         '  find /usr/share/pixmaps -maxdepth 1 -name "*.$ext" 2>/dev/null;',
-        'done'
+        'done; } | awk -F/ \'{ n = $NF; sub(/\\.[^.]*$/, "", n); if (!(n in seen)) { seen[n] = 1; print } }\''
       ].join(' ')
     }
 
@@ -294,10 +283,11 @@ Item {
   Process {
     id: iconIndexScan
     command: ["bash", "-c", localAppLibrary.iconIndexScanCommand()]
-    stdout: SplitParser { onRead: function (line) { localAppLibrary.indexIconLine(line) } }
-    onStarted: localAppLibrary.pendingIconIndex = ({})
+    // One collected read, parsed once: a callback per line cost ~23 600
+    // GUI-thread calls on every start and theme change.
+    stdout: StdioCollector { id: iconIndexOut; waitForEnd: true }
     onExited: {
-      localAppLibrary.iconIndex = localAppLibrary.pendingIconIndex
+      localAppLibrary.iconIndex = DockModel.parseIconIndex(iconIndexOut.text)
       localAppLibrary.appsChanged()
     }
   }
@@ -623,10 +613,12 @@ Item {
   function refreshDock() {
     var tops = ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []
     if (root.filterByMonitor) tops = tops.filter(root.isToplevelOnThisMonitor)
-    root.dockModel = root.appLibrary
+    var next = root.appLibrary
       ? DockModel.buildEntries(root.pinnedIds, tops, root.appRows,
                                root.appLibrary, root.hyprToplevelFor, root.minimizedWorkspace, root.minimizedOrigins, root.appGroups)
       : { pinned: [], running: [] }
+    // An equal model would only re-run every delegate's bindings.
+    if (!DockModel.sameModel(next, root.dockModel)) root.dockModel = next
     root.rescanMinimizedWindows()
     root.pruneLaunching()
     root.pruneWindowState()
@@ -699,6 +691,9 @@ Item {
   property var minimizedOrigins: ({})
   property var parkedAt: ({})
   property var urgentMap: ({})
+  // Counts urgency events (Hyprland urgent, app notifications) so items can
+  // animate again for a new event while they are already marked urgent.
+  property int urgentEvents: 0
   property var recentOpenedWindowAddrs: ({})
 
   // Per app: the window it parked last, and the window it was in last. Both
@@ -1908,6 +1903,7 @@ Item {
         var map = DockModel.copyMap(root.urgentMap)
         map[fullAddr] = true
         root.urgentMap = map
+        root.urgentEvents++
         modelTimer.restart()
       }
       if (n === "activewindow" || n === "activewindowv2") {
@@ -1939,7 +1935,6 @@ Item {
           delete mo[fullAddr]
           root.minimizedOrigins = mo
         }
-        root.refreshDock()
       }
       if (n === "workspace" || n === "workspacev2" || n === "openwindow" || n === "closewindow" ||
           n === "movewindow" || n === "movewindowv2" || n === "resizewindow" || n === "resizewindowv2" ||
@@ -2040,6 +2035,7 @@ Item {
 
     if (found) {
       root.urgentMap = map
+      root.urgentEvents++
       modelTimer.restart()
     }
 
@@ -2224,7 +2220,27 @@ Item {
     root.refreshDock()
   }
 
+  // Up to five sources report one theme switch (three Color signals, the
+  // icon theme file, the colors file); each used to rescan apps and rebuild
+  // the dock. After the first load they coalesce into one run once the
+  // burst is over; the first load applies at once so icons do not flash.
+  property bool _themeApplied: false
   function handleThemeChanged() {
+    if (!root._themeApplied) {
+      root._themeApplied = true
+      root.applyThemeChange()
+      return
+    }
+    themeChangeTimer.restart()
+  }
+
+  Timer {
+    id: themeChangeTimer
+    interval: 100
+    onTriggered: root.applyThemeChange()
+  }
+
+  function applyThemeChange() {
     try {
       var t = DockModel.readCapped(themeIconsFile.text, DockModel.MAX_ICONS_THEME_BYTES).trim()
       if (t) root.currentIconThemeName = t

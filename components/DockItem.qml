@@ -117,7 +117,34 @@ Item {
   // The pulse carries both attention states: urgency, and a launch in
   // progress, where it breathes under the bounce.
   property real pulse: 1.0
-  readonly property bool pulsing: item.urgent || item.starting
+  // Urgency animates for URGENT_ANIMATION_MS, then only the indicator's
+  // urgent colour remains: an unattended urgent window must not keep the
+  // dock (and the compositor) redrawing forever. A new urgent event starts
+  // it again.
+  readonly property int urgentAnimationMs: 10000
+  property bool urgentFresh: false
+  function restartUrgentAnimation() {
+    if (!item.urgent) return
+    item.urgentFresh = true
+    urgentCalm.restart()
+  }
+  onUrgentChanged: {
+    if (item.urgent) item.restartUrgentAnimation()
+    else { item.urgentFresh = false; urgentCalm.stop() }
+  }
+  Component.onCompleted: item.restartUrgentAnimation()
+  Connections {
+    target: root
+    // A new urgency event for an app that is still marked urgent.
+    function onUrgentEventsChanged() { Qt.callLater(item.restartUrgentAnimation) }
+  }
+  Timer {
+    id: urgentCalm
+    interval: item.urgentAnimationMs
+    onTriggered: item.urgentFresh = false
+  }
+
+  readonly property bool pulsing: item.starting || (item.urgent && item.urgentFresh)
   onPulsingChanged: if (!item.pulsing) item.pulse = 1.0
 
   SequentialAnimation on pulse {
@@ -133,7 +160,7 @@ Item {
     NumberAnimation { duration: 120 }
   }
 
-  readonly property bool bouncing: root ? ((item.starting && root.launchBounce) || (item.urgent && root.showUrgentHint)) : false
+  readonly property bool bouncing: root ? ((item.starting && root.launchBounce) || (item.urgent && item.urgentFresh && root.showUrgentHint)) : false
   onBouncingChanged: if (!item.bouncing) item.bounceY = 0
 
   SequentialAnimation on bounceY {

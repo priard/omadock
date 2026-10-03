@@ -452,7 +452,8 @@ Item {
       width: segment.width + spread * 2
       height: dockCard.height + spread * 2
       z: 0
-      layer.enabled: true
+      // No offscreen texture while the shadow is off.
+      layer.enabled: cardShadow.visible
       layer.effect: MultiEffect {
         blurEnabled: true
         blur: 1.0
