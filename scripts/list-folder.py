@@ -15,10 +15,12 @@ SORT is one of:
 LIMIT caps the items returned (default 16, at most 1000).
 
 Prints {"count": N, "items": [...first LIMIT...], "folder": FOLDER}.
-Hidden entries are skipped. Each file carries "thumb": a preview image
-path, preferring a freedesktop thumbnail a file manager already rendered
-(~/.cache/thumbnails), then the file itself for images, else "". The
-output is always valid JSON, even for a missing folder.
+Hidden entries are skipped. At most MAX_SCAN visible entries are read
+("truncated": true when the folder holds more). Each file carries "thumb":
+a preview image path, preferring a freedesktop thumbnail a file manager
+already rendered (~/.cache/thumbnails), then the file itself for small
+PNG/JPEG/WebP images only (SVG and GIF are never decoded in the shell),
+else "". The output is always valid JSON, even for a missing folder.
 """
 
 import hashlib
@@ -30,6 +32,9 @@ import time
 
 DEFAULT_LIMIT = 16
 MAX_LIMIT = 1000
+MAX_SCAN = 20000                      # entries read before giving up
+PREVIEW_EXT = {".png", ".jpg", ".jpeg", ".webp"}
+MAX_PREVIEW_BYTES = 20 * 1024 * 1024  # larger originals are not previewed
 THUMB_DIRS = [
     os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "thumbnails", size)
     # Smallest that still looks sharp in a grid tile first.
@@ -97,7 +102,9 @@ def thumbnail_for(path):
 
 def quote_segment(segment):
     from urllib.parse import quote
-    return quote(segment, safe="!$&'()*+,;=:@-._~")
+    # Names that are not valid UTF-8 arrive as surrogate escapes; the URI
+    # needs their raw bytes percent-encoded.
+    return quote(segment.encode("utf-8", "surrogateescape"), safe="!$&'()*+,;=:@-._~")
 
 
 def natural_key(name):
@@ -113,34 +120,38 @@ def main():
         limit = DEFAULT_LIMIT
 
     entries = []
+    truncated = False
     if folder and os.path.isdir(folder):
         try:
-            scan = list(os.scandir(folder))
+            with os.scandir(folder) as scan:
+                for entry in scan:
+                    if entry.name.startswith("."):
+                        continue
+                    if len(entries) >= MAX_SCAN:
+                        truncated = True
+                        break
+                    try:
+                        st = entry.stat()
+                        is_dir = entry.is_dir()
+                    except OSError:
+                        continue
+                    ext = "" if is_dir else os.path.splitext(entry.name)[1].lower()
+                    size = 0 if is_dir else st.st_size
+                    entries.append({
+                        "name": entry.name,
+                        "path": entry.path,
+                        "isDir": is_dir,
+                        "isImage": ext in IMAGE_EXT,
+                        "size": human_size(size),
+                        "time": human_age(st.st_mtime),
+                        "mtime": st.st_mtime,
+                        "icon": icon_for(ext, is_dir),
+                        "_ext": ext,
+                        "_bytes": size,
+                        "_ctime": st.st_ctime,
+                    })
         except OSError:
-            scan = []
-        for entry in scan:
-            if entry.name.startswith("."):
-                continue
-            try:
-                st = entry.stat()
-                is_dir = entry.is_dir()
-            except OSError:
-                continue
-            ext = "" if is_dir else os.path.splitext(entry.name)[1].lower()
-            size = 0 if is_dir else st.st_size
-            entries.append({
-                "name": entry.name,
-                "path": entry.path,
-                "isDir": is_dir,
-                "isImage": ext in IMAGE_EXT,
-                "size": human_size(size),
-                "time": human_age(st.st_mtime),
-                "mtime": st.st_mtime,
-                "icon": icon_for(ext, is_dir),
-                "_ext": ext,
-                "_bytes": size,
-                "_ctime": st.st_ctime,
-            })
+            pass
 
     if sort == "name":
         entries.sort(key=lambda e: natural_key(e["name"]))
@@ -159,9 +170,11 @@ def main():
         if not e["isDir"]:
             # A cached thumbnail is a small PNG; decoding the original photo
             # (often megabytes) is the fallback.
-            item["thumb"] = thumbnail_for(e["path"]) or (e["path"] if e["isImage"] else "")
+            previewable = e["_ext"] in PREVIEW_EXT and e["_bytes"] <= MAX_PREVIEW_BYTES
+            item["thumb"] = thumbnail_for(e["path"]) or (e["path"] if previewable else "")
         items.append(item)
-    print(json.dumps({"count": len(entries), "items": items, "folder": folder, "sort": sort}))
+    print(json.dumps({"count": len(entries), "items": items, "folder": folder,
+                      "sort": sort, "truncated": truncated}))
 
 
 if __name__ == "__main__":

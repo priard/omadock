@@ -1240,7 +1240,8 @@ Item {
     property string targetFolder: ""
     property string sortKey: "modified"
     // scripts/list-folder.py lists, sorts and caps the folder (see its header).
-    command: ["python3", decodeURIComponent(Qt.resolvedUrl("scripts/list-folder.py").toString().replace(/^file:\/\//, "")), folderStackScanner.targetFolder, folderStackScanner.sortKey, "300"]
+    // timeout: a stalled filesystem (network mount) must not leave the helper running.
+    command: ["timeout", "-k", "2", "10", "python3", decodeURIComponent(Qt.resolvedUrl("scripts/list-folder.py").toString().replace(/^file:\/\//, "")), folderStackScanner.targetFolder, folderStackScanner.sortKey, "300"]
     running: false
     stdout: StdioCollector {
       onStreamFinished: {
@@ -1285,7 +1286,8 @@ Item {
 
   Process {
     id: removableDrivesScanner
-    command: ["python3", "-c", "import json, subprocess, os, sys\ntry:\n    res = subprocess.run(['lsblk', '-J', '-o', 'NAME,LABEL,MOUNTPOINTS,RM,HOTPLUG,SIZE,TYPE,FSTYPE,MODEL,TRAN'], capture_output=True, text=True)\n    data = json.loads(res.stdout) if res.returncode == 0 else {}\n    devices = []\n    seen = set()\n    def walk(devs):\n        for d in devs:\n            mps = d.get('mountpoints') or ([d.get('mountpoint')] if d.get('mountpoint') else [])\n            rm = bool(d.get('rm') or d.get('hotplug') or (d.get('tran') == 'usb'))\n            for mp in mps:\n                if not mp or mp in ['/', '/home', '/boot', '[SWAP]', '/var/log', '/var/cache/pacman/pkg']:\n                    continue\n                if rm or mp.startswith('/run/media/') or mp.startswith('/media/'):\n                    if mp in seen: continue\n                    seen.add(mp)\n                    label = d.get('label') or d.get('model') or os.path.basename(mp) or d.get('name')\n                    space_info = ''\n                    try:\n                        st = os.statvfs(mp)\n                        free_bytes = st.f_bavail * st.f_frsize\n                        total_bytes = st.f_blocks * st.f_frsize\n                        def fmt(b):\n                            return f'{b / (1024*1024):.1f} MB' if b < 1024*1024*1024 else f'{b / (1024*1024*1024):.1f} GB'\n                        space_info = f'{fmt(free_bytes)} free of {fmt(total_bytes)}'\n                    except Exception:\n                        pass\n                    fstype = str(d.get('fstype') or '').lower()\n                    is_usb = (d.get('tran') == 'usb') or rm or ('usb' in str(d.get('model') or '').lower())\n                    if is_usb:\n                        icon = 'drive-removable-media-usb'\n                    elif fstype in ['iso9660', 'udf']:\n                        icon = 'media-optical'\n                    elif d.get('type') == 'disk':\n                        icon = 'drive-harddisk-usb'\n                    else:\n                        icon = 'drive-removable-media'\n                    devices.append({'dev': '/dev/' + str(d.get('name') or ''), 'name': str(label).strip() if label else 'USB Drive', 'mountpoint': mp, 'size': d.get('size', ''), 'space': space_info, 'fstype': fstype, 'icon': icon})\n            if 'children' in d:\n                walk(d['children'])\n    if 'blockdevices' in data:\n        walk(data['blockdevices'])\n    print(json.dumps(devices))\nexcept Exception as e:\n    print('[]')\n"]
+    // scripts/list-drives.py reads lsblk and prints the drives as JSON.
+    command: ["python3", root.scriptPath("list-drives.py")]
     running: false
     stdout: StdioCollector {
       onStreamFinished: {
@@ -1324,7 +1326,9 @@ Item {
     property string dev: ""
     property string mountpoint: ""
     property string driveName: ""
-    command: ["python3", "-c", "import subprocess, sys\ndev = sys.argv[1] if len(sys.argv) > 1 else ''\nmp = sys.argv[2] if len(sys.argv) > 2 else ''\nname = sys.argv[3] if len(sys.argv) > 3 else 'Drive'\nsuccess = False\nif mp:\n    r = subprocess.run(['gio', 'mount', '-u', mp], capture_output=True)\n    if r.returncode == 0: success = True\nif not success and dev:\n    r = subprocess.run(['udisksctl', 'unmount', '-b', dev], capture_output=True)\n    if r.returncode == 0: success = True\nif not success and mp:\n    r = subprocess.run(['umount', mp], capture_output=True)\n    if r.returncode == 0: success = True\nif success:\n    subprocess.run(['notify-send', 'Device Safely Removed', f'{name} can now be safely disconnected.', '-i', 'drive-removable-media'])\nprint(success)\n", ejectProc.dev, ejectProc.mountpoint, ejectProc.driveName]
+    // scripts/eject-drive.py: gio, then udisksctl, then umount; the label is
+    // cleaned before it reaches the notification.
+    command: ["python3", root.scriptPath("eject-drive.py"), ejectProc.dev, ejectProc.mountpoint, ejectProc.driveName]
     running: false
     stdout: StdioCollector {
       onStreamFinished: {
@@ -2183,7 +2187,7 @@ Item {
     root.perMonitorApps = parsed ? parsed.perMonitorApps !== false : true
     root.applyLook(parsed)
     root.blurSize = parsed && typeof parsed.blurSize === "number" ? Math.max(0, Math.min(20, Math.round(parsed.blurSize))) : 0
-    root.systemBlurSize = parsed && typeof parsed.systemBlurSize === "number" ? Math.max(0, Math.round(parsed.systemBlurSize)) : 0
+    root.systemBlurSize = DockModel.boundSystemBlurSize(parsed ? parsed.systemBlurSize : 0)
     root.applyBlurRule(false)
     if (parsed && typeof parsed.minimizeMode === "string") {
       root.minimizeMode = parsed.minimizeMode
@@ -2196,7 +2200,7 @@ Item {
     root.showUrgentHint = parsed ? parsed.showUrgentHint !== false : true
     root.urgentOnNotification = parsed ? parsed.urgentOnNotification !== false : true
     root.urgentSound = parsed ? parsed.urgentSound !== false : true
-    root.urgentSoundName = parsed && typeof parsed.urgentSoundName === "string" ? parsed.urgentSoundName : "bell"
+    root.urgentSoundName = DockModel.cleanSoundName(parsed ? parsed.urgentSoundName : "bell")
     root.revealDelay = parsed && typeof parsed.revealDelay === "number"
       ? Math.max(0, Math.min(2000, Math.round(parsed.revealDelay)))
       : 160
@@ -2326,7 +2330,7 @@ Item {
   // remembered as the system size the first time the dock overrides it.
   function setBlurSize(size, currentSize) {
     if (root.systemBlurSize <= 0 && root._appliedBlurSize <= 0 && currentSize > 0)
-      root.systemBlurSize = currentSize
+      root.systemBlurSize = DockModel.boundSystemBlurSize(currentSize)
     root.blurSize = Math.max(1, Math.min(20, Math.round(size)))
     root.applyBlurSize(false)
     root.saveConfig()
@@ -2383,15 +2387,13 @@ Item {
     root.saveConfig()
   }
 
+  // Local filesystem path of a helper in scripts/.
+  function scriptPath(name) {
+    return decodeURIComponent(Qt.resolvedUrl("scripts/" + name).toString().replace(/^file:\/\//, ""))
+  }
+
   function localPathsFromUrls(urls) {
-    var out = []
-    for (var i = 0; i < (urls ? urls.length : 0); i++) {
-      var u = String(urls[i])
-      if (u.indexOf("file://") !== 0) continue
-      var p = decodeURIComponent(u.slice(7))
-      if (p.charAt(0) === "/") out.push(p)
-    }
-    return out
+    return DockModel.localPathsFromUrls(urls)
   }
 
   function pinDroppedFolders(urls) {
@@ -2629,6 +2631,7 @@ Item {
   }
 
   function setUrgentSoundName(name) {
+    name = DockModel.cleanSoundName(name)
     root.urgentSoundName = name
     root.urgentSound = name !== "none"
     if (name !== "none" && !root.isDndActive) {
@@ -3511,12 +3514,10 @@ Item {
   readonly property var currentLook: DockModel.pickLook(root.buildConfig({}))
 
   function saveConfig() {
-    var conf = {}
-    try {
-      var txt = DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES).trim()
-      if (txt) conf = JSON.parse(txt) || {}
-    } catch (e) {
-      conf = {}
+    var conf = DockModel.configBase(DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES))
+    if (conf === null) {
+      console.warn("[omadock] omadock.json is not a JSON object; not saving so its other keys survive. Fix the file to save settings again.")
+      return
     }
     root.buildConfig(conf)
     root._savingConfig = true

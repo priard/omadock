@@ -1695,6 +1695,7 @@ PanelWindow {
                       anchors.verticalCenter: parent.verticalCenter
                       width: Math.min(parent.width, Style.space(260))
                       placeholderText: "Group name"
+                      maximumLength: 120   // DockModel.MAX_APP_GROUP_NAME
                       foreground: Color.menu.text
                       Keys.onReturnPressed: groupRow.finishEdit(true)
                       Keys.onEnterPressed: groupRow.finishEdit(true)

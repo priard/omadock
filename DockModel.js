@@ -292,7 +292,8 @@ function parsePinned(raw) {
   }
   if (!parsed || typeof parsed !== "object") return []
 
-  var arr = isList(parsed) ? parsed : (isList(parsed.pinned) ? parsed.pinned : [])
+  // Real arrays only (see boundList).
+  var arr = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.pinned) ? parsed.pinned : [])
   var out = []
   var seen = {}
   for (var i = 0; i < arr.length; i++) {
@@ -328,6 +329,22 @@ var MAX_FOLDER_PATH = 512
 var MAX_FOLDER_NAME = 120
 var MAX_FOLDER_ICON = 120
 
+var MAX_SYSTEM_BLUR_SIZE = 100
+
+// Hyprland's own blur size as remembered in the config: an integer in
+// 0..MAX_SYSTEM_BLUR_SIZE (0 = not remembered). It is written back to
+// decoration.blur.size, where a huge value stalls the compositor.
+function boundSystemBlurSize(v) {
+  if (typeof v !== "number" || !isFinite(v)) return 0
+  return Math.max(0, Math.min(MAX_SYSTEM_BLUR_SIZE, Math.round(v)))
+}
+
+// A sound theme id for canberra-gtk-play -i, or "none"; anything else
+// (a path, "../x") falls back to "bell".
+function cleanSoundName(v) {
+  return (typeof v === "string" && /^[a-z0-9][a-z0-9-]{0,47}$/.test(v)) ? v : "bell"
+}
+
 // Byte ceiling applied to text read from a watched file. The returned slice is
 // never parsed further when the file exceeds the cap, so an oversized file can
 // neither grow shell memory nor amplify parse work. Oversize input yields "".
@@ -349,13 +366,31 @@ function readCapped(raw, maxBytes) {
   return ""
 }
 
+// The object saveConfig merges the dock's keys into: {} for an empty file,
+// the parsed object otherwise, and null when the file holds anything else
+// (a typo, an array, a string). null means "do not write": rewriting from
+// {} would silently drop every key the dock does not own.
+function configBase(text) {
+  var t = String(text == null ? "" : text).trim()
+  if (!t) return {}
+  var parsed
+  try {
+    parsed = JSON.parse(t)
+  } catch (e) {
+    return null
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null
+  return parsed
+}
+
 // Shape-bound generic list: keeps at most `max` entries that pass `predicate`.
+// Real arrays only: JSON gives nothing else, and an array-like object
+// ({ "length": 1e9 }) would be walked to its claimed length.
 function boundList(arr, max, predicate) {
-  if (!isList(arr)) return []
-  var src = toArray(arr)
+  if (!Array.isArray(arr)) return []
   var out = []
-  for (var i = 0; i < src.length && out.length < max; i++) {
-    var v = src[i]
+  for (var i = 0; i < arr.length && out.length < max; i++) {
+    var v = arr[i]
     if (predicate(v)) out.push(v)
   }
   return out
@@ -509,7 +544,10 @@ var FOLDER_SORTS = ["name", "kind", "modified", "added", "size"]
 function boundPinnedFolders(arr) {
   return boundList(arr, MAX_PINNED_FOLDERS, function(f) {
     if (!f || typeof f !== "object" || isList(f)) return false
-    return !!_boundedStr(f.path, MAX_FOLDER_PATH)
+    // Absolute or home-relative only: the path reaches xdg-open, which has
+    // no "--", so a relative "-x" would be read as an option.
+    var p = _boundedStr(f.path, MAX_FOLDER_PATH)
+    return !!p && (p.charAt(0) === "/" || p === "~" || p.indexOf("~/") === 0)
   }).map(function(f) {
     return {
       path: _boundedStr(f.path, MAX_FOLDER_PATH),
@@ -599,6 +637,26 @@ function boundPresets(arr) {
     if (name === "" || !p.look || typeof p.look !== "object" || isList(p.look)) continue
     seen[id] = true
     out.push({ id: id, name: name, look: pickLook(p.look) })
+  }
+  return out
+}
+
+// Local absolute paths from dropped file:// URLs. A path with a line break
+// is dropped: the folder probes print one path per line, so "a\n/etc"
+// would come back as two paths. Malformed escapes are skipped.
+function localPathsFromUrls(urls) {
+  var list = toArray(urls)
+  var out = []
+  for (var i = 0; i < list.length; i++) {
+    var u = String(list[i])
+    if (u.indexOf("file://") !== 0) continue
+    var p
+    try {
+      p = decodeURIComponent(u.slice(7))
+    } catch (e) {
+      continue
+    }
+    if (p.charAt(0) === "/" && !/[\r\n]/.test(p)) out.push(p)
   }
   return out
 }
