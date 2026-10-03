@@ -13,7 +13,7 @@ Touches nothing outside temporary directories.
 | file | covers |
 |---|---|
 | `unit/dockmodel.test.mjs` | regression tests for the hardening fixes: real arrays only, malformed config not overwritten, blur/sound/folder bounds, dropped paths |
-| `model.test.js`, `test_helpers.py` | the upstream author's own tests (DockModel helpers, script helpers) |
+| `unit/model.test.js`, `unit/test_helpers.py`, `manifest-check.sh` | the upstream author's tests and manifest gate, also run by upstream CI |
 | `unit/dockmodel-core.test.mjs` | pinning, grouping, app matching, notification domains, presets and look bounds |
 | `unit/test_list_folder.py` | stack listing: sorting, limits, hidden files, non-UTF-8 names, preview whitelist, 20 000 entry budget |
 | `unit/test_list_drives.py` | drive listing from lsblk JSON: skips, nesting, dedupe, icons, label cleanup |

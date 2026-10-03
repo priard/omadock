@@ -15,14 +15,13 @@ step() {
   if "$@"; then printf 'ok   %s\n' "$name"; else printf 'FAIL %s\n' "$name"; fail=1; fi
 }
 offline() {
-  step "DockModel (node)" node --test tests/unit/*.test.mjs
-  step "upstream model tests" node --test tests/model.test.js
-  step "upstream helper tests" python3 -m unittest tests/test_helpers.py
+  step "DockModel (node)" node --test tests/unit/*.test.js tests/unit/*.test.mjs
   step "scripts (python)" python3 -m unittest discover -s tests/unit -p 'test_*.py'
   step "bench helpers" python3 -m unittest tests/bench/test_bench.py
   step "capped read gate" bash tests/unit/test_capped_gate.sh
   step "shaders in sync" bash tests/static/shaders-in-sync.sh
   step "manifest" bash tests/static/manifest.sh
+  step "manifest (upstream CI gate)" bash tests/manifest-check.sh .
   step "qmllint baseline" bash tests/static/qmllint.sh
   step "security grep" python3 tests/static/security_grep.py
 }
