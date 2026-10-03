@@ -126,22 +126,45 @@ Item {
   function restartUrgentAnimation() {
     if (!item.urgent) return
     item.urgentFresh = true
-    urgentCalm.restart()
+    if (root && root.dockVisible) urgentCalm.restart()
+    else urgentCalm.stop()
   }
   onUrgentChanged: {
     if (item.urgent) item.restartUrgentAnimation()
     else { item.urgentFresh = false; urgentCalm.stop() }
   }
   Component.onCompleted: item.restartUrgentAnimation()
+  // Whether the latest urgency event names this app or one of its windows.
+  function isUrgentEventForMe() {
+    var keys = root ? (root.urgentEventKeys || []) : []
+    if (keys.indexOf(item.appId) >= 0) return true
+    var list = item.windowList || []
+    for (var i = 0; i < list.length; i++)
+      if (list[i] && keys.indexOf(list[i].address) >= 0) return true
+    return false
+  }
   Connections {
     target: root
-    // A new urgency event for an app that is still marked urgent.
-    function onUrgentEventsChanged() { Qt.callLater(item.restartUrgentAnimation) }
+    // A new urgency event for this app while it is still marked urgent.
+    function onUrgentEventsChanged() {
+      if (item.isUrgentEventForMe()) Qt.callLater(item.restartUrgentAnimation)
+    }
   }
+  // Counts only while the dock is shown, so an autohidden dock still
+  // bounces when it is revealed.
   Timer {
     id: urgentCalm
     interval: item.urgentAnimationMs
+    running: false
     onTriggered: item.urgentFresh = false
+  }
+  Connections {
+    target: root
+    function onDockVisibleChanged() {
+      if (!item.urgentFresh) return
+      if (root.dockVisible) urgentCalm.restart()
+      else urgentCalm.stop()
+    }
   }
 
   readonly property bool pulsing: item.starting || (item.urgent && item.urgentFresh)

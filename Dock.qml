@@ -694,6 +694,8 @@ Item {
   // Counts urgency events (Hyprland urgent, app notifications) so items can
   // animate again for a new event while they are already marked urgent.
   property int urgentEvents: 0
+  // The app ids and window addresses the latest urgency event was about.
+  property var urgentEventKeys: []
   property var recentOpenedWindowAddrs: ({})
 
   // Per app: the window it parked last, and the window it was in last. Both
@@ -1903,6 +1905,7 @@ Item {
         var map = DockModel.copyMap(root.urgentMap)
         map[fullAddr] = true
         root.urgentMap = map
+        root.urgentEventKeys = [fullAddr]
         root.urgentEvents++
         modelTimer.restart()
       }
@@ -2002,6 +2005,7 @@ Item {
 
     var map = DockModel.copyMap(root.urgentMap)
     var found = false
+    var eventKeys = []
 
     for (var e = 0; e < matchedEntries.length; e++) {
       var entry = matchedEntries[e]
@@ -2025,9 +2029,10 @@ Item {
       // Foreground Suppression Rule: An app currently focused in the foreground suppresses urgency bounce
       if (!isFocused) {
         map[appId] = true
+        eventKeys.push(appId)
         for (var w2 = 0; w2 < wins.length; w2++) {
           var wa2 = wins[w2] ? wins[w2].address : ""
-          if (wa2) map[wa2] = true
+          if (wa2) { map[wa2] = true; eventKeys.push(wa2) }
         }
         found = true
       }
@@ -2035,6 +2040,7 @@ Item {
 
     if (found) {
       root.urgentMap = map
+      root.urgentEventKeys = eventKeys
       root.urgentEvents++
       modelTimer.restart()
     }
