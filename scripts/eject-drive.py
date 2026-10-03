@@ -36,8 +36,9 @@ def main(argv):
     ok = unmount(dev, mountpoint)
     if ok:
         try:
-            subprocess.run(["notify-send", "Device Safely Removed",
-                            f"{name} can now be safely disconnected.", "-i", "drive-removable-media"])
+            # Options before "--": a label such as "-u..." stays text.
+            subprocess.run(["notify-send", "-i", "drive-removable-media", "--", "Device Safely Removed",
+                            f"{name} can now be safely disconnected."])
         except OSError:
             pass
     print(ok)

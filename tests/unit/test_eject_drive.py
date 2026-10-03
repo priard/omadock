@@ -66,8 +66,25 @@ class EndToEnd(unittest.TestCase):
                                 "/run/media/u/x", "<a href='x'>Evil</a>&"],
                                capture_output=True, text=True, env=env, timeout=30)
             self.assertEqual(r.stdout.strip(), "True")
-            body = log.read_text().splitlines()[1]
-            self.assertEqual(body, "a href='x'Evil/a can now be safely disconnected.")
+            args = log.read_text().splitlines()
+            # Options first, then "--": a label like "-u..." must not be
+            # parsed as a notify-send option.
+            self.assertEqual(args[:3], ["-i", "drive-removable-media", "--"])
+            self.assertEqual(args[4], "a href='x'Evil/a can now be safely disconnected.")
+
+    def test_label_starting_with_a_dash_stays_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_dir = pathlib.Path(tmp)
+            log = bin_dir / "notify.log"
+            (bin_dir / "gio").write_text("#!/bin/sh\nexit 0\n")
+            (bin_dir / "notify-send").write_text(f'#!/bin/sh\nprintf "%s\\n" "$@" > {log}\n')
+            for f in ("gio", "notify-send"):
+                os.chmod(bin_dir / f, 0o755)
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+            subprocess.run([sys.executable, str(SCRIPTS / "eject-drive.py"), "/dev/sdz1",
+                            "/run/media/u/x", "-uc"], capture_output=True, text=True, env=env, timeout=30)
+            args = log.read_text().splitlines()
+            self.assertLess(args.index("--"), args.index("-uc can now be safely disconnected."))
 
 
 if __name__ == "__main__":

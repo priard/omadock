@@ -3514,9 +3514,10 @@ Item {
   readonly property var currentLook: DockModel.pickLook(root.buildConfig({}))
 
   function saveConfig() {
-    var conf = DockModel.configBase(DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES))
+    var conf = configFile.oversized ? null
+      : DockModel.configBase(DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES))
     if (conf === null) {
-      console.warn("[omadock] omadock.json is not a JSON object; not saving so its other keys survive. Fix the file to save settings again.")
+      console.warn("[omadock] omadock.json is not a readable JSON object (or is over the size cap); not saving so its other keys survive. Fix the file to save settings again.")
       return
     }
     root.buildConfig(conf)

@@ -39,6 +39,9 @@ Item {
 
   // Last accepted file content ("" for empty, oversized, or never-loaded).
   property string text: ""
+  // The last read was refused for size: text is "" but the file is not
+  // empty, so a writer must not treat it as a blank file.
+  property bool oversized: false
 
   signal loaded()
   signal fileChanged()
@@ -94,9 +97,11 @@ Item {
     // exited, so gateOut.text is complete here.
     onExited: (exitCode, exitStatus) => {
       if (exitCode === 0) {
+        root.oversized = false
         root.text = gateOut.text
         root.loaded()
       } else if (exitCode === 3) {
+        root.oversized = true
         root.text = ""
         root.loaded()
       }
