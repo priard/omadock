@@ -23,17 +23,18 @@ PopupWindow {
   anchor.window: hostWindow
   anchor.rect.width: 1
   anchor.rect.height: 1
-  anchor.edges: Edges.Top | Edges.Left
-  anchor.gravity: Edges.Bottom | Edges.Right
-  anchor.adjustment: PopupAdjustment.Slide
+  // Anchored at its bottom centre and growing upward, so content that grows
+  // after the tooltip appears never covers the item (see DockPopupWindow).
+  anchor.edges: Edges.Top
+  anchor.gravity: Edges.Top
+  anchor.adjustment: PopupAdjustment.SlideX
   anchor.onAnchoring: {
     if (!tip.hostWindow || !tip.target) return
     var win = tip.hostWindow.contentItem
     var p = win.mapFromItem(tip.target, tip.target.width / 2, 0)
-    var maxX = win.width - tip.implicitWidth - Style.gapsOut
-    tip.anchor.rect.x = Math.round(Math.max(Style.gapsOut, Math.min(maxX, p.x - tip.implicitWidth / 2)))
-    tip.anchor.rect.y = Math.round(p.y - tip.gap - tip.implicitHeight)
+    var half = tip.implicitWidth / 2
+    tip.anchor.rect.x = Math.round(Math.max(Style.gapsOut + half, Math.min(win.width - Style.gapsOut - half, p.x)))
+    tip.anchor.rect.y = Math.round(p.y - tip.gap)
   }
-  onImplicitHeightChanged: if (tip.visible) tip.anchor.updateAnchor()
   onImplicitWidthChanged: if (tip.visible) tip.anchor.updateAnchor()
 }

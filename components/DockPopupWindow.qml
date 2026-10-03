@@ -5,9 +5,12 @@ import qs.Commons
 
 // A menu above the dock card in its own popup surface, so the dock layer
 // only needs to be as tall as the card. Positioned in onAnchoring (the
-// pattern of Omarchy's Ui/PopupCard.qml): centred on centerX, clamped to the
-// window, its bottom Style.space(6) above the card. No compositor adjustment:
-// toDockWindow() relies on the popup sitting exactly at anchor.rect.
+// pattern of Omarchy's Ui/PopupCard.qml): the anchor point sits on the line
+// Style.space(6) above the card and the popup grows upward from it, centred
+// on centerX (clamped so it stays on screen). Anchoring the bottom keeps a
+// popup whose content grows or shrinks (a folder being listed, another
+// folder opened) from flashing over the dock while the compositor catches
+// up. No compositor adjustment: toDockWindow() relies on that placement.
 PopupWindow {
   id: popup
 
@@ -31,28 +34,30 @@ PopupWindow {
   anchor.window: dockWindow
   anchor.rect.width: 1
   anchor.rect.height: 1
-  anchor.edges: Edges.Top | Edges.Left
-  anchor.gravity: Edges.Bottom | Edges.Right
+  anchor.edges: Edges.Top
+  anchor.gravity: Edges.Top
   anchor.adjustment: PopupAdjustment.None
   anchor.onAnchoring: {
     if (!popup.dockWindow || !popup.dockRoot || !popup.dockRoot.dockCard) return
     var win = popup.dockWindow.contentItem
     var cardTop = win.mapFromItem(popup.dockRoot.dockCard, 0, 0).y
-    var maxX = win.width - popup.implicitWidth - Style.gapsOut
-    popup.anchor.rect.x = Math.round(Math.max(Style.gapsOut, Math.min(maxX, popup.centerX - popup.implicitWidth / 2)))
-    popup.anchor.rect.y = Math.round(cardTop - popup.gap - popup.implicitHeight)
+    var half = popup.implicitWidth / 2
+    var cx = Math.max(Style.gapsOut + half, Math.min(win.width - Style.gapsOut - half, popup.centerX))
+    popup.anchor.rect.x = Math.round(cx)
+    popup.anchor.rect.y = Math.round(cardTop - popup.gap)
   }
 
-  // Content that grows or shrinks while open (a folder page, a submenu)
-  // keeps the popup's bottom edge on the card.
-  onImplicitHeightChanged: if (popup.visible) popup.anchor.updateAnchor()
+  // Height changes need no re-anchoring (the bottom is the anchor); a width
+  // change can move the clamp, a new centerX the popup.
   onImplicitWidthChanged: if (popup.visible) popup.anchor.updateAnchor()
   onCenterXChanged: if (popup.visible) popup.anchor.updateAnchor()
 
-  // A point in an item hosted by this popup, in dock-window coordinates.
+  // A point in an item hosted by this popup, in dock-window coordinates: the
+  // popup is centred on anchor.rect.x and ends at anchor.rect.y.
   function toDockWindow(item, x, y) {
     var p = item.mapToItem(popup.contentItem, x, y)
-    return Qt.point(popup.anchor.rect.x + p.x, popup.anchor.rect.y + p.y)
+    return Qt.point(popup.anchor.rect.x - Math.round(popup.implicitWidth / 2) + p.x,
+                    popup.anchor.rect.y - popup.implicitHeight + p.y)
   }
 
   // A click outside the popup and the dock closes it, as the full-surface
