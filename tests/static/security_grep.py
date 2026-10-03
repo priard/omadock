@@ -30,14 +30,15 @@ RULES = {
     "notify-send": re.compile(r"notify-send"),
     "python-c": re.compile(r"\"python3\",\s*\"-c\""),
 }
-TEXT_OPEN = re.compile(r"^\s*(Text|Label)\s*\{")
+# "Text {", and also "component X: Text {" or "property var p: Label {".
+TEXT_OPEN = re.compile(r"(^\s*|:\s*)(Text|Label)\s*\{")
 
 
 def text_blocks_without_plaintext(src):
     lines = src.splitlines()
     count = 0
     for i, line in enumerate(lines):
-        if not TEXT_OPEN.match(line):
+        if not TEXT_OPEN.search(line):
             continue
         depth, body = 0, []
         for l in lines[i:]:
