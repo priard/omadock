@@ -4,6 +4,9 @@
 # (backs up and restores omadock.json, no clicks, no keyboard). --all: both.
 set -u
 cd "$(dirname "$0")/.."
+# Writing __pycache__ inside the plugin directory would make Quickshell
+# reload the live dock.
+export PYTHONDONTWRITEBYTECODE=1
 mode=${1:---offline}
 fail=0
 step() {

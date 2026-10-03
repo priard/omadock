@@ -3,6 +3,8 @@
 # clean log. Backs up omadock.json and restores it on exit. No input.
 set -u
 cd "$(dirname "$0")/../.."
+. tests/live/common.sh
+wait_ready || exit 1
 CFG=$HOME/.config/omarchy/omadock.json
 bak=$(mktemp); cp "$CFG" "$bak"
 restore() { omarchy-shell omadock closeSettings >/dev/null 2>&1; cp "$bak" "$CFG"; rm -f "$bak"; }
@@ -10,7 +12,9 @@ trap restore EXIT
 since=$(date '+%Y-%m-%d %H:%M:%S')
 ipc() { omarchy-shell omadock "$@"; }
 st() { ipc state | python3 -c "import json,sys; print(json.load(sys.stdin)[sys.argv[1]])" "$1"; }
-fail() { echo "IPC ROUND-TRIP FAILED: $*" >&2; exit 1; }
+# The settings panel is a full-screen overlay that takes keyboard focus and
+# closes on any click or Escape, so input during the run fails the test.
+fail() { echo "IPC ROUND-TRIP FAILED: $* (a click or key press during the run closes settings)" >&2; exit 1; }
 
 ipc openSettings; sleep 1
 [ "$(st settingsOpen)" = True ] || fail "openSettings"

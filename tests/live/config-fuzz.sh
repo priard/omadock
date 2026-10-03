@@ -3,6 +3,8 @@
 # be rewritten by it. Backs up the config and restores it on exit.
 set -u
 cd "$(dirname "$0")/../.."
+. tests/live/common.sh
+wait_ready || exit 1
 CFG=$HOME/.config/omarchy/omadock.json
 bak=$(mktemp); cp "$CFG" "$bak"
 work=$(mktemp -d)
