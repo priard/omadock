@@ -761,6 +761,13 @@ Item {
   // subfolders after clicking into it. activeStackTrail holds the folders
   // walked through ({ path, name }), so Back can return step by step.
   property string activeStackPath: ""
+  // The folder being listed. Its name, path and entries replace the shown
+  // ones together when the scan lands, so switching folders never flashes
+  // an empty or half-filled stack.
+  property string pendingStackPath: ""
+  property string pendingStackName: ""
+  property bool activeStackLoading: false
+  property real pendingStackX: 0
   property var activeStackTrail: []
   // "stack" (list) or "grid" (larger icons and previews), per pinned folder.
   readonly property string activeStackView: root.activeStackFolder !== "" ? root.folderViewFor(root.activeStackFolder) : "stack"
@@ -1254,14 +1261,12 @@ Item {
           // folder the user currently has open (or any at all). Prevents a
           // slow older scan from painting one folder's files under another's
           // header, or repopulating after the stack was closed.
-          var wanted = String(root.activeStackPath || "")
+          var wanted = String(root.pendingStackPath || "")
           if (parsed.folder !== wanted) return
-          root.activeStackTotalCount = parsed.count || 0
-          root.activeStackEntries = parsed.items || []
+          root.applyStackScan(parsed.items || [], parsed.count || 0)
         } catch (e) {
           console.warn("[omadock] Failed parsing folder scan:", e)
-          root.activeStackTotalCount = 0
-          root.activeStackEntries = []
+          root.applyStackScan([], 0)
         }
       }
     }
@@ -4035,7 +4040,9 @@ Item {
     // older scan race the new one.
     if (folderStackScanner.running) folderStackScanner.running = false
     root.activeStackFolder = path
-    root.activeStackX = cx
+    // The open stack moves over the new folder together with its content.
+    root.pendingStackX = cx
+    if (root.activeStackEntries.length === 0) root.activeStackX = cx
     root.activeStackTrail = []
     root.showStackDir((path || "").replace(/^~/, Quickshell.env("HOME")), name || "Folder")
     root.syncVisibility()
@@ -4044,12 +4051,27 @@ Item {
   // Lists dir in the open stack. Kill any in-flight scan first: assigning
   // running = true while a process is already running is a no-op in
   // Quickshell, which used to let a slow older scan race the new one.
+  // The scan for the pending folder landed: show it in one step.
+  function applyStackScan(items, count) {
+    if (root.pendingStackPath === "") return
+    root.activeStackPath = root.pendingStackPath
+    root.activeStackName = root.pendingStackName
+    root.activeStackX = root.pendingStackX
+    root.activeStackTotalCount = count
+    root.activeStackEntries = items
+    root.activeStackLoading = false
+  }
+
   function showStackDir(dir, name) {
     if (folderStackScanner.running) folderStackScanner.running = false
-    root.activeStackPath = dir
-    root.activeStackName = name
-    root.activeStackEntries = []
-    root.activeStackTotalCount = 0
+    root.pendingStackPath = dir
+    root.pendingStackName = name
+    root.activeStackLoading = true
+    // First open: nothing to keep on screen, so show the header right away.
+    if (root.activeStackEntries.length === 0) {
+      root.activeStackPath = dir
+      root.activeStackName = name
+    }
     folderStackScanner.targetFolder = dir
     folderStackScanner.sortKey = root.folderSortFor(root.activeStackFolder)
     folderStackScanner.running = true
@@ -4076,6 +4098,9 @@ Item {
     root.activeStackFolder = ""
     root.activeStackName = ""
     root.activeStackPath = ""
+    root.pendingStackName = ""
+    root.pendingStackPath = ""
+    root.activeStackLoading = false
     root.activeStackTrail = []
     root.activeStackEntries = []
     root.fileDragOut = false

@@ -184,7 +184,7 @@ BorderSurface {
 
     Text {
       id: emptyText
-      visible: folderStackPopover.entries.length === 0
+      visible: folderStackPopover.entries.length === 0 && !(root && root.activeStackLoading)
       width: parent.width
       horizontalAlignment: Text.AlignHCenter
       text: "Folder is empty"
