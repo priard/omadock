@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, experimental]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Node & Python suites
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: DockModel syntax
+        run: node --check DockModel.js
+
+      - name: Node test suites
+        run: node --test tests/unit/*.test.js tests/unit/*.test.mjs
+
+      - name: Python syntax
+        run: python3 -m py_compile scripts/*.py tests/unit/*.py
+
+      - name: Python test suites
+        run: python3 -m unittest discover -s tests/unit -p 'test_*.py'
+
+  qml-lint:
+    name: QML syntax gate
+    runs-on: ubuntu-24.04
+    # Same toolchain as the Omarchy host (Arch qt6-declarative qmllint).
+    # Ubuntu's Qt 6.4 qmllint exits non-zero on warnings alone, which can never
+    # pass here because Quickshell and the Omarchy shell modules are not
+    # installable on runners; Qt 6.11 treats unresolved imports as warnings and
+    # fails only on parse errors — verified against the live toolchain.
+    container: archlinux:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install qmllint (qt6-declarative)
+        run: pacman -Sy --noconfirm qt6-declarative
+
+      # Hard syntax gate: parse errors exit non-zero (255 on broken QML).
+      # Typed checking against the Omarchy shell and Quickshell modules only
+      # exists on an Omarchy host — that runs in the release checklist
+      # (AGENTS.md "Verification Commands").
+      - name: qmllint
+        run: /usr/lib/qt6/bin/qmllint --silent Dock.qml DockHost.qml components/*.qml
+
+  manifest:
+    name: Manifest schema
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Faithful mirror of `omarchy plugin validate` (see script header); the
+      # authoritative validator runs on the Omarchy host before every release.
+      - name: Validate manifest.json
+        run: ./tests/manifest-check.sh .

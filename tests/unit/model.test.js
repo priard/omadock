@@ -5,7 +5,7 @@ const vm = require('node:vm')
 const { test } = require('node:test')
 
 const model = vm.createContext({ console, Quickshell: { iconPath: () => '' } })
-vm.runInContext(readFileSync(join(__dirname, '../DockModel.js'), 'utf8'), model)
+vm.runInContext(readFileSync(join(__dirname, '../../DockModel.js'), 'utf8'), model)
 const plain = value => JSON.parse(JSON.stringify(value))
 const library = {
   entryName: entry => entry.name,

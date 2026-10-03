@@ -5,6 +5,7 @@
 ### *A modern, fluid, zero-CPU application dock engineered for Omarchy Linux*
 
 [![Release](https://img.shields.io/github/v/release/thepathless/omadock?style=for-the-badge&logo=github&logoColor=white&labelColor=1e1e2e&color=6c7086)](https://github.com/thepathless/omadock/releases)
+[![CI](https://github.com/thepathless/omadock/actions/workflows/ci.yml/badge.svg)](https://github.com/thepathless/omadock/actions/workflows/ci.yml)
 [![Omarchy](https://img.shields.io/badge/omarchy-4.0.3+-cba6f7?style=for-the-badge&logo=archlinux&logoColor=white&labelColor=1e1e2e)](https://omarchy.org)
 [![Hyprland](https://img.shields.io/badge/compositor-Hyprland-89b4fa?style=for-the-badge&logo=wayland&logoColor=white&labelColor=1e1e2e)](https://hyprland.org)
 [![Quickshell](https://img.shields.io/badge/shell-Quickshell_Qt6-a6e3a1?style=for-the-badge&logo=qt&logoColor=white&labelColor=1e1e2e)](https://quickshell.org)
@@ -151,15 +152,20 @@ Configure how clicking a focused app icon behaves (`omadock.json` or the Setting
 
 ---
 
-### 🌊 4. Wave & Zoom Magnification
+### 🌊 4. Magnification & Hover Effects
 
-Juan Pablo Zamora's raised-cosine falloff, in three modes:
+Juan Pablo Zamora's raised-cosine falloff magnification, plus shader hover effects — all six modes in `hoverEffect`:
 
 $$\text{scale}(d) = 1 + (\text{peak} - 1) \cdot \frac{1 + \cos\left(\frac{\pi \cdot d}{R}\right)}{2} \quad \text{for } d \le R$$
 
 - **`"wave"`** — the dock ripples under the cursor; zero feedback drift.
 - **`"zoom"`** — only the hovered icon grows.
+- **`"lift"`** — the hovered icon rises off the dock.
+- **`"glow"`** — the hovered icon blooms with light.
+- **`"glitch"`** — a shader-driven chromatic tear on hover.
 - **`"off"`** — calm, static geometry.
+
+With an icon style active, `iconHoverOriginal` shows the hovered icon as shipped, and `iconHoverReveal` dissolves it back in as a dithered reveal instead of a hard switch.
 
 ---
 
@@ -223,6 +229,21 @@ Deep Linux desktop and compositor integration:
 - **Drop files on apps** — drag files (or a folder) onto an app icon to open them with it; the icon lights up only when the app declares their types (`MimeType=` in its desktop entry).
 - **Media controls** — right-click an app that plays media (Spotify, a browser playing a video…) for *Now Playing* with previous / play-pause / next, through MPRIS.
 - **Intelligent autohide** — 2D AABB overlap tests on Hyprland events only. **0.00% CPU**, always.
+
+---
+
+### 🔔 10. Notification Badges & CLI App Identity
+
+- Pinned icons show a badge counting **matching active notification popups** — the count clears as soon as the popup leaves the stack (dismissed, expired, or replaced). These are not unread-message counts.
+- Terminal-launched apps know who they are: **Antigravity** (`agy`) and **btop** keep their own product icons; the terminal's icon is only a fallback for unknown CLI tools.
+
+---
+
+### 🗂 11. Window Preview Cards & Smooth Tooltips
+
+- Hovering an app with several windows shows them as a **card stack of live thumbnails** in the tooltip; the wheel browses the stack (paced by `wheelStepDelay`), a click raises the chosen window.
+- Tooltips fade in with a small rise, linger 200 ms after the pointer leaves, and cross-fade from icon to icon along the dock — no re-dwelling as you move.
+- Menus, folder stacks, app groups and tooltips live in their own focus-grabbing popup windows while the dock layer hugs the card — dock VRAM cost drops from 194 MiB to 26 MiB.
 
 ---
 
@@ -324,9 +345,11 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "intelligentAutohide": true,
   "showRemovableDrives": true,
   "minimizeMode": "active",
+  "clickToMinimize": true,
   "showMinimizedTiles": true,
   "opacity": 1.0,
   "shape": "rounded",
+  "cornerRadius": -1,
   "bgColor": "theme",
   "showBackground": true,
   "showShadow": true,
@@ -334,6 +357,8 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "borderOpacity": "theme",
   "groupStyle": "rounded",
   "itemSpacing": 4,
+  "splitSections": false,
+  "sectionSpacing": 18,
   "dividerGeometry": "classic",
   "dividerHeight": 70,
   "dividerStyle": "simple",
@@ -341,6 +366,9 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "dividerOpacity": 0.4,
   "iconSize": 0,
   "hoverEffect": "zoom",
+  "keepPointer": true,
+  "wheelStepDelay": 150,
+  "iconHoverReveal": false,
   "showAppsButton": true,
   "showTooltips": true,
   "advancedTooltips": true,
@@ -379,9 +407,11 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `groupStyle` | `string` | `"rounded"` | Group tile frame: `"rounded"` (softly rounded rim), `"square"` (rim without rounding) or `"none"` (icons only). |
 | `groupIconEffects` | `string` | `"theme"` | Icons in an opened group: `"theme"` follows `iconStyle`, `"none"` keeps them original. The tile on the dock always follows `iconStyle`. |
 | `minimizeMode` | `string` | `"active"` | `"active"` (FIFO single), `"all"` (batch group), `"off"` (disabled). |
+| `clickToMinimize` | `bool` | derived | Legacy mirror of `minimizeMode !== "off"` for older configs; set `minimizeMode` instead. |
 | `showMinimizedTiles` | `bool` | `true` | Displays live screencopy preview tiles for parked windows. |
 | `opacity` | `number \| str` | `1.0` | Background opacity: `"theme"`, `1.0`, `0.80`, `0.65`, `0.35`, `0.0`. |
 | `shape` | `string` | `"rounded"` | Dock geometry: `"rounded"`, `"round"` (pill), `"square"`, `"theme"`. |
+| `cornerRadius` | `number` | `-1` | `-1` follows the shape's natural radius; `≥ 0` pins a pixel radius. |
 | `indicatorShape` | `string` | `"theme"` | Dots and bars under icons: `"theme"` (follows `shape`), `"rounded"` or `"square"`. |
 | `bgColor` | `string` | `"theme"` | `"theme"`, `"none"`, or custom hex string (`"#1e1e2e"`). |
 | `showBackground` | `bool` | `true` | Draws the dock's background fill. `false` leaves the icons floating. |
@@ -401,12 +431,17 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `iconContrast` | `number` | `0` | `mono` / `dots`: adaptive contrast `0`–`1`, stretched around each icon's own average; high values flatten icons to a simple shape. |
 | `iconStrength` | `number` | `1` | `mono` / `dots`: how much of the effect covers the original icon, `0`–`1`. |
 | `iconHoverOriginal` | `bool` | `false` | With an icon style on, the hovered icon (dock, group tiles, an opened group) shows as shipped. |
+| `iconHoverReveal` | `bool` | `false` | With `iconHoverOriginal`, hover dissolves the original icon back in as a dithered reveal instead of a hard switch. |
+| `keepPointer` | `bool` | `true` | Focusing a window from the dock keeps the pointer where it is instead of warping it to the window centre. |
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
-| `hoverEffect` | `string` | `"zoom"` | Hover growth mode: `"zoom"`, `"wave"`, or `"off"`. |
+| `hoverEffect` | `string` | `"zoom"` | Hover mode: magnification `"zoom"` or `"wave"`; effects `"lift"`, `"glow"`, `"glitch"` (shaders); or `"off"`. |
 | `dividerGeometry` | `string` | `"classic"` | Section divider length: `"classic"` keeps the original short lines; `"long"` uses the adjustable `dividerHeight` share. |
 | `showNotificationBadges` | `bool` | `true` | Count matching active popups on pinned icons (not unread messages); cleared when the notification leaves the popup stack. |
 | `revealDelay` | `int` | `160` | Edge dwell time in milliseconds before unhiding ($0$–$2000$). |
 | `tooltipDelay` | `int` | `450` | Tooltip hover dwell delay in milliseconds ($0$–$5000$). |
+| `wheelStepDelay` | `int` | `150` | Minimum milliseconds between accepted wheel steps while browsing an app's windows ($0$–$1000$). |
+| `splitSections` | `bool` | `false` | Splits pinned apps, running apps and folders into separate sections divided by the `divider*` settings. |
+| `sectionSpacing` | `number` | `18` | Gap between sections in pixels ($0$–$48$). |
 
 ---
 
@@ -417,7 +452,7 @@ Omadock registers IPC commands callable directly by Quickshell.
 ### Automated Setup (Recommended)
 Run the bundled keybinding helper script to automatically configure all shortcuts:
 ```bash
-~/.config/omarchy/plugins/omadock/bind-keys.sh
+~/.config/omarchy/plugins/omadock/scripts/bind-keys.sh
 ```
 
 ### Manual Setup
@@ -441,7 +476,7 @@ Additional IPC methods available:
 - `setAlignment("center" | "left" | "right")`: Change dock alignment dynamically.
 - `setPosition("bottom" | "top" | "left" | "right")`: Change dock edge position.
 - `openSettings`: Open the settings panel on the focused monitor's dock.
-- `openSettingsPage("appearance" | "placement" | "behavior" | "effects" | "size" | "folders" | "groups")`: Open the settings panel on a given page.
+- `openSettingsPage("appearance" | "placement" | "behavior" | "effects" | "size" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.
 - `closeSettings`: Close the settings panel.
 
 > [!NOTE]
@@ -479,9 +514,22 @@ Run <code>omarchy restart shell</code> in your terminal to instantly reload the 
 
 ## 🛠️ Diagnostics & Validation
 
+Every pull request runs the test suites, a QML syntax gate and the manifest schema check in CI.
+
 ```bash
 # Validate manifest compliance against Omarchy 4.0.3+ standards
 omarchy plugin validate ~/Projects/omadock
+
+# Same manifest gate CI runs (a faithful mirror of the command above)
+./tests/manifest-check.sh .
+
+# Test suites (Node: model + perf + hardening; Python: script helpers)
+node --check DockModel.js
+node --test tests/unit/*.test.js tests/unit/*.test.mjs
+python3 -m unittest discover -s tests/unit -p 'test_*.py'
+
+# Load-time smoke test (probes the running shell)
+./tests/smoke-test.sh
 
 # Inspect live compositor journal logs
 journalctl --user -xeu omarchy-shell -n 50 --no-pager
@@ -490,6 +538,23 @@ journalctl --user -xeu omarchy-shell -n 50 --no-pager
 qs -p /usr/share/omarchy/shell ipc call omadock minimizeActive
 qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 ```
+
+---
+
+## 🗂 Repository Layout
+
+| Path | What it is |
+| :--- | :--- |
+| `Dock.qml` | The dock itself: model refresh, windows, popups, badges, settings state. |
+| `DockHost.qml` | Overlay entry point declared by `manifest.json`. |
+| `DockModel.js` | Pure model logic and every safety bound (parsing caps, identity resolution). |
+| `components/` | QML UI components (dock items, popups, tooltips, settings panel, shaders). |
+| `scripts/` | Python helpers (folder/drive scans, notification watcher, keybinding setup) plus `bind-keys.sh`. |
+| `shaders/` | Hover/icon-style fragment shaders with precompiled `.qsb` bundles. |
+| `tests/unit/` | Node and Python unit suites — what CI runs on every PR. |
+| `tests/` | `smoke-test.sh` (live-shell probe) and `manifest-check.sh` (CI manifest gate). |
+| `assets/` | README imagery. |
+| `.github/workflows/ci.yml` | CI: test suites, QML syntax gate, manifest schema. |
 
 ---
 

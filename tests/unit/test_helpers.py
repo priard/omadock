@@ -11,7 +11,7 @@ import time
 import unittest
 from unittest.mock import mock_open, patch
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def load_helper(name):
