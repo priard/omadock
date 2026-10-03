@@ -28,7 +28,8 @@ Item {
 
   Timer {
     id: tileTooltipDwell
-    interval: root ? root.tooltipDelay : 450
+    // No wait while another tooltip is still up (see TooltipLife).
+    interval: (root && root.tooltipsAlive > 0) ? 1 : (root ? root.tooltipDelay : 450)
     running: tile.tileHovered && !tile.tileMenuOpen && tile.tileTitle !== "" && (root ? root.showTooltips : true)
     onTriggered: tile.tooltipShown = true
   }
@@ -204,13 +205,21 @@ Item {
 
   // Title bubble in its own popup surface above the tile, created only
   // while shown (TooltipWindow).
+  TooltipLife {
+    id: tileTooltipLife
+    dockRoot: root
+    hideDelay: tile.tileMenuOpen ? 0 : 200
+    want: tile.tooltipShown && tile.tileHovered && !tile.tileMenuOpen && tile.tileTitle !== "" && (root ? root.showTooltips : true)
+  }
+
   LazyLoader {
     id: tileTooltip
-    active: tile.tooltipShown && tile.tileHovered && !tile.tileMenuOpen && tile.tileTitle !== "" && (root ? root.showTooltips : true)
+    active: tileTooltipLife.alive
 
     TooltipWindow {
       target: tile
       shown: true
+      level: tileTooltipLife.level
       body: tileTooltipSurface
 
       BorderSurface {

@@ -170,6 +170,7 @@ Item {
 
   // Hover tooltip — uses our own HoverTooltip so textFormat: Text.PlainText is enforced.
   HoverTooltip {
+    dockRoot: root
     text: fitem.name + " (Folder)"
     hovered: area.containsMouse
     blocked: (!root || !root.showTooltips || root.activeStackFolder !== "")

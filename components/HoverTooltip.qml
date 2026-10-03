@@ -17,6 +17,8 @@ Item {
   property bool showTooltips: true
   property int tooltipDelay: 450
   property string contextAppId: ""
+  // The dock root, for the shared tooltip warmth (TooltipLife).
+  property var dockRoot: null
 
   width: 0
   height: 0
@@ -34,20 +36,31 @@ Item {
     bubble.shown = false
   }
 
+  // No wait while another tooltip is still up: moving along the dock
+  // cross-fades from one to the next.
   Timer {
     id: dwell
-    interval: bubble.tooltipDelay
+    interval: (bubble.dockRoot && bubble.dockRoot.tooltipsAlive > 0) ? 1 : bubble.tooltipDelay
     onTriggered: bubble.shown = true
   }
 
-  // The popup window exists only while the bubble is shown.
+  TooltipLife {
+    id: life
+    dockRoot: bubble.dockRoot
+    // A menu opening hides it at once.
+    hideDelay: (bubble.blocked || bubble.contextAppId !== "") ? 0 : 200
+    want: bubble.shown && bubble.text !== "" && bubble.showTooltips && !bubble.blocked && bubble.contextAppId === ""
+  }
+
+  // The popup window exists only while the bubble is alive.
   LazyLoader {
-    active: bubble.shown && bubble.text !== "" && bubble.showTooltips && !bubble.blocked && bubble.contextAppId === ""
+    active: life.alive
 
     TooltipWindow {
       target: bubble.parent
       gap: Style.space(8)
       shown: true
+      level: life.level
       body: bubbleSurface
 
       BorderSurface {

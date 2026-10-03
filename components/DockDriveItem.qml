@@ -148,6 +148,7 @@ Item {
 
   // Hover tooltip
   HoverTooltip {
+    dockRoot: root
     text: ditem.name + (ditem.space !== "" ? (" (USB • " + ditem.space + ")") : " (USB Drive)")
     hovered: driveArea.containsMouse
     blocked: (!root || !root.showTooltips || root.activeStackFolder !== "")

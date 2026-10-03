@@ -256,6 +256,7 @@ Item {
 
   // Hover tooltip
   HoverTooltip {
+    dockRoot: root
     text: gitem.groupName + " (" + gitem.groupApps.length + (gitem.groupApps.length === 1 ? " app)" : " apps)")
     hovered: groupArea.containsMouse
     blocked: (!root || !root.showTooltips || root.activeAppGroupId !== "")

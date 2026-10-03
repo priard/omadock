@@ -505,6 +505,14 @@ Item {
       && item.name !== "" && (root ? (root.showTooltips && root.contextAppId === "") : true)
     readonly property bool showing: itemTooltip.tipShown && itemTooltip.wanted
 
+    TooltipLife {
+      id: itemTooltipLife
+      dockRoot: root
+      // A menu or a drag hides it at once.
+      hideDelay: (item.isDragging || (root && root.contextAppId !== "")) ? 0 : 200
+      want: itemTooltip.showing
+    }
+
     onWantedChanged: {
       if (itemTooltip.wanted) tooltipDwell.restart()
       else {
@@ -516,19 +524,21 @@ Item {
       }
     }
 
+    // No wait while another tooltip is still up (see TooltipLife).
     Timer {
       id: tooltipDwell
-      interval: root ? root.tooltipDelay : 450
+      interval: (root && root.tooltipsAlive > 0) ? 1 : (root ? root.tooltipDelay : 450)
       onTriggered: itemTooltip.tipShown = true
     }
 
     LazyLoader {
-      active: itemTooltip.showing
+      active: itemTooltipLife.alive
 
       TooltipWindow {
         target: item
         gap: Style.space(10)
         shown: true
+        level: itemTooltipLife.level
         body: itemTooltipSurface
 
         BorderSurface {
@@ -568,7 +578,7 @@ Item {
               anchors.horizontalCenter: parent.horizontalCenter
               rootRef: item.rootRef
               windows: item.tooltipWindows
-              active: wanted && itemTooltip.showing
+              active: wanted && itemTooltipLife.alive
               fallbackIcon: iconImg.source
               frontIndex: {
                 var wins = item.tooltipWindows
