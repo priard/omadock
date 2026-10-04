@@ -221,20 +221,26 @@ Item {
           smooth: true
         }
 
-        // 2x2 Mini Icons Grid Preview
+        // 2x2 Mini Icons Grid Preview. The grid keeps its full 2x2 size even
+        // with one or two members, so they sit in the top row where a third
+        // would join them instead of a single row centred in the tile.
         Grid {
+          id: miniGrid
           visible: gitem.groupApps.length > 0
           anchors.centerIn: parent
           columns: 2
           rows: 2
           spacing: Style.space(2)
+          // Without a frame the grid can use the whole tile.
+          readonly property real cellSize: Math.round(iconContainer.width * (folderTile.tileStyle === "none" ? 0.46 : 0.36))
+          width: cellSize * 2 + spacing
+          height: width
 
           Repeater {
             model: gitem.groupApps.slice(0, 4)
             delegate: Item {
               id: miniCell
-              // Without a frame the grid can use the whole tile.
-              readonly property real miniSize: Math.round(iconContainer.width * (folderTile.tileStyle === "none" ? 0.46 : 0.36))
+              readonly property real miniSize: miniGrid.cellSize
               width: miniSize
               height: miniSize
 
