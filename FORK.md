@@ -34,6 +34,10 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   drive removal warning, more unit tests, live tooling and the benchmark,
   preset menu flicker.
 
+- #40 settings pages got a null root (v4.0.1 regression), #41 group tile
+  keeps its 2x2 shape with one or two members: merged into `experimental`
+  2026-10-04, released in v4.0.3.
+
 ## Open
 
 - none.
