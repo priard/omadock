@@ -1,4 +1,4 @@
-# OmaDock benchmark
+# omadock benchmark
 
 Measures what the dock costs in CPU, RAM and VRAM on the live desktop, in
 fixed scenarios, and compares runs. Python stdlib only; needs a running

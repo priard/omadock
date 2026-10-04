@@ -92,7 +92,7 @@ BorderSurface {
       visible: root ? (root.contextAppId === "__dock_settings__" && contextMenu.dockPage === "") : false
 
       ContextRow {
-        text: "Omadock"
+        text: "omadock"
         isHeader: true
       }
 

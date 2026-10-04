@@ -1,6 +1,6 @@
 <div align="center">
 
-# ❖ OMADOCK ・ オマドック
+# ❖ omadock ・ オマドック
 
 ### *A modern, fluid, zero-CPU application dock engineered for Omarchy Linux*
 
@@ -14,7 +14,7 @@
 <br />
 
 <p align="center">
-  <img src="assets/preview-desktop.png" alt="Omadock on Omarchy Desktop" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
+  <img src="assets/preview-desktop.png" alt="omadock on Omarchy Desktop" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
 </p>
 
 <p align="center">
@@ -35,9 +35,9 @@
 
 ## ❤️ Support the project
 
-Omadock is built by **[thepathless](https://github.com/thepathless)**, a medical student in India who codes between classes and clinics. It's free, and it always will be — but building it costs money I don't quite have: monthly AI coding tokens, and a laptop that's falling apart (dead WiFi, sticky keys, a trackpad with a mind of its own) — so I'm saving for a **[Dell XPS 13 (2026)](https://www.dell.com/en-us/blog/year-of-the-linux-laptop-omarchy-on-xps/)**.
+omadock is built by **[thepathless](https://github.com/thepathless)**, a medical student in India who codes between classes and clinics. It's free, and it always will be — but building it costs money I don't quite have: monthly AI coding tokens, and a laptop that's falling apart (dead WiFi, sticky keys, a trackpad with a mind of its own) — so I'm saving for a **[Dell XPS 13 (2026)](https://www.dell.com/en-us/blog/year-of-the-linux-laptop-omarchy-on-xps/)**.
 
-If Omadock earns a place on your desktop, [**sponsoring me**](https://github.com/sponsors/thepathless) keeps the AI lights on and the laptop fund growing. Every supporter is honored on the [**supporters wall**](SPONSORS.md) 💝 — with love, no tiers, no perks.
+If omadock earns a place on your desktop, [**sponsoring me**](https://github.com/sponsors/thepathless) keeps the AI lights on and the laptop fund growing. Every supporter is honored on the [**supporters wall**](SPONSORS.md) 💝 — with love, no tiers, no perks.
 
 <p align="center">
   <a href="https://github.com/sponsors/thepathless"><img src="https://img.shields.io/badge/Sponsor_%E2%9D%A4%EF%B8%8F-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor ❤️ on GitHub" /></a>
@@ -55,7 +55,7 @@ If Omadock earns a place on your desktop, [**sponsoring me**](https://github.com
 
 *(running total so far: **−₹499** for my coding-agent subscription — borrowed from my mom 😅. Updated monthly; honesty is the least I can offer)*
 
-**Freebuff wallet (2026-10-03):** OmaDock creator [thepathless](https://github.com/thepathless) reports adding **₹1,000 to their Freebuff wallet** to fund continued development.
+**Freebuff wallet (2026-10-03):** omadock creator [thepathless](https://github.com/thepathless) reports adding **₹1,000 to their Freebuff wallet** to fund continued development.
 
 To everyone who donates — really, truly, thank you. 🙏
 
@@ -63,12 +63,12 @@ To everyone who donates — really, truly, thank you. 🙏
 
 ## ⚡ Overview
 
-**Omadock (オマドック)** is a fluid, zero-CPU application dock for **[Omarchy](https://omarchy.org/)** — Arch, Hyprland, Quickshell.
+**omadock (オマドック)** is a fluid, zero-CPU application dock for **[Omarchy](https://omarchy.org/)** — Arch, Hyprland, Quickshell.
 
 Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live window previews, app groups, multi-monitor docks. Beautiful, opinionated, and strictly **0.00% background CPU**.
 
 <p align="center">
-  <img src="assets/screenshot-transparent.png" alt="Omadock Close-up View" width="700" />
+  <img src="assets/screenshot-transparent.png" alt="omadock Close-up View" width="700" />
 </p>
 
 ### ✨ Key Highlights
@@ -124,10 +124,10 @@ Every icon shows all its windows at a glance: **▬** active · **●** open · 
 
 ### 🪟 2. Minimized Preview Tiles
 
-When a window is parked on `special:minimized`, Omadock generates a live visual preview tile between your pinned and running applications:
+When a window is parked on `special:minimized`, omadock generates a live visual preview tile between your pinned and running applications:
 
 <div align="center">
-  <img src="assets/preview-dock.png" alt="Omadock Preview Tiles" width="700" style="border-radius: 8px;" />
+  <img src="assets/preview-dock.png" alt="omadock Preview Tiles" width="700" style="border-radius: 8px;" />
 </div>
 
 - **📸→🖱️** Thumbnails appear on minimize; **left-click restores** to the active workspace.
@@ -312,7 +312,7 @@ omarchy-shell omadock applyPreset "Night"
 | Gesture / Trigger | Target | Action Executed |
 | :--- | :--- | :--- |
 | **Left Click** | ❖ Omarchy Logo | Opens Omarchy Application Launcher |
-| **Right Click** | ❖ Omarchy Logo | Opens Omadock Preferences Menu |
+| **Right Click** | ❖ Omarchy Logo | Opens omadock Preferences Menu |
 | **Middle Click** | ❖ Omarchy Logo | Spawns default terminal emulator |
 | **Left Click** | Application Icon | Launches app / focuses / restores window |
 | **Middle Click** | Application Icon | Launches a **new instance** of the application |
@@ -459,7 +459,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 
 ## ⌨️ Keyboard Shortcuts via IPC
 
-Omadock registers IPC commands callable directly by Quickshell.
+omadock registers IPC commands callable directly by Quickshell.
 
 ### Automated Setup (Recommended)
 Run the bundled keybinding helper script to automatically configure all shortcuts:
@@ -472,9 +472,9 @@ Add these keybinds to `~/.config/hypr/bindings.lua`:
 
 ```lua
 -- Toggle Dock Visibility
-o.bind("SUPER + D", "Toggle Omadock", "exec qs -p /usr/share/omarchy/shell ipc call omadock toggleVisibility")
+o.bind("SUPER + D", "Toggle omadock", "exec qs -p /usr/share/omarchy/shell ipc call omadock toggleVisibility")
 
--- Minimize currently focused window to Omadock
+-- Minimize currently focused window to omadock
 o.bind("SUPER + M", "Minimize focused window", "exec qs -p /usr/share/omarchy/shell ipc call omadock minimizeActive")
 
 -- Restore longest-parked window (FIFO)
@@ -501,7 +501,7 @@ Additional IPC methods available:
 <details>
 <summary><b>Where are minimized windows stored?</b></summary>
 <br />
-Windows are placed onto Hyprland's hidden <code>special:minimized</code> workspace. Omadock remembers their origin workspace so you can restore them instantly to where they belong.
+Windows are placed onto Hyprland's hidden <code>special:minimized</code> workspace. omadock remembers their origin workspace so you can restore them instantly to where they belong.
 </details>
 
 <details>

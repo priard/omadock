@@ -1,5 +1,5 @@
 #!/bin/bash
-# OmaDock keybinding helper — idempotent, safe to run multiple times
+# omadock keybinding helper — idempotent, safe to run multiple times
 set -euo pipefail
 
 BINDINGS="${HOME}/.config/hypr/bindings.lua"
@@ -11,7 +11,7 @@ fi
 
 # Check if toggleVisibility is already configured
 if grep -q "omadock toggleVisibility" "$BINDINGS" 2>/dev/null; then
-  echo "✓ OmaDock keybindings are already configured in $BINDINGS"
+  echo "✓ omadock keybindings are already configured in $BINDINGS"
   exit 0
 fi
 
@@ -19,16 +19,16 @@ fi
 # update it cleanly, or append the full block.
 cat >> "$BINDINGS" << 'EOF'
 
--- >>> ADDED BY OMADOCK <<<
--- OmaDock IPC keybindings (idempotent, safe to re-run bind-keys.sh)
-o.bind("SUPER + D", "Toggle Omadock", "exec qs -p /usr/share/omarchy/shell ipc call omadock toggleVisibility")
+-- >>> ADDED BY omadock <<<
+-- omadock IPC keybindings (idempotent, safe to re-run bind-keys.sh)
+o.bind("SUPER + D", "Toggle omadock", "exec qs -p /usr/share/omarchy/shell ipc call omadock toggleVisibility")
 o.bind("SUPER + M", "Minimize focused window", "exec qs -p /usr/share/omarchy/shell ipc call omadock minimizeActive")
 hl.unbind("SUPER + SHIFT + M")
 o.bind("SUPER + SHIFT + M", "Restore oldest minimized", "exec qs -p /usr/share/omarchy/shell ipc call omadock restoreLast")
--- <<< ADDED BY OMADOCK <<<
+-- <<< ADDED BY omadock <<<
 EOF
 
-echo "✓ OmaDock keybindings successfully added to $BINDINGS"
+echo "✓ omadock keybindings successfully added to $BINDINGS"
 echo "  SUPER + D         → Toggle dock visibility"
 echo "  SUPER + M         → Minimize focused window"
 echo "  SUPER + SHIFT + M → Restore oldest minimized window"

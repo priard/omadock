@@ -279,7 +279,7 @@ PanelWindow {
         spacing: Style.spacing.xs
 
         Text {
-          text: "Omadock"
+          text: "omadock"
           textFormat: Text.PlainText
           color: Color.menu.text
           font.family: Style.font.family

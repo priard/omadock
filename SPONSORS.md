@@ -1,6 +1,6 @@
 # 💝 Supporters & Contributors
 
-> The people keeping Omadock alive — AI coding tokens paid, the laptop fund
+> The people keeping omadock alive — AI coding tokens paid, the laptop fund
 > growing, code contributions, and community diagnostics.
 
 *Anonymous supporters are honored just as warmly.* 🙏
@@ -11,7 +11,7 @@
 
 ## 🌟 Supporters & Contributors Wall
 
-Everyone who has helped shape OmaDock through code, architectural features, bug diagnostics, or financial support is honored here:
+Everyone who has helped shape omadock through code, architectural features, bug diagnostics, or financial support is honored here:
 
 ### 🛠️ Core Team & Code Contributors
 
@@ -40,7 +40,7 @@ Everyone who has helped shape OmaDock through code, architectural features, bug 
 
 | | |
 | :--- | :--- |
-| 🧃 AI coding tokens | the subscriptions that make Omadock possible |
+| 🧃 AI coding tokens | the subscriptions that make omadock possible |
 | 💻 [Laptop fund](https://github.com/thepathless/omadock#support-the-project) | a Dell XPS 13 (2026) — `thepathless` keeps building either way |
 
 Maintained with gratitude by **[thepathless](https://github.com/thepathless)** — medical student, night-time programmer.

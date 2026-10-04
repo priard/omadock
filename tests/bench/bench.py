@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OmaDock performance benchmark (stdlib only; needs a running Omarchy shell).
+"""omadock performance benchmark (stdlib only; needs a running Omarchy shell).
 
 Measures the quickshell process (Omarchy shell + dock) and Hyprland in
 fixed scenarios on the live desktop and writes a JSON report. Pointer

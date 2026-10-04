@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OmaDock load-time smoke test (read-only, part of the verification suite).
+# omadock load-time smoke test (read-only, part of the verification suite).
 #
 # The dock's worst failure mode is silent: a QML type error during component
 # creation only surfaces as a WARN ("Process is not a type", "Type Dock
@@ -41,7 +41,7 @@ qs -p "$SHELL_PATH" ipc show 2>/dev/null | grep -q "target omadock" \
   || fail "IPC target 'omadock' is not registered in 'qs ipc show'"
 
 # 3. The shell log must not carry omadock QML runtime errors.
-# Omadock's own console.warn diagnostics are deliberate (invariant: every
+# omadock's own console.warn diagnostics are deliberate (invariant: every
 # catch block logs) and carry engine exception text like "Parse error" —
 # they must not count as runtime errors. Real QML faults never carry the
 # "[omadock]" warn prefix; they cite file:line instead, so filter on it.

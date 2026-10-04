@@ -14,7 +14,7 @@ Column {
   width: parent.width
 
 
-  SectionLabel { text: "OmaDock" }
+  SectionLabel { text: "omadock" }
 
   SettingRow {
     label: "Version"
@@ -57,7 +57,7 @@ Column {
     width: parent.width
     topPadding: Style.spacing.lg
     bottomPadding: Style.spacing.lg
-    text: "Omadock is built with love by thepathless — a medical student, between classes and clinics. It is free, and it always will be.\n\nIf it earns a place on your desktop, you can give some love back to its maker. No tiers, no perks — just support returned."
+    text: "omadock is built with love by thepathless — a medical student, between classes and clinics. It is free, and it always will be.\n\nIf it earns a place on your desktop, you can give some love back to its maker. No tiers, no perks — just support returned."
     textFormat: Text.PlainText
     color: Color.menu.text
     wrapMode: Text.WordWrap
@@ -79,7 +79,7 @@ Column {
 
   SettingRow {
     label: "Supporters wall"
-    hint: "Everyone who has supported Omadock, honored in the repository."
+    hint: "Everyone who has supported omadock, honored in the repository."
 
     Button {
       text: "View wall"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""OmaDock launch-id validation harness (read-only, part of the verification suite).
+"""omadock launch-id validation harness (read-only, part of the verification suite).
 
-Validates every installed desktop-entry id against OmaDock's `launch()` suffix
+Validates every installed desktop-entry id against omadock's `launch()` suffix
 logic, exactly as Dock.qml applies it before handing the name to gtk-launch:
 
     launch(desktopId, name): gtk-launch -- (desktopId + ".desktop")   [v3.7.2+]
@@ -127,7 +127,7 @@ EDGE_CASES = [
 
 
 def main() -> int:
-    print("=== OmaDock launch-id harness (read-only) ===\n")
+    print("=== omadock launch-id harness (read-only) ===\n")
 
     # -- synthetic checks ---------------------------------------------------
     print("-- suffix logic check --")
