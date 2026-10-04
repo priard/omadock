@@ -414,6 +414,66 @@ function clearNotificationCounts(map, appId) {
   return out
 }
 
+// Sticky badge state for the state dir: the counts plus the dedupe keys of
+// rows already counted, so a shell restart resumes exactly where the session
+// left off (README: counts stay until the app is focused). Everything is
+// bounded on the way out — ids, keys, counts — so a long session can never
+// grow the file without limit; parseBadgeState treats anything unreadable as
+// "no badges": the file is persisted memory, never a source of truth.
+function serializeBadgeState(counts, seenOrder) {
+  var out = { counts: {}, seen: [] }
+  var n = 0
+  if (counts && typeof counts === "object") {
+    var ids = Object.keys(counts)
+    for (var i = 0; i < ids.length && n < MAX_BADGE_IDS; i++) {
+      var key = String(ids[i] == null ? "" : ids[i]).slice(0, MAX_BADGE_KEY)
+      var val = Math.round(Number(counts[ids[i]]))
+      if (!key || !isFinite(val) || val <= 0) continue
+      out.counts[key] = Math.min(val, MAX_BADGE_COUNT)
+      n++
+    }
+  }
+  if (Array.isArray(seenOrder)) {
+    for (var j = 0; j < seenOrder.length && out.seen.length < MAX_BADGE_SEEN; j++) {
+      var s = String(seenOrder[j] == null ? "" : seenOrder[j]).slice(0, MAX_BADGE_KEY)
+      if (s) out.seen.push(s)
+    }
+  }
+  return JSON.stringify(out)
+}
+
+function parseBadgeState(raw) {
+  var empty = { counts: {}, seenKeys: {}, seenOrder: [] }
+  var txt = readCapped(raw, MAX_BADGE_BYTES).trim()
+  if (!txt) return empty
+  var obj = null
+  try {
+    obj = JSON.parse(txt)
+  } catch (e) {
+    return empty
+  }
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return empty
+  var out = { counts: {}, seenKeys: {}, seenOrder: [] }
+  var counts = (obj.counts && typeof obj.counts === "object" && !Array.isArray(obj.counts)) ? obj.counts : {}
+  var ids = Object.keys(counts)
+  var n = 0
+  for (var i = 0; i < ids.length && n < MAX_BADGE_IDS; i++) {
+    var key = String(ids[i] == null ? "" : ids[i]).slice(0, MAX_BADGE_KEY)
+    var val = Math.round(Number(counts[ids[i]]))
+    if (!key || !isFinite(val) || val <= 0) continue
+    out.counts[key] = Math.min(val, MAX_BADGE_COUNT)
+    n++
+  }
+  var seen = Array.isArray(obj.seen) ? obj.seen : []
+  for (var j = 0; j < seen.length && out.seenOrder.length < MAX_BADGE_SEEN; j++) {
+    var s = String(seen[j] == null ? "" : seen[j]).slice(0, MAX_BADGE_KEY)
+    if (!s || out.seenKeys[s]) continue
+    out.seenKeys[s] = true
+    out.seenOrder.push(s)
+  }
+  return out
+}
+
 // The badge total a folder tile shows: the counts of every member app summed
 // through notificationAliasIds, each spelling counted once so members filed
 // under aliases (or two members sharing one) never inflate the total.
@@ -475,6 +535,11 @@ var MAX_DOCK_JSON_BYTES = 65536       // dock.json (largest real file ~2 KB)
 var MAX_ICONS_THEME_BYTES = 4096      // icons.theme (one line)
 var MAX_COLORS_TOML_BYTES = 262144    // colors.toml (~10 KB)
 var MAX_NOTIFICATIONS_BYTES = 16384   // notifications.json (~60 bytes)
+var MAX_BADGE_BYTES = 16384           // omadock-badges.json (sticky badge state)
+var MAX_BADGE_IDS = 256
+var MAX_BADGE_SEEN = 512
+var MAX_BADGE_KEY = 128
+var MAX_BADGE_COUNT = 9999
 
 var MAX_APP_GROUPS = 32
 var MAX_APP_GROUP_NAME = 120

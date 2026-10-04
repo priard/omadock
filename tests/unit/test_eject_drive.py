@@ -72,6 +72,29 @@ class EndToEnd(unittest.TestCase):
             self.assertEqual(args[:3], ["-i", "drive-removable-media", "--"])
             self.assertEqual(args[4], "a href='x'Evil/a can now be safely disconnected.")
 
+    def test_falls_back_when_notify_send_is_broken(self):
+        # The regression this exists for: hosts where notify-send fails at
+        # startup (libnotify ABI mismatch) must still deliver the warning,
+        # through Omarchy's sender, with the dash label still one text
+        # positional after the static headline.
+        with tempfile.TemporaryDirectory() as tmp:
+            bin_dir = pathlib.Path(tmp)
+            log = bin_dir / "notify.log"
+            (bin_dir / "gio").write_text("#!/bin/sh\nexit 0\n")
+            (bin_dir / "notify-send").write_text("#!/bin/sh\nexit 1\n")
+            (bin_dir / "omarchy-notification-send").write_text(f'#!/bin/sh\nprintf "%s\\n" "$@" > {log}\n')
+            for f in ("gio", "notify-send", "omarchy-notification-send"):
+                os.chmod(bin_dir / f, 0o755)
+            env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+            r = subprocess.run([sys.executable, str(SCRIPTS / "eject-drive.py"), "/dev/sdz1",
+                                "/run/media/u/x", "-uc"],
+                               capture_output=True, text=True, env=env, timeout=30)
+            self.assertEqual(r.stdout.strip(), "True")
+            args = log.read_text().splitlines()
+            self.assertEqual(args[:4], ["--app-name", "OmaDock", "-i", "drive-removable-media"])
+            self.assertEqual(args[4], "Device Safely Removed")
+            self.assertEqual(args[5], "-uc can now be safely disconnected.")
+
     def test_label_starting_with_a_dash_stays_text(self):
         with tempfile.TemporaryDirectory() as tmp:
             bin_dir = pathlib.Path(tmp)

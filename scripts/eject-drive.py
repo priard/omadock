@@ -6,6 +6,7 @@ Prints True or False; on success sends a notification naming the drive
 (label cleaned: notification bodies render markup).
 """
 
+import os
 import subprocess
 import sys
 
@@ -36,8 +37,11 @@ def main(argv):
     ok = unmount(dev, mountpoint)
     if ok:
         try:
-            # Options before "--": a label such as "-u..." stays text.
-            subprocess.run(["notify-send", "-i", "drive-removable-media", "--", "Device Safely Removed",
+            # notify.sh picks Omarchy's own sender when present (plain
+            # notify-send is broken on some hosts and would drop this), and
+            # keeps options like "-u..." from being read as flags.
+            subprocess.run(["bash", os.path.join(os.path.dirname(os.path.abspath(__file__)), "notify.sh"),
+                            "drive-removable-media", "Device Safely Removed",
                             f"{name} can now be safely disconnected."])
         except OSError:
             pass

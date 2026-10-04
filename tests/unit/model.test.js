@@ -194,6 +194,47 @@ test('row keys dedupe by timestamp/id and fingerprint watcher fallback rows', ()
     model.notificationRowKey({ app: 'steam', summary: 's', body: 'c' }))
   assert.equal(model.notificationRowKey(null), '')
 })
+test('badge state round-trips counts and seen keys, bounded both ways', () => {
+  const counts = { steam: 2, btop: 1 }
+  const seen = ['5-x', '6-y']
+  const round = model.parseBadgeState(model.serializeBadgeState(counts, seen))
+  assert.deepEqual(plain(round.counts), counts)
+  assert.deepEqual(plain(round.seenOrder), seen)
+  assert.deepEqual(plain(round.seenKeys), { '5-x': true, '6-y': true })
+
+  // Counts clamp and drop junk; seen keys dedupe and cap.
+  const big = { clamped: 100000, negative: -2, nan: NaN }
+  for (let i = 0; i < model.MAX_BADGE_IDS + 50; i++) big['id' + i] = i
+  const out = model.parseBadgeState(model.serializeBadgeState(big,
+    Array.from({ length: model.MAX_BADGE_SEEN + 50 }, (_, i) => 'k' + i)))
+  assert.equal(Object.keys(out.counts).length, model.MAX_BADGE_IDS)
+  assert.equal(out.counts.clamped, model.MAX_BADGE_COUNT)
+  assert.equal(out.counts.negative, undefined)
+  assert.equal(out.counts.nan, undefined)
+  assert.equal(out.seenOrder.length, model.MAX_BADGE_SEEN)
+  assert.equal(new Set(out.seenOrder).size, out.seenOrder.length)
+
+  // Duplicates collapse on the way in.
+  assert.deepEqual(plain(model.parseBadgeState(
+    model.serializeBadgeState({}, ['a', 'a', 'b', 'a'])).seenOrder), ['a', 'b'])
+
+  // Keys are capped in length so hostile ids cannot bloat the file.
+  assert.equal(Object.keys(model.parseBadgeState(
+    model.serializeBadgeState({ ['x'.repeat(500)]: 1 }, [])).counts)[0].length,
+    model.MAX_BADGE_KEY)
+})
+test('badge state parses junk as empty and never throws', () => {
+  for (const junk of ['', '   ', 'not json', '[1,2]', '"str"', 'null', '123',
+    '{"counts": [1]}', '{"counts": {"a": "x"}}', '{"seen": "nope"}']) {
+    const out = model.parseBadgeState(junk)
+    assert.deepEqual(plain(out.counts), {})
+    assert.deepEqual(plain(out.seenOrder), [])
+    assert.deepEqual(plain(out.seenKeys), {})
+  }
+  // Over-cap input is refused whole, like every other capped read.
+  const huge = '{"counts":{' + Array.from({ length: 5000 }, (_, i) => `"i${i}":1`).join(',') + '}}'
+  assert.deepEqual(plain(model.parseBadgeState(huge).counts), {})
+})
 test('PWA notification badge is not also attributed to its browser', () => {
   const apps = [{ appId: 'firefox', name: 'Firefox', pinned: true },
     { appId: 'chrome-web.whatsapp.com__-Default', name: 'WhatsApp', pinned: true }]

@@ -80,7 +80,7 @@ Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live wi
 - **🖥️ Multi-monitor** — one dock per monitor, each showing its own monitor's windows.
 - **💾 Removable media** — USB drives dock themselves; safe eject included.
 - **🔔 Attention glow & chimes** — bouncing alerts and audio pings.
-- **🔴 Sticky notification badges** — counts matching notifications on pinned, running, and foldered apps; folder tiles sum their members. Counts stay until the app is focused. These are not unread-message counts.
+- **🔴 Sticky notification badges** — counts matching notifications on pinned, running, and foldered apps; folder tiles sum their members. Counts stay until the app is focused — through dismissals, expiry, and shell restarts. These are not unread-message counts.
 - **🖥️ CLI app identity** — Antigravity and btop keep their own icons when launched in a terminal; the terminal icon is only a fallback.
 - **⌨️ Keybindings & IPC** — wired for `~/.config/hypr/bindings.lua` out of the box.
 
@@ -237,7 +237,7 @@ Deep Linux desktop and compositor integration:
 
 ### 🔔 10. Notification Badges & CLI App Identity
 
-- Dock icons show a badge counting **matching notifications** (pinned, running, and foldered apps alike); a folder tile sums its members' counts. Counts are **sticky**: one notification bumps the badge by one and the count stays until the app gains focus — dismissing or expiring the popup does not clear it. These are not unread-message counts.
+- Dock icons show a badge counting **matching notifications** (pinned, running, and foldered apps alike); a folder tile sums its members' counts. Counts are **sticky**: one notification bumps the badge by one and the count stays until the app gains focus — dismissing or expiring the popup does not clear it, and neither does a shell restart (the counts live in `~/.local/state/omarchy/omadock-badges.json`). These are not unread-message counts.
 - The badge is customizable: `badgeStyle` picks a count pill or a plain dot, `badgePosition` picks the corner of the icon (`"top-right"`, `"top-left"`, `"bottom-right"`, `"bottom-left"`), and `badgeColor` picks accent, urgent red or a neutral pill.
 - Terminal-launched apps know who they are: **Antigravity** (`agy`) and **btop** keep their own product icons; the terminal's icon is only a fallback for unknown CLI tools.
 
@@ -445,7 +445,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
 | `hoverEffect` | `string` | `"zoom"` | Hover mode: magnification `"zoom"` or `"wave"`; effects `"lift"`, `"glow"`, `"glitch"` (shaders); or `"off"`. |
 | `dividerGeometry` | `string` | `"classic"` | Section divider length: `"classic"` keeps the original short lines; `"long"` uses the adjustable `dividerHeight` share. |
-| `showNotificationBadges` | `bool` | `true` | Count matching notifications on dock icons and folder tiles (not unread messages); sticky until the app is focused. |
+| `showNotificationBadges` | `bool` | `true` | Count matching notifications on dock icons and folder tiles (not unread messages); sticky until the app is focused, across shell restarts. |
 | `badgeStyle` | `string` | `"count"` | Badge shape: `"count"` pill with the number, or `"dot"`. |
 | `badgePosition` | `string` | `"top-right"` | Corner of the icon the badge sits on: `"top-right"`, `"top-left"`, `"bottom-right"`, `"bottom-left"`. |
 | `badgeColor` | `string` | `"accent"` | Badge colour: `"accent"`, `"urgent"` (red) or `"neutral"`. |
@@ -592,6 +592,17 @@ Copyright © 2026 **[thepathless](https://github.com/thepathless)**.
 ## 📋 Releases & Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.0.3 — 2026-10-04
+
+- **Settings pages see the dock again** (thanks [@priard](https://github.com/priard), #40) — the settings pages were wired with `root: root`, which in QML binds to the page's own `root` property and stays null; they now receive the dock through the panel (`panel.root`), and a tree-wide test guards against this self-binding class of bug returning.
+- **Group tiles keep their 2×2 grid** (thanks [@priard](https://github.com/priard), #41) — with one or two members the mini-icons grid keeps its full 2×2 shape (members sit in the top row where a third would join) instead of collapsing into a single centred row.
+
+### v4.0.2 — 2026-10-04
+
+- **Badges survive shell restarts** — notification counts and their dedupe keys round-trip through `~/.local/state/omarchy/omadock-badges.json` (bounded on both write and read), keeping the documented promise that counts stay until the app is focused even across an Omarchy shell restart; clearing on focus persists too.
+- **Drive warnings can no longer be silently lost** — the unsafe-removal and missing-app warnings run through a `scripts/notify.sh` shim that calls `notify-send` with dash-safe arguments and falls back to Omarchy's own sender when `notify-send` is broken on the host (a libnotify ABI mismatch fails it at startup). Safe eject goes through the same shim.
+- **Focus handoff fixes for parking and minimizing** — parking a window never leaves keyboard focus inside the parking-lot workspace, restore hands focus deterministically (a sibling window first, then the most recently used standing window), and window lookups accept both handles and hex address strings so restores work whatever format Hyprland reports.
 
 ### v4.0.1 — 2026-10-04
 

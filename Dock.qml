@@ -37,6 +37,10 @@ Item {
   readonly property string dockPath: Quickshell.env("HOME") + "/.config/omarchy/dock.json"
   readonly property string configPath: Quickshell.env("HOME") + "/.config/omarchy/omadock.json"
   property bool _savingConfig: false
+  // Sticky badge counts and their dedupe keys, persisted so a shell restart
+  // resumes the same badges (README: counts stay until the app is focused).
+  readonly property string badgePath: Quickshell.env("HOME") + "/.local/state/omarchy/omadock-badges.json"
+  property bool _savingBadges: false
 
   property string screenName: ""
   // Real, connected outputs only: Qt keeps placeholder screens (empty name)
@@ -759,7 +763,24 @@ Item {
     return h ? root.windowAddress(h) : ""
   }
   onActiveIdChanged: if (root.activeId) root.clearUrgentApp(root.activeId, root.activeWindowAddress)
-  onActiveWindowAddressChanged: if (root.activeWindowAddress) root.clearUrgentApp(root.activeId, root.activeWindowAddress)
+  onActiveWindowAddressChanged: {
+    if (root.activeWindowAddress) root.clearUrgentApp(root.activeId, root.activeWindowAddress)
+    root.rememberFocus(root.activeWindowAddress)
+  }
+
+  // Window addresses by recency of focus, newest first. Parking hands focus to
+  // the newest entry still standing, so a park can never leave the keyboard
+  // inside the parking lot. Bounded; addresses vanish when their windows do.
+  property var focusOrder: []
+
+  function rememberFocus(addr) {
+    if (!addr) return
+    var out = [addr]
+    for (var i = 0; i < root.focusOrder.length && out.length < 12; i++) {
+      if (root.focusOrder[i] !== addr) out.push(root.focusOrder[i])
+    }
+    root.focusOrder = out
+  }
 
   readonly property int focusedWorkspaceId: Hyprland.focusedWorkspace
     ? Hyprland.focusedWorkspace.id
@@ -1906,6 +1927,24 @@ Item {
     onFileChanged: dndConfigFile.reload()
   }
 
+  // Own written state, loaded once at startup; nothing external edits it, so
+  // it is not watched (our own writes cannot echo back as reloads).
+  CappedFileView {
+    id: badgeFile
+    path: root.badgePath
+    maxBytes: DockModel.MAX_BADGE_BYTES
+    watchChanges: false
+    onLoaded: root.loadBadgeState()
+  }
+
+  // Bumps and clears can arrive in bursts; one save settles them.
+  Timer {
+    id: badgeSaveDebounce
+    interval: 400
+    repeat: false
+    onTriggered: root.flushBadgeState()
+  }
+
   readonly property bool isDndActive: {
     if (root.notifService && typeof root.notifService.doNotDisturb === "boolean") {
       return root.notifService.doNotDisturb
@@ -2133,6 +2172,26 @@ Item {
     }
   }
 
+  // Restores the sticky badge session after a shell restart: counts and the
+  // rows already counted, bounded and sanitized on the way in.
+  function loadBadgeState() {
+    if (root._savingBadges) return
+    var st = DockModel.parseBadgeState(DockModel.readCapped(badgeFile.text, DockModel.MAX_BADGE_BYTES))
+    root.notificationBadges = st.counts
+    root._notifSeenKeys = st.seenKeys
+    root._notifSeenOrder = st.seenOrder
+  }
+
+  function scheduleBadgeSave() {
+    badgeSaveDebounce.restart()
+  }
+
+  function flushBadgeState() {
+    root._savingBadges = true
+    badgeFile.setText(DockModel.serializeBadgeState(root.notificationBadges, root._notifSeenOrder))
+    Qt.callLater(function() { root._savingBadges = false })
+  }
+
   // Sticky badges: a count arrives with its notification and stays until its
   // app is focused (clearNotificationBadgesFor). Rows are deduped by
   // DockModel.notificationRowKey, so model churn and re-emitted snapshots
@@ -2154,6 +2213,9 @@ Item {
       if (id && !(root.activeId && DockModel.isAppMatch(id, root.activeId))) ids.push(id)
     }
     if (ids.length) root.notificationBadges = DockModel.bumpNotificationCounts(root.notificationBadges, ids, 1)
+    // The seen key counts as a state change too: a row skipped now must stay
+    // counted-out after a restart.
+    root.scheduleBadgeSave()
   }
 
   function refreshNotificationBadges() {
@@ -2163,6 +2225,7 @@ Item {
         root._notifSeenOrder = []
       }
       if (JSON.stringify(root.notificationBadges) !== "{}") root.notificationBadges = {}
+      root.scheduleBadgeSave()
       return
     }
     // The watcher's snapshot rows hold every live popup, so nothing is lost
@@ -2919,8 +2982,11 @@ Item {
     return null
   }
 
+  // Accepts a toplevel handle or a raw address string; every address-keyed
+  // lookup goes through here so "574e…" and "0x574e…" can never diverge.
   function windowAddress(handle) {
-    var value = String((handle && handle.address) || "").trim()
+    var raw = (handle && handle.address !== undefined && handle.address !== null) ? handle.address : handle
+    var value = String(raw == null ? "" : raw).trim()
     if (!value) return ""
     if (value.slice(0, 2) === "0x" || value.slice(0, 2) === "0X") value = value.slice(2)
     return "0x" + value.toLowerCase()
@@ -2980,13 +3046,14 @@ Item {
 
   function liveToplevelForAddress(addr) {
     if (!addr) return null
+    var want = root.windowAddress(addr)
     try {
       var tops = ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []
       for (var i = 0; i < tops.length; i++) {
         var top = tops[i]
         if (!top) continue
         var h = root.hyprToplevelFor(top)
-        if (root.windowAddress(h) === addr) return top
+        if (root.windowAddress(h) === want) return top
       }
     } catch (e) {
       console.warn("[omadock] Failed resolving live toplevel for address:", e)
@@ -2996,11 +3063,12 @@ Item {
 
   function liveHyprToplevelForAddress(addr) {
     if (!addr) return null
+    var want = root.windowAddress(addr)
     try {
       var tops = Hyprland.toplevels ? Hyprland.toplevels.values : []
       for (var i = 0; i < tops.length; i++) {
         var h = tops[i]
-        if (h && root.windowAddress(h) === addr) return h
+        if (h && root.windowAddress(h) === want) return h
       }
     } catch (e) {
       console.warn("[omadock] Failed resolving live Hyprland toplevel for address:", e)
@@ -3013,7 +3081,6 @@ Item {
     root.clearUrgentApp(appId || "", addr)
     var handle = root.liveHyprToplevelForAddress(addr)
     var top = root.liveToplevelForAddress(addr)
-
 
     if (handle) {
       var workspace = handle.workspace
@@ -3078,10 +3145,14 @@ Item {
     })
   }
 
-  function minimizeToplevel(topOrAddr) {
-    var address = typeof topOrAddr === "string" ? topOrAddr : root.windowAddress(root.hyprToplevelFor(topOrAddr))
+  // focusNext names the app window that should take focus once this one is
+  // parked — the click contract's "step to the app's next window". appId
+  // carries the urgent-clear context for focusing it.
+  function minimizeToplevel(topOrAddr, focusNext, appId) {
+    var address = root.windowAddress(typeof topOrAddr === "string" ? topOrAddr : root.hyprToplevelFor(topOrAddr))
     if (!address) return false
 
+    var wasFocused = root.activeWindowAddress === address
     var handle = root.liveHyprToplevelForAddress(address)
     var origin = (handle && handle.workspace) ? root.workspaceTarget(handle.workspace) : root.workspaceTarget(Hyprland.focusedWorkspace)
     if (!origin || origin === root.minimizedWorkspace) origin = root.workspaceTarget(Hyprland.focusedWorkspace)
@@ -3100,11 +3171,54 @@ Item {
       'hl.dsp.window.move({ window = "address:' + address + '", workspace = "'
         + root.luaString(root.minimizedWorkspace) + '", follow = false })',
       "movetoworkspacesilent " + root.minimizedWorkspace + ",address:" + address)
+    if (wasFocused) root.handoffFocusAfterPark(address, focusNext || null, appId || "")
     return true
   }
 
+  // The window to take focus when a park emptied its workspace: the most
+  // recently focused window still standing, else any standing window. A parked
+  // window still accepts typing, so the keyboard must never stay on one.
+  function standingWindowAfterPark(exceptAddress) {
+    var i, a
+    for (i = 0; i < root.focusOrder.length; i++) {
+      a = root.focusOrder[i]
+      if (!a || a === exceptAddress) continue
+      var h = root.liveHyprToplevelForAddress(a)
+      if (h && !root.isWinParkedLive(h)) return h
+    }
+    var list = Hyprland.toplevels ? Hyprland.toplevels.values : []
+    for (i = 0; i < list.length; i++) {
+      a = root.windowAddress(list[i])
+      if (!a || a === exceptAddress) continue
+      if (!root.isWinParkedLive(list[i])) return list[i]
+    }
+    return null
+  }
+
+  // Parking must never leave the keyboard inside the parking lot. The click
+  // contract says parking one of several windows "hands focus straight to a
+  // sibling"; with no sibling it goes to the window used before this one
+  // rather than any particular app. Focus is dispatched, not Wayland-
+  // activated: dispatchers queue in the compositor behind the park move, so
+  // this deterministically beats the compositor's own handoff (an activation
+  // arrived out of order and lost that race on busy workspaces).
+  function handoffFocusAfterPark(address, focusNext, appId) {
+    var target = ""
+    if (focusNext && focusNext.address && root.windowAddress(focusNext) !== address)
+      target = root.windowAddress(focusNext)
+    if (!target) {
+      var prev = root.standingWindowAfterPark(address)
+      if (prev) target = root.windowAddress(prev)
+    }
+    if (!target) return
+    root.withoutPointerWarp(function() {
+      root.hyprDispatch('hl.dsp.focus({ window = "address:' + root.luaString(target) + '" })',
+                        "focuswindow address:" + target)
+    })
+  }
+
   function restoreWindow(targetRef, appId, useOrigin) {
-    var address = typeof targetRef === "string" ? targetRef : root.windowAddress(targetRef)
+    var address = root.windowAddress(targetRef)
     if (!address) return false
 
 
@@ -3219,9 +3333,10 @@ Item {
   // time and fall back to the cached name only while no handle exists.
   function liveWsNameOf(win) {
     var cached = win ? String(win.workspaceName || "") : ""
-    var h = (win && win.address) ? root.liveHyprToplevelForAddress(win.address) : null
+    var addr = win ? root.windowAddress(win) : ""
+    var h = addr ? root.liveHyprToplevelForAddress(addr) : null
     if (h && h.workspace) return String(h.workspace.name || h.workspace.id || "")
-    if (win && win.address && root.minimizedOrigins && root.minimizedOrigins[win.address] !== undefined)
+    if (addr && root.minimizedOrigins && root.minimizedOrigins[addr] !== undefined)
       return root.minimizedWorkspace
     return cached
   }
@@ -3400,7 +3515,9 @@ Item {
       }
     }
 
-    return (target && target.address) ? root.minimizeToplevel(target.address) : false
+    return (target && target.address)
+      ? root.minimizeToplevel(target.address, root.stepWindow(root.visibleWindows(windows), 1), entry ? entry.appId : "")
+      : false
   }
 
   function minimizeApp(entry) {
@@ -3504,7 +3621,10 @@ Item {
         }
       }
     }
-    if (JSON.stringify(next) !== JSON.stringify(root.notificationBadges)) root.notificationBadges = next
+    if (JSON.stringify(next) !== JSON.stringify(root.notificationBadges)) {
+      root.notificationBadges = next
+      root.scheduleBadgeSave()
+    }
   }
 
   // Clears urgency entries from urgentMap for an application and its windows.
@@ -4102,7 +4222,7 @@ Item {
       }
       if (root.minimizeMode === "active") {
         if (visible[focusedIdx] && visible[focusedIdx].address) {
-          root.minimizeToplevel(visible[focusedIdx].address)
+          root.minimizeToplevel(visible[focusedIdx].address, root.stepWindow(visible, 1), appId)
         } else {
           root.minimizeOneWindow(entry)
         }
@@ -4204,7 +4324,7 @@ Item {
   function notifyUnsafeRemoval(name) {
     var label = String(name || "A drive").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     Quickshell.execDetached([
-      "notify-send", "-a", "OmaDock", "-i", "drive-removable-media", "--",
+      "bash", root.scriptPath("notify.sh"), "drive-removable-media",
       "Drive removed without ejecting",
       label + " was removed while still mounted. Recent changes may not have been written; eject it from the dock next time."
     ])
@@ -4240,7 +4360,7 @@ Item {
   function notifyAppMissing(name, detail) {
     var label = String(name || "This app").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     Quickshell.execDetached([
-      "notify-send", "-a", "OmaDock", "-i", "dialog-error",
+      "bash", root.scriptPath("notify.sh"), "dialog-error",
       "App no longer installed",
       label + " is no longer installed. " + String(detail || "Reinstall the app or unpin it from the dock.")
     ])
