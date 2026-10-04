@@ -69,8 +69,8 @@ class EndToEnd(unittest.TestCase):
             args = log.read_text().splitlines()
             # Options first, then "--": a label like "-u..." must not be
             # parsed as a notify-send option.
-            self.assertEqual(args[:3], ["-i", "drive-removable-media", "--"])
-            self.assertEqual(args[4], "a href='x'Evil/a can now be safely disconnected.")
+            self.assertEqual(args[:5], ["-a", "omadock", "-i", "drive-removable-media", "--"])
+            self.assertEqual(args[6], "a href='x'Evil/a can now be safely disconnected.")
 
     def test_falls_back_when_notify_send_is_broken(self):
         # The regression this exists for: hosts where notify-send fails at
@@ -91,7 +91,7 @@ class EndToEnd(unittest.TestCase):
                                capture_output=True, text=True, env=env, timeout=30)
             self.assertEqual(r.stdout.strip(), "True")
             args = log.read_text().splitlines()
-            self.assertEqual(args[:4], ["--app-name", "OmaDock", "-i", "drive-removable-media"])
+            self.assertEqual(args[:4], ["--app-name", "omadock", "-i", "drive-removable-media"])
             self.assertEqual(args[4], "Device Safely Removed")
             self.assertEqual(args[5], "-uc can now be safely disconnected.")
 

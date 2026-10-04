@@ -12,10 +12,10 @@ icon=$1
 title=$2
 body=$3
 
-if command -v notify-send >/dev/null 2>&1 && notify-send -i "$icon" -- "$title" "$body" 2>/dev/null; then
+if command -v notify-send >/dev/null 2>&1 && notify-send -a omadock -i "$icon" -- "$title" "$body" 2>/dev/null; then
   exit 0
 fi
 if command -v omarchy-notification-send >/dev/null 2>&1; then
-  exec omarchy-notification-send --app-name "OmaDock" -i "$icon" "$title" "$body"
+  exec omarchy-notification-send --app-name omadock -i "$icon" "$title" "$body"
 fi
 exit 1
