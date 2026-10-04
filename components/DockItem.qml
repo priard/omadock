@@ -27,16 +27,8 @@ Item {
   // Badge counts are filed under whichever id the matching entry carries.
   // DockModel owns the id spellings, so this only sums the aliases it is told.
   readonly property int notificationCount: {
-    if (!root || !root.showNotificationBadges || !item.pinned) return 0
-    var ids = DockModel.notificationAliasIds(item.appId)
-    var seen = ({})
-    var count = 0
-    for (var i = 0; i < ids.length; i++) {
-      if (seen[ids[i]]) continue
-      seen[ids[i]] = true
-      count += root.notificationBadges[ids[i]] || 0
-    }
-    return count
+    if (!root || !root.showNotificationBadges) return 0
+    return DockModel.groupBadgeTotal([item.appId], root.notificationBadges)
   }
 
   signal activateRequested(string appId)
@@ -263,6 +255,7 @@ Item {
       iconStyle: root ? root.iconStyle : "original"
       tint: root ? root.iconTintColor : Color.bar.text
       grid: root ? root.iconGrid : 16
+      outputScale: root ? root.outputScale : 1
       contrast: root ? root.iconContrast : 0
       strength: root ? root.iconStrength : 1
       dropShadow: root ? root.iconShadow : false
@@ -273,32 +266,14 @@ Item {
 
       // The badge rides on the icon, so hover effects move it too.
       overlay: [
-        Rectangle {
-          visible: item.notificationCount > 0
-          anchors.right: parent.right
-          anchors.top: parent.top
-          anchors.rightMargin: -Style.space(3)
-          anchors.topMargin: -Style.space(3)
-          width: Math.max(Style.space(17), badgeText.implicitWidth + Style.space(8))
-          height: Style.space(17)
-          radius: height / 2
-          color: Color.accent
-          border.width: 1
-          border.color: Color.bar.background
-          Text {
-            id: badgeText
-            anchors.centerIn: parent
-            text: item.notificationCount > 99 ? "99+" : String(item.notificationCount)
-            textFormat: Text.PlainText
-            color: root && root.isLight(Color.accent) ? "#12100f" : "#f2efec"
-            font.family: Style.font.family
-            font.pixelSize: Style.space(10)
-            font.bold: true
-          }
+        BadgeMark {
+          rootRef: item.rootRef
+          anchorRef: parent
+          count: item.notificationCount
+          rim: Color.bar.background
         }
       ]
     }
-
   }
 
   readonly property bool isFocused: {
@@ -323,12 +298,6 @@ Item {
     return w.address === root.activeWindowAddress
   }
 
-  readonly property int totalWindowCount: (item.windowList && item.windowList.length > 0) ? item.windowList.length : (item.running ? 1 : 0)
-  readonly property int maxVisibleDots: totalWindowCount > 5 ? 4 : Math.min(totalWindowCount, 5)
-  readonly property real dynamicDotSize: totalWindowCount >= 5 ? Style.space(4) : Style.space(5)
-  readonly property real dynamicActiveWidth: totalWindowCount >= 5 ? Style.space(9) : Style.space(12)
-  readonly property real dynamicSpacing: totalWindowCount >= 5 ? Style.space(2) : Style.space(3)
-
   // An app with no window whose media player is still up (closed to the
   // tray, playing in the background): a faint dot instead of none.
   readonly property bool backgroundMedia: !item.running && root ? root.mediaPlayerFor(item.appId) !== null : false
@@ -343,54 +312,19 @@ Item {
   }
 
   // Fixed at the slot bottom, never scaled or pushed out of the dock.
-  Row {
+  DockIndicatorRow {
     id: indicatorRow
+    rootRef: item.rootRef
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1)
-    spacing: item.dynamicSpacing
-    visible: item.running
     z: 2
-
-    Repeater {
-      model: item.maxVisibleDots
-      // Active window: accent bar; open window: dot; minimized: hollow dot.
-      delegate: DockIndicator {
-        readonly property var winObj: (item.windowList && item.windowList.length > index) ? item.windowList[index] : null
-        readonly property bool winMinimized: winObj ? item.isWinMinimized(winObj) : item.minimized
-        readonly property bool winActive: !winMinimized && ((winObj && winObj.address) ? item.isWinActive(winObj) : (index === 0 && item.isFocused))
-
-        rootRef: item.rootRef
-        anchors.verticalCenter: parent.verticalCenter
-        kind: winActive ? "active" : (winMinimized ? "minimized" : "window")
-        dense: item.totalWindowCount >= 5
-        urgent: item.urgent
-        pulse: item.pulse
-      }
-    }
-
-    // Compact overflow pill when 6+ windows are open
-    Rectangle {
-      visible: item.totalWindowCount > 5
-      width: overflowText.implicitWidth + Style.space(4)
-      height: Style.space(5)
-      radius: (root && root.indicatorSquare) ? 0 : height / 2
-      anchors.verticalCenter: parent.verticalCenter
-      color: Util.alpha(root ? root.dockForeground : Color.bar.text, 0.20)
-      border.color: Qt.rgba(0, 0, 0, 0.35)
-      border.width: 1
-
-      Text {
-        id: overflowText
-        anchors.centerIn: parent
-        text: "+" + (item.totalWindowCount - item.maxVisibleDots)
-        textFormat: Text.PlainText
-        color: root ? root.dockForeground : Color.bar.text
-        font.family: Style.font.family
-        font.pixelSize: Math.max(7, Style.font.caption - 4)
-        font.bold: true
-      }
-    }
+    windows: item.windowList
+    running: item.running
+    focused: item.isFocused
+    allMinimized: item.minimized
+    urgent: item.urgent
+    pulse: item.pulse
   }
 
   // Files dragged in from outside: opened with this app when it declares

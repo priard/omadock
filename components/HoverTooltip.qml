@@ -10,6 +10,10 @@ Item {
   id: bubble
 
   property string text: ""
+  // Windows shown as live preview cards under the label (an app group's
+  // member windows); empty keeps the plain one-line bubble.
+  property var windows: []
+  property url fallbackIcon: ""
   property bool hovered: false
   property bool blocked: false
   property bool shown: false
@@ -69,19 +73,57 @@ Item {
         borderSpec: Border.surfaceSpec("tooltip", "border", Color.tooltip.border, 1)
         radius: Style.cornerRadius
         padding: Style.space(4)
-        width: bubbleLabel.implicitWidth + contentLeftInset + contentRightInset
-        height: bubbleLabel.implicitHeight + contentTopInset + contentBottomInset
+        width: bubbleContent.implicitWidth + contentLeftInset + contentRightInset
+        height: bubbleContent.implicitHeight + contentTopInset + contentBottomInset
 
-        Text {
-          id: bubbleLabel
+        Column {
+          id: bubbleContent
           x: bubbleSurface.contentLeftInset
           y: bubbleSurface.contentTopInset
-          text: bubble.text
-          textFormat: Text.PlainText
-          color: Color.tooltip.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.caption
-          horizontalAlignment: Text.AlignHCenter
+          spacing: Style.space(3)
+
+          Text {
+            id: bubbleLabel
+            text: bubble.text
+            textFormat: Text.PlainText
+            color: Color.tooltip.text
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            horizontalAlignment: Text.AlignHCenter
+          }
+
+          // The same card stack an app's tooltip carries. The front card is
+          // the focused member window when there is one.
+          WindowCardStack {
+            id: cardStack
+            readonly property bool wanted: bubble.dockRoot ? (bubble.dockRoot.advancedTooltips && bubble.windows.length > 0) : false
+            visible: wanted
+            width: wanted ? implicitWidth : 0
+            height: wanted ? implicitHeight : 0
+            anchors.horizontalCenter: parent.horizontalCenter
+            rootRef: bubble.dockRoot
+            windows: bubble.windows
+            active: wanted && life.alive
+            fallbackIcon: bubble.fallbackIcon
+            frontIndex: {
+              var fi = bubble.dockRoot ? bubble.dockRoot.focusedIndex(bubble.windows) : -1
+              return fi >= 0 ? fi : 0
+            }
+          }
+
+          Text {
+            visible: cardStack.wanted
+            width: Math.min(implicitWidth, cardStack.width)
+            anchors.horizontalCenter: parent.horizontalCenter
+            horizontalAlignment: Text.AlignHCenter
+            text: (cardStack.wanted && bubble.dockRoot) ? bubble.dockRoot.windowRowLabel(bubble.windows[cardStack.frontIndex]) : ""
+            textFormat: Text.PlainText
+            color: Util.alpha(Color.tooltip.text, 0.80)
+            font.family: Style.font.family
+            font.pixelSize: Math.max(10, Style.font.caption - 1)
+            elide: Text.ElideRight
+            maximumLineCount: 1
+          }
         }
       }
     }

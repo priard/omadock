@@ -29,15 +29,19 @@ Rectangle {
   // Marks are unsmoothed rectangles, so at a fractional scale (1.5) they lost
   // or gained a row of pixels depending on where they landed, and anything
   // that shifted the dock by a fraction of a pixel (the border width, say)
-  // made them look bigger or smaller. Sizes are whole device pixels, one
-  // pixel under the nominal size (the lighter look), and the mark nudges
+  // made them look bigger or smaller. Sizes are whole device pixels at the
+  // classic dimensions (5px dots, 4px tall bars), and the mark nudges
   // itself onto the pixel grid (snapX, snapY).
   // The output's pixel grid (see Dock.outputScale), not Qt's render ratio.
   readonly property real dpr: root ? root.outputScale : 1
   onDprChanged: Qt.callLater(mark.resnap)
   function snap(v) { return Math.max(1, Math.round(v * mark.dpr)) / mark.dpr }
   readonly property real hairline: Math.max(1, Math.floor(mark.dpr)) / mark.dpr
-  readonly property real dotSize: Math.max(2 / mark.dpr, mark.snap(Style.space(dense ? 4 : 5)) - 1 / mark.dpr)
+  // The dock's classic mark dimensions: 5px dots (4px dense) and a 12x4
+  // accent bar (9x4 dense). A fix for fractional-scale borders once thinned
+  // every mark a pixel with it; the sizes here are the look the dock ships.
+  readonly property real dotSize: Math.max(2 / mark.dpr, mark.snap(Style.space(dense ? 4 : 5)))
+  readonly property real barHeight: Math.max(2 / mark.dpr, mark.snap(Style.space(4)))
 
   property real snapX: 0
   property real snapY: 0
@@ -76,7 +80,7 @@ Rectangle {
     : Util.alpha(root ? root.dockForeground : Color.bar.text, 0.88)
 
   width: kind === "active" ? mark.snap(Style.space(dense ? 9 : 12)) : dotSize
-  height: dotSize
+  height: kind === "active" ? mark.barHeight : dotSize
   radius: (root && root.indicatorSquare) ? 0 : height / 2
 
   color: kind === "active" ? Color.accent
@@ -86,7 +90,7 @@ Rectangle {
   border.color: kind === "minimized" ? mark.ink
     : kind === "background" ? Qt.rgba(0, 0, 0, 0.18)
     : Qt.rgba(0, 0, 0, 0.45)
-  border.width: kind === "minimized" ? mark.hairline * 2 : mark.hairline
+  border.width: kind === "minimized" ? mark.hairline * 1.5 : mark.hairline
 
   opacity: urgent ? (0.4 + 0.6 * pulse) : 1.0
 

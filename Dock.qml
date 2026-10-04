@@ -64,15 +64,69 @@ Item {
 
   readonly property var dockScreen: root.pickScreen()
 
-  // The output's own scale (Hyprland's monitor scale, e.g. 1.5). Qt renders
-  // fractional scales at the next whole ratio (2) and the compositor scales
-  // the buffer down, so pixel-exact drawing has to target this grid, not
-  // Screen.devicePixelRatio. HyprlandMonitor.scale reads 0 until the monitor
-  // list has been fetched, hence the refresh (Component.onCompleted) and the
-  // fallback.
-  readonly property real outputScale: {
+  // The output's own scale (Hyprland's monitor scale, e.g. 1.5): the pixel
+  // grid that pixel-exact drawing snaps to. Screen.devicePixelRatio reports
+  // the rounded ratio (2 at 1.5), not the grid the window raster lands on,
+  // so it cannot stand in for this number. HyprlandMonitor.scale reads 0
+  // until the monitor list has been fetched, hence the refresh
+  // (Component.onCompleted) and the fallback.
+  //
+  // HyprlandMonitor.scale also updates in place without notifying, Hyprland
+  // emits no event when a monitor's scale changes, and Qt's rounded
+  // Screen.devicePixelRatio carries no change signal at all — so the lookup
+  // is driven from the things that do fire: the screen object quickshell
+  // re-advertises on any output change (dockScreen) and Hyprland's monitor
+  // events. The refresh's IPC reply lands asynchronously and silently, so
+  // recheckOutputScale re-runs the lookup in a short burst until it has had
+  // time to land.
+  property int monitorRev: 0
+  readonly property real outputScale: root.lookupOutputScale(root.monitorRev)
+  onDockScreenChanged: root.recheckOutputScale()
+
+  function lookupOutputScale(_rev) {
+    // HyprlandMonitor.scale stops tracking after load, but the monitor's
+    // physical size and Qt's logical screen size stay live — their ratio is
+    // the output scale. Diagonal over diagonal, since width alone breaks on a
+    // rotated output. m.scale is only a last resort. _rev is the binding's
+    // re-run hook (monitorRev), not an input.
     var m = root.dockScreen ? Hyprland.monitorFor(root.dockScreen) : null
+    var lw = Screen.width
+    var lh = Screen.height
+    if (m && m.width > 0 && m.height > 0 && lw > 0 && lh > 0) {
+      return Math.sqrt((m.width * m.width + m.height * m.height) / (lw * lw + lh * lh))
+    }
     return (m && m.scale > 0) ? m.scale : 1
+  }
+
+  function recheckOutputScale() {
+    Hyprland.refreshMonitors()
+    scaleRevBump.ticks = 0
+    scaleRevBump.restart()
+  }
+
+  // Bounded burst, not a poll: stops on its own after two seconds.
+  Timer {
+    id: scaleRevBump
+    interval: 250
+    repeat: true
+    property int ticks: 0
+    onTriggered: {
+      root.monitorRev++
+      ticks++
+      if (ticks >= 8) {
+        stop()
+        ticks = 0
+      }
+    }
+  }
+
+  Connections {
+    target: Hyprland
+    function onRawEvent(event) {
+      if (event.name === "configreloaded" || event.name.startsWith("monitor")) {
+        root.recheckOutputScale()
+      }
+    }
   }
 
   // ------------------------------------------------- multi-monitor
@@ -344,7 +398,7 @@ Item {
     root.loadConfig()
     if (root.appLibrary === localAppLibrary) iconIndexScan.running = true
     // Fills HyprlandMonitor.scale for outputScale.
-    Hyprland.refreshMonitors()
+    root.recheckOutputScale()
   }
 
   // ------------------------------------------------- magnification
@@ -637,6 +691,9 @@ Item {
   }
   readonly property var runningSection: root.dockModel.running || []
   readonly property var groupedSection: root.dockModel.grouped || []
+  // Every entry a notification may be attributed to: pinned, unpinned
+  // running, and foldered (grouped) apps alike.
+  readonly property var notifEntries: root.pinnedSection.concat(root.runningSection).concat(root.groupedSection || [])
 
   function refreshDock() {
     var tops = ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []
@@ -1124,8 +1181,20 @@ Item {
   property bool showUrgentHint: true
   property bool urgentOnNotification: true
   property bool showNotificationBadges: true
+  // Badge look: what the pill carries, which corner it sits on, its colour.
+  property string badgeStyle: "count"
+  property string badgePosition: "top-right"
+  property string badgeColor: "accent"
+  readonly property color badgeFill: root.badgeColor === "urgent" ? Color.urgent
+    : root.badgeColor === "neutral" ? Color.bar.text
+    : Color.accent
+  readonly property color badgeInk: root.badgeColor === "neutral" ? Color.bar.background
+    : (root.isLight(root.badgeFill) ? "#12100f" : "#f2efec")
   property var notificationBadges: ({})
   property var notificationPopupRows: []
+  // Sticky-badge dedupe: row keys already counted, oldest evicted at 512.
+  property var _notifSeenKeys: ({})
+  property var _notifSeenOrder: []
   property bool urgentSound: true
   property string urgentSoundName: "bell"
   property var notifService: null
@@ -2064,15 +2133,47 @@ Item {
     }
   }
 
+  // Sticky badges: a count arrives with its notification and stays until its
+  // app is focused (clearNotificationBadgesFor). Rows are deduped by
+  // DockModel.notificationRowKey, so model churn and re-emitted snapshots
+  // never double-count; the seen-key store is bounded to the same 512 as the
+  // row walks. The 20ms timer debounces the several signals that ask for a
+  // rebuild.
+  function processNotifRowSticky(row) {
+    if (!row || !root.showNotificationBadges) return
+    var key = DockModel.notificationRowKey(row)
+    if (!key || root._notifSeenKeys[key]) return
+    root._notifSeenKeys[key] = true
+    root._notifSeenOrder.push(key)
+    while (root._notifSeenOrder.length > 512) delete root._notifSeenKeys[root._notifSeenOrder.shift()]
+
+    var rowCounts = DockModel.notificationCounts(root.notifEntries, root.appRows, [row])
+    var ids = []
+    for (var id in rowCounts) {
+      // A focused app shows no badge; its counts clear at the focus event.
+      if (id && !(root.activeId && DockModel.isAppMatch(id, root.activeId))) ids.push(id)
+    }
+    if (ids.length) root.notificationBadges = DockModel.bumpNotificationCounts(root.notificationBadges, ids, 1)
+  }
+
   function refreshNotificationBadges() {
-    var rows = root.showNotificationBadges ? root.notificationPopupRows : []
+    if (!root.showNotificationBadges) {
+      if (root._notifSeenOrder.length) {
+        root._notifSeenKeys = {}
+        root._notifSeenOrder = []
+      }
+      if (JSON.stringify(root.notificationBadges) !== "{}") root.notificationBadges = {}
+      return
+    }
+    // The watcher's snapshot rows hold every live popup, so nothing is lost
+    // to a dismissal between two emissions.
+    var rows = root.notificationPopupRows
     var popups = root.notifService ? root.notifService.popupModel : null
-    if (root.showNotificationBadges && popups) {
+    if (popups) {
       rows = []
       for (var i = 0; i < Math.min(popups.count, 512); i++) rows.push(popups.get(i))
     }
-    root.notificationBadges = DockModel.notificationCounts(
-      root.pinnedSection.concat(root.runningSection), root.appRows, rows)
+    for (var r = 0; r < Math.min(rows.length, 512); r++) root.processNotifRowSticky(rows[r])
   }
 
   // Overlay plugins may not receive the first-party notification service.
@@ -2120,7 +2221,7 @@ Item {
     if (ts && ts === root._lastProcessedNotifTimestamp) return
     root._lastProcessedNotifTimestamp = ts
 
-    var allEntries = root.pinnedSection.concat(root.runningSection)
+    var allEntries = root.notifEntries
     var matchedEntries = DockModel.findNotificationTargets(allEntries, root.appRows, row)
     if (!matchedEntries || matchedEntries.length === 0) return
 
@@ -2180,10 +2281,14 @@ Item {
     target: root.notifService ? root.notifService.popupModel : null
     function onRowsInserted(parent, first, last) {
       notificationBadgeTimer.restart()
-      if (!root.showUrgentHint || !root.urgentOnNotification || !root.notifService || !root.notifService.popupModel) return
+      var wantUrgent = root.showUrgentHint && root.urgentOnNotification
       for (var i = first; i <= last; i++) {
         var row = root.notifService.popupModel.get(i)
-        if (row) root.handleNotificationReceived(row)
+        if (!row) continue
+        // Counted here, not on the timer: a popup that expires before the
+        // debounce still leaves its sticky badge.
+        root.processNotifRowSticky(row)
+        if (wantUrgent) root.handleNotificationReceived(row)
       }
     }
     function onRowsRemoved(parent, first, last) { notificationBadgeTimer.restart() }
@@ -2194,7 +2299,10 @@ Item {
       if (!root.showUrgentHint || !root.urgentOnNotification || !root.notifService || !root.notifService.popupModel) return
       if (root.notifService.popupModel.count > 0) {
         var row = root.notifService.popupModel.get(0)
-        if (row) root.handleNotificationReceived(row)
+        if (row) {
+          root.processNotifRowSticky(row)
+          root.handleNotificationReceived(row)
+        }
       }
     }
   }
@@ -2334,6 +2442,10 @@ Item {
     root.showUrgentHint = parsed ? parsed.showUrgentHint !== false : true
     root.urgentOnNotification = parsed ? parsed.urgentOnNotification !== false : true
     root.showNotificationBadges = parsed ? parsed.showNotificationBadges !== false : true
+    // Bounded spellings: anything else falls back to the classic badge.
+    root.badgeStyle = (parsed && parsed.badgeStyle === "dot") ? "dot" : "count"
+    root.badgePosition = (parsed && ["top-left", "top-right", "bottom-left", "bottom-right"].indexOf(parsed.badgePosition) >= 0) ? parsed.badgePosition : "top-right"
+    root.badgeColor = (parsed && ["accent", "urgent", "neutral"].indexOf(parsed.badgeColor) >= 0) ? parsed.badgeColor : "accent"
     root.urgentSound = parsed ? parsed.urgentSound !== false : true
     root.urgentSoundName = DockModel.cleanSoundName(parsed ? parsed.urgentSoundName : "bell")
     root.revealDelay = parsed && typeof parsed.revealDelay === "number"
@@ -3333,7 +3445,7 @@ Item {
 
     var next = {}
     var dropped = false
-    var allEntries = root.pinnedSection.concat(root.runningSection).concat(root.groupedSection || [])
+    var allEntries = root.notifEntries
 
     for (var i = 0; i < keys.length; i++) {
       var key = keys[i]
@@ -3372,9 +3484,33 @@ Item {
     return dropped ? next : map
   }
 
+  // Sticky badges are "notifications you have not looked at": they clear for
+  // the app (and whatever entry owns the address) as soon as it gains focus,
+  // independently of whether any urgency entry exists.
+  function clearNotificationBadgesFor(appId, address) {
+    if (!root.notificationBadges) return
+    var next = DockModel.clearNotificationCounts(root.notificationBadges, appId)
+    var normAddr = address ? DockModel.windowAddress({ address: address }) : ""
+    if (normAddr) {
+      var allEntries = root.notifEntries
+      for (var i = 0; i < allEntries.length; i++) {
+        var entry = allEntries[i]
+        var wins = entry ? (entry.windowList || []) : []
+        for (var w = 0; w < wins.length; w++) {
+          if (wins[w] && wins[w].address === normAddr) {
+            next = DockModel.clearNotificationCounts(next, entry.appId || entry.id)
+            break
+          }
+        }
+      }
+    }
+    if (JSON.stringify(next) !== JSON.stringify(root.notificationBadges)) root.notificationBadges = next
+  }
+
   // Clears urgency entries from urgentMap for an application and its windows.
   // Called whenever an app/window receives focus or is activated/clicked by user.
   function clearUrgentApp(appId, address) {
+    root.clearNotificationBadgesFor(appId, address)
     if (!root.urgentMap) return
     var hasKeys = false
     for (var k in root.urgentMap) {
@@ -3397,7 +3533,7 @@ Item {
       changed = true
     }
 
-    var allEntries = root.pinnedSection.concat(root.runningSection).concat(root.groupedSection || [])
+    var allEntries = root.notifEntries
     var targetEntries = []
 
     for (var i = 0; i < allEntries.length; i++) {
@@ -3679,6 +3815,9 @@ Item {
     conf.showUrgentHint = root.showUrgentHint
     conf.urgentOnNotification = root.urgentOnNotification
     conf.showNotificationBadges = root.showNotificationBadges
+    conf.badgeStyle = root.badgeStyle
+    conf.badgePosition = root.badgePosition
+    conf.badgeColor = root.badgeColor
     conf.urgentSound = root.urgentSound
     conf.urgentSoundName = root.urgentSoundName
     conf.revealDelay = root.revealDelay

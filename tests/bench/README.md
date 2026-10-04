@@ -1,7 +1,8 @@
 # OmaDock benchmark
 
 Measures what the dock costs in CPU, RAM and VRAM on the live desktop, in
-fixed scenarios, and compares runs. Fork tooling, Python stdlib only.
+fixed scenarios, and compares runs. Python stdlib only; needs a running
+Omarchy shell (not run in CI).
 
 ## Run
 
@@ -11,8 +12,8 @@ fixed scenarios, and compares runs. Fork tooling, Python stdlib only.
     python3 tests/bench/bench.py compare A.json B.json
     python3 tests/bench/bench.py soak --minutes 120 --interval 60 --label on
 
-Results land in `bench/results/<date>-<host>.json`; commit the ones worth
-keeping (baselines, before/after of an optimisation).
+Results land in `~/.local/state/omadock-bench/` (`--out` to change it; keep
+it outside the plugin directory, where every write reloads the dock).
 
 ## What it does to your desktop
 
@@ -83,7 +84,7 @@ hardware, versions, config or monitors differ.
 `soak` only watches: it never moves the pointer or touches the shell, so
 keep working normally. Every interval it records the shell's RSS, PSS,
 VRAM, threads and fds (and Hyprland's VRAM and CPU ticks) and rewrites
-`bench/results/soak-<date>-<host>-<label>.json`, so an interrupted run
+`soak-<date>-<host>-<label>.json` in the output directory, so an interrupted run
 keeps its data. A shell restart (new pid) starts a new segment; each
 segment gets a least-squares trend per metric (MB per hour). Run it once
 with the plugin enabled (`--label on`) and once disabled (`--label off`,
@@ -92,4 +93,4 @@ comes from the dock or from the shell itself.
 
 ## Unit tests
 
-    python3 -m unittest tests/bench/test_bench.py -v
+    python3 -m unittest tests/unit/test_bench.py -v

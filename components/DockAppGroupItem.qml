@@ -34,32 +34,91 @@ Item {
   readonly property bool isOpen: root ? root.activeAppGroupId === gitem.groupId : false
   readonly property bool isDropTarget: (root && (root.dropTargetGroupId === gitem.groupId || root.dropTargetAppId === gitem.groupId))
 
-  // Check running / active / window stats for apps in this group
-  readonly property var groupRunningInfo: {
-    var hasRun = false
-    var hasActive = false
-    var count = 0
-    if (!root) return { running: false, active: false, count: 0 }
-    var running = root.runningSection || []
-    var grouped = root.groupedSection || []
-    var all = running.concat(grouped)
+  // Folder badges sum their members' counts (macOS folder badge), each id
+  // spelling counted once via DockModel's aliases.
+  readonly property int badgeCount: {
+    if (!root || !root.showNotificationBadges) return 0
+    return DockModel.groupBadgeTotal(gitem.groupApps, root.notificationBadges)
+  }
+
+  // Every window of every member app, in member order, each window once.
+  // The indicator row and the tooltip's previews read the same list, so a
+  // foldered app's marks carry the same per-window states as a pinned app's.
+  readonly property var groupWindows: {
+    var out = []
+    if (!root) return out
+    var seenEnt = []
+    var seenAddr = []
     for (var a = 0; a < gitem.groupApps.length; a++) {
-      var aid = gitem.groupApps[a]
-      for (var r = 0; r < all.length; r++) {
-        var ent = all[r]
-        if (ent && (ent.appId === aid || DockModel.isAppMatch(ent.appId, aid))) {
-          if (ent.running) {
-            hasRun = true
-            count += (ent.windows || 1)
-            if (ent.appId === root.activeId) hasActive = true
+      var ent = root.entryForId(gitem.groupApps[a])
+      if (!ent || seenEnt.indexOf(ent.appId) >= 0) continue
+      seenEnt.push(ent.appId)
+      var wins = ent.windowList || []
+      for (var w = 0; w < wins.length; w++) {
+        var win = wins[w]
+        if (!win) continue
+        // An id alias can make two members resolve to the same entry.
+        if (win.address && seenAddr.indexOf(win.address) >= 0) continue
+        if (win.address) seenAddr.push(win.address)
+        out.push(win)
+      }
+    }
+    return out
+  }
+
+  // Minimized windows live as preview tiles on the dock itself, so hover
+  // surfaces list only what is actually on screen (same as an app's tooltip).
+  readonly property var tooltipWindows: root ? root.visibleWindows(gitem.groupWindows) : []
+
+  readonly property bool hasRunningApps: {
+    if (!root) return false
+    for (var a = 0; a < gitem.groupApps.length; a++) {
+      var ent = root.entryForId(gitem.groupApps[a])
+      if (ent && ent.running) return true
+    }
+    return false
+  }
+
+  // One of the group's apps holds the focus (app-id match including DockModel
+  // aliases, or one of its windows does). The marks name the focused window
+  // directly; this is the fallback for the row's unnamed case.
+  readonly property bool hasFocusedMember: {
+    if (!root) return false
+    for (var a = 0; a < gitem.groupApps.length; a++) {
+      var ent = root.entryForId(gitem.groupApps[a])
+      if (!ent) continue
+      if (root.activeId && DockModel.isAppMatch(ent.appId, root.activeId)) return true
+      var wins = ent.windowList || []
+      for (var w = 0; w < wins.length; w++) {
+        if (wins[w] && wins[w].address && wins[w].address === root.activeWindowAddress) return true
+      }
+    }
+    return false
+  }
+
+  // What the indicator row stands for: the folder's focused app, else its
+  // first running one. Clicking the row toggles that app like its icon would.
+  readonly property string indicatorAppId: {
+    if (!root) return ""
+    var fallback = ""
+    for (var a = 0; a < gitem.groupApps.length; a++) {
+      var ent = root.entryForId(gitem.groupApps[a])
+      if (!ent || !ent.running) continue
+      var focused = root.activeId && DockModel.isAppMatch(ent.appId, root.activeId)
+      if (!focused) {
+        var wins = ent.windowList || []
+        for (var w = 0; w < wins.length; w++) {
+          if (wins[w] && wins[w].address && wins[w].address === root.activeWindowAddress) {
+            focused = true
+            break
           }
         }
       }
+      if (focused) return ent.appId
+      if (fallback === "") fallback = ent.appId
     }
-    return { running: hasRun, active: hasActive, count: count }
+    return fallback
   }
-
-  readonly property bool hasRunningApps: groupRunningInfo.running
 
   property real magnifyScale: {
     if (!root) return 1
@@ -129,6 +188,15 @@ Item {
         hoverFx: root ? root.hoverFx : null
       }
 
+      // Badge: the folder's summed count, same mark as an app badge.
+      BadgeMark {
+        parent: tileFx.contentItem
+        rootRef: gitem.rootRef
+        anchorRef: tileFx.contentItem
+        count: gitem.badgeCount
+        rim: Color.bar.background
+      }
+
       // Folder tile (macOS / iOS Launchpad folder style). groupStyle picks
       // the frame: a softly rounded rim, a square rim, or none at all (just
       // the mini-icon grid).
@@ -194,6 +262,7 @@ Item {
                 tint: root ? root.iconTintColor : Color.bar.text
                 // Same cell size as a full icon, so the minis match it.
                 grid: root ? Math.round(root.iconGrid * miniCell.miniSize / Math.max(1, root.baseIconArt)) : 8
+                outputScale: root ? root.outputScale : 1
                 contrast: root ? root.iconContrast : 0
                 strength: root ? root.iconStrength : 1
                 showOriginal: root ? (root.iconHoverOriginal && groupArea.containsMouse) : false
@@ -206,24 +275,37 @@ Item {
     }
   }
 
-  // Running indicator dot underneath the folder if any child app is running
-  // 3-state running indicator row underneath the folder if any child app is running
-  Row {
-    id: indicatorRow
+  // The same indicator row an app carries, one mark per member window.
+  // Wrapped in a band so the click area can size to the row without entering
+  // the row's own layout.
+  Item {
+    id: indicatorBand
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1)
-    spacing: Style.space(3)
+    width: indicatorRow.width
+    height: indicatorRow.height
     visible: gitem.hasRunningApps || gitem.isOpen
+    z: 2
 
-    // Same marks as an app: the first turns into the accent bar while one
-    // of the group's apps has focus or the group is open.
-    Repeater {
-      model: Math.min(3, Math.max(1, gitem.groupRunningInfo.count))
-      delegate: DockIndicator {
-        rootRef: gitem.rootRef
-        anchors.verticalCenter: parent.verticalCenter
-        kind: index === 0 && (gitem.groupRunningInfo.active || gitem.isOpen) ? "active" : "window"
+    DockIndicatorRow {
+      id: indicatorRow
+      rootRef: gitem.rootRef
+      windows: gitem.groupWindows
+      running: gitem.hasRunningApps || gitem.isOpen
+      focused: gitem.isOpen || gitem.hasFocusedMember
+    }
+
+    // One click on the marks toggles the app they stand for; hover still
+    // reaches the tile beneath so its effects and tooltip keep working.
+    MouseArea {
+      id: indicatorHit
+      anchors.fill: parent
+      anchors.margins: -Style.space(3)
+      enabled: gitem.indicatorAppId !== ""
+      cursorShape: Qt.PointingHandCursor
+      onClicked: {
+        if (root) root.activate(gitem.indicatorAppId)
       }
     }
   }
@@ -254,10 +336,12 @@ Item {
     }
   }
 
-  // Hover tooltip
+  // Hover tooltip: the member windows as preview cards, like an app's.
   HoverTooltip {
     dockRoot: root
     text: gitem.groupName + " (" + gitem.groupApps.length + (gitem.groupApps.length === 1 ? " app)" : " apps)")
+    windows: gitem.tooltipWindows
+    fallbackIcon: Quickshell.iconPath("folder", true)
     hovered: groupArea.containsMouse
     blocked: (!root || !root.showTooltips || root.activeAppGroupId !== "")
     showTooltips: root ? root.showTooltips : true

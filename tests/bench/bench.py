@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OmaDock performance benchmark (fork tooling, stdlib only).
+"""OmaDock performance benchmark (stdlib only; needs a running Omarchy shell).
 
 Measures the quickshell process (Omarchy shell + dock) and Hyprland in
 fixed scenarios on the live desktop and writes a JSON report. Pointer
@@ -470,6 +470,9 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 CONFIG = os.path.expanduser("~/.config/omarchy/omadock.json")
 SHELL_JSON = os.path.expanduser("~/.config/omarchy/shell.json")
 SETTLE = 20          # seconds after a shell restart before measuring
+# Results go outside the plugin directory: any file written inside it makes
+# Quickshell reload the dock (and a soak writes every minute).
+DEFAULT_OUT = os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "omadock-bench")
 
 
 def result_path(out_dir, host, when):
@@ -764,7 +767,7 @@ def main(argv=None):
     r.add_argument("--events", action="store_true", help="also switch workspaces (S5)")
     r.add_argument("--repeat", type=int, default=3)
     r.add_argument("--yes", action="store_true", help="do not ask before restarting the shell")
-    r.add_argument("--out", default=os.path.join(REPO, "bench", "results"))
+    r.add_argument("--out", default=DEFAULT_OUT)
     r.set_defaults(func=cmd_run)
     c = sub.add_parser("compare", help="compare two result files")
     c.add_argument("a")
@@ -774,7 +777,7 @@ def main(argv=None):
     k.add_argument("--minutes", type=float, default=120)
     k.add_argument("--interval", type=float, default=60)
     k.add_argument("--label", default="on", help="e.g. on / off: whether the plugin is enabled")
-    k.add_argument("--out", default=os.path.join(REPO, "bench", "results"))
+    k.add_argument("--out", default=DEFAULT_OUT)
     k.set_defaults(func=cmd_soak)
     args = p.parse_args(argv)
     return args.func(args)

@@ -80,7 +80,7 @@ Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live wi
 - **🖥️ Multi-monitor** — one dock per monitor, each showing its own monitor's windows.
 - **💾 Removable media** — USB drives dock themselves; safe eject included.
 - **🔔 Attention glow & chimes** — bouncing alerts and audio pings.
-- **🔴 Pinned notification badges** — counts matching active popups on pinned apps; dismiss or expire a popup to clear it. These are not unread-message counts.
+- **🔴 Sticky notification badges** — counts matching notifications on pinned, running, and foldered apps; folder tiles sum their members. Counts stay until the app is focused. These are not unread-message counts.
 - **🖥️ CLI app identity** — Antigravity and btop keep their own icons when launched in a terminal; the terminal icon is only a fallback.
 - **⌨️ Keybindings & IPC** — wired for `~/.config/hypr/bindings.lua` out of the box.
 
@@ -112,7 +112,7 @@ omarchy plugin remove omadock --yes
 
 ### 🔘 1. 3-State Window Indicators
 
-Every icon shows all its windows at a glance: **▬** active · **●** open · **○** minimized.
+Every icon shows all its windows at a glance: **▬** active · **●** open · **○** minimized. App group tiles carry the same marks — one per member window — with the accent bar on the focused member's window, so a foldered app behaves exactly like a pinned one.
 
 | Window Count | Indicator Visual | Behavior |
 | :--- | :--- | :--- |
@@ -139,6 +139,8 @@ When a window is parked on `special:minimized`, Omadock generates a live visual 
 windows, including ones minimized to the dock's hidden workspace. They are
 captured into GPU memory only while the tooltip is open and are never
 written to disk. Turn them off in Settings → Behavior → Window previews.
+An app group's tooltip shows its member windows the same way, with the
+focused member's window in front.
 
 ---
 
@@ -189,6 +191,7 @@ Pin directories like `~/Downloads`, `~/Projects`, or custom paths directly to yo
 Organize applications into intelligent macOS / iOS-style folders directly on your dock:
 
 - **2×2 live preview grid** with window dots; the popover tray scales 2–4 columns.
+- **Popup stays open** — click cells to launch, switch, minimize and restore repeatedly; each cell shows per-window running/minimized marks, and one click on the tile's indicator dots toggles the folder's focused app.
 - **Drag-to-group, drag-to-pin** — drop one icon on another to make a folder.
 - **Inline renaming**, saved instantly.
 - **Drag-out extraction** — folders auto-dissolve when one app remains.
@@ -234,7 +237,8 @@ Deep Linux desktop and compositor integration:
 
 ### 🔔 10. Notification Badges & CLI App Identity
 
-- Pinned icons show a badge counting **matching active notification popups** — the count clears as soon as the popup leaves the stack (dismissed, expired, or replaced). These are not unread-message counts.
+- Dock icons show a badge counting **matching notifications** (pinned, running, and foldered apps alike); a folder tile sums its members' counts. Counts are **sticky**: one notification bumps the badge by one and the count stays until the app gains focus — dismissing or expiring the popup does not clear it. These are not unread-message counts.
+- The badge is customizable: `badgeStyle` picks a count pill or a plain dot, `badgePosition` picks the corner of the icon (`"top-right"`, `"top-left"`, `"bottom-right"`, `"bottom-left"`), and `badgeColor` picks accent, urgent red or a neutral pill.
 - Terminal-launched apps know who they are: **Antigravity** (`agy`) and **btop** keep their own product icons; the terminal's icon is only a fallback for unknown CLI tools.
 
 ---
@@ -253,7 +257,7 @@ Right-click the Omarchy logo or empty dock space to access deep customization.
 
 ### 🎛️ Settings Panel
 
-Right-clicking either one opens the full settings panel directly: a sidebar with *Appearance*, *Placement*, *Behavior*, *Effects*, *Size & Spacing*, *Presets*, *Folders* and *App Groups*, with switches, sliders and dropdowns for every option. Changes apply live, so the dock underneath previews them. Close it with <kbd>Esc</kbd>, the close button, or a click outside. The panel can also be opened from a keybind: `omarchy-shell omadock openSettings`.
+Right-clicking either one opens the full settings panel directly: a sidebar with *Appearance*, *Icons*, *Motion & Effects*, *Behavior*, *Placement*, *Folders*, *App Groups*, *Presets* and *About*, with switches, sliders and dropdowns for every option. A fuzzy search box at the top of the sidebar finds any setting by name or synonym (typos included — `pixl` reaches the pixel icon style) and picking a hit jumps to and highlights that setting's row. Changes apply live, so the dock underneath previews them. Close it with <kbd>Esc</kbd>, the close button, or a click outside. The panel can also be opened from a keybind: `omarchy-shell omadock openSettings`.
 
 The settings at a glance:
 
@@ -377,6 +381,9 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "showUrgentHint": true,
   "urgentOnNotification": true,
   "showNotificationBadges": true,
+  "badgeStyle": "count",
+  "badgePosition": "top-right",
+  "badgeColor": "accent",
   "urgentSound": true,
   "urgentSoundName": "bell",
   "folderColor": "theme",
@@ -429,7 +436,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `blurSize` | `int` | unset | With `blur: "on"`, Hyprland's blur size `1`–`20`. Hyprland has one blur size for everything, so this applies globally; the previous value (`systemBlurSize`, recorded automatically) comes back when blur leaves `"on"`. |
 | `iconStyle` | `string` | `"original"` | `"original"`, `"mono"` (one theme colour, shading kept), `"pixel"` (coarse grid, unsmoothed) or `"dots"` (dithered dot matrix). |
 | `iconTint` | `string` | `"text"` | Colour for `mono` and `dots`: the dock's `"text"` colour, the theme `"accent"`, or `"bw"` (near black or near white, whichever contrasts more with the background). Text and accent are lightened or darkened when they would not stand out from the background. |
-| `iconGrid` | `int` | `16` | Pixels / dots across an icon for `pixel` and `dots` (`8`–`32`). |
+| `iconGrid` | `int` | `16` | Pixels / dots across an icon for `pixel` and `dots` (`8`–`32`). The pixel style snaps its cells to whole even device pixels and coarsens the grid to fit. |
 | `iconContrast` | `number` | `0` | `mono` / `dots`: adaptive contrast `0`–`1`, stretched around each icon's own average; high values flatten icons to a simple shape. |
 | `iconStrength` | `number` | `1` | `mono` / `dots`: how much of the effect covers the original icon, `0`–`1`. |
 | `iconHoverOriginal` | `bool` | `false` | With an icon style on, the hovered icon (dock, group tiles, an opened group) shows as shipped. |
@@ -438,7 +445,10 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
 | `hoverEffect` | `string` | `"zoom"` | Hover mode: magnification `"zoom"` or `"wave"`; effects `"lift"`, `"glow"`, `"glitch"` (shaders); or `"off"`. |
 | `dividerGeometry` | `string` | `"classic"` | Section divider length: `"classic"` keeps the original short lines; `"long"` uses the adjustable `dividerHeight` share. |
-| `showNotificationBadges` | `bool` | `true` | Count matching active popups on pinned icons (not unread messages); cleared when the notification leaves the popup stack. |
+| `showNotificationBadges` | `bool` | `true` | Count matching notifications on dock icons and folder tiles (not unread messages); sticky until the app is focused. |
+| `badgeStyle` | `string` | `"count"` | Badge shape: `"count"` pill with the number, or `"dot"`. |
+| `badgePosition` | `string` | `"top-right"` | Corner of the icon the badge sits on: `"top-right"`, `"top-left"`, `"bottom-right"`, `"bottom-left"`. |
+| `badgeColor` | `string` | `"accent"` | Badge colour: `"accent"`, `"urgent"` (red) or `"neutral"`. |
 | `revealDelay` | `int` | `160` | Edge dwell time in milliseconds before unhiding ($0$–$2000$). |
 | `tooltipDelay` | `int` | `450` | Tooltip hover dwell delay in milliseconds ($0$–$5000$). |
 | `wheelStepDelay` | `int` | `150` | Minimum milliseconds between accepted wheel steps while browsing an app's windows ($0$–$1000$). |
@@ -478,7 +488,7 @@ Additional IPC methods available:
 - `setAlignment("center" | "left" | "right")`: Change dock alignment dynamically.
 - `setPosition("bottom" | "top" | "left" | "right")`: Change dock edge position.
 - `openSettings`: Open the settings panel on the focused monitor's dock.
-- `openSettingsPage("appearance" | "placement" | "behavior" | "effects" | "size" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.
+- `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.
 - `closeSettings`: Close the settings panel.
 
 > [!NOTE]
@@ -516,7 +526,7 @@ Run <code>omarchy restart shell</code> in your terminal to instantly reload the 
 
 ## 🛠️ Diagnostics & Validation
 
-Every pull request runs the test suites, a QML syntax gate and the manifest schema check in CI.
+Every pull request runs the test suites, a QML syntax gate, the security grep, a check that the compiled shaders match their sources and the manifest schema check in CI. Pull requests must target the `experimental` branch — `main` only receives verified release batches — and CI enforces the base branch.
 
 ```bash
 # Validate manifest compliance against Omarchy 4.0.3+ standards
@@ -525,13 +535,24 @@ omarchy plugin validate ~/Projects/omadock
 # Same manifest gate CI runs (a faithful mirror of the command above)
 ./tests/manifest-check.sh .
 
-# Test suites (Node: model + perf + hardening; Python: script helpers)
+# Test suites (Node: model, perf, hardening and DockModel behaviour; Python: script helpers, drop check, the CappedFileView read gate)
 node --check DockModel.js
 node --test tests/unit/*.test.js tests/unit/*.test.mjs
 python3 -m unittest discover -s tests/unit -p 'test_*.py'
 
 # Load-time smoke test (probes the running shell)
 ./tests/smoke-test.sh
+
+# Live checks against the running dock (no clicks or keys; they back up
+# and restore omadock.json): every IPC call round-trips, malformed configs
+# neither break the dock nor get rewritten by a save
+./tests/live/ipc-roundtrip.sh
+./tests/live/config-fuzz.sh
+
+# Performance: CPU, RAM and VRAM in fixed scenarios, dock on/off cost,
+# comparisons and long soak runs (see tests/bench/README.md)
+python3 tests/bench/bench.py run
+python3 tests/bench/bench.py soak --minutes 120
 
 # Inspect live compositor journal logs
 journalctl --user -xeu omarchy-shell -n 50 --no-pager
@@ -550,7 +571,8 @@ qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 | `Dock.qml` | The dock itself: model refresh, windows, popups, badges, settings state. |
 | `DockHost.qml` | Overlay entry point declared by `manifest.json`. |
 | `DockModel.js` | Pure model logic and every safety bound (parsing caps, identity resolution). |
-| `components/` | QML UI components (dock items, popups, tooltips, settings panel, shaders). |
+| `components/` | QML UI components (dock items, popups, tooltips, shaders) and `SettingsPanel.qml`, the settings shell (sidebar, search, page assembly). |
+| `components/settings/` | The settings module: one file per settings page plus the shared row family (`SettingRow`, `SwitchRow`, `ChoiceRow`, `SliderRow`, `Swatch`, `SectionLabel`). Pages wire `root` (the Dock) into rows; the panel owns search-jump state and registers rows by their `key`. |
 | `scripts/` | Python helpers (folder/drive scans, notification watcher, keybinding setup) plus `bind-keys.sh`. |
 | `shaders/` | Hover/icon-style fragment shaders with precompiled `.qsb` bundles. |
 | `tests/unit/` | Node and Python unit suites — what CI runs on every PR. |
@@ -570,3 +592,11 @@ Copyright © 2026 **[thepathless](https://github.com/thepathless)**.
 ## 📋 Releases & Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.0.1 — 2026-10-04
+
+- **Classic indicator look restored** — running marks draw at their original dimensions again (5px dots, 4px micro-dots past five windows, 12×4 bars, 1.5px minimized rings). A contributor's fractional-scale fix had quietly thinned every mark by a pixel; that look change is reverted while the pixel-grid snapping it introduced stays.
+- **App groups behave like pinned apps** — a group tile's indicator is the same row apps carry (one mark per member window, hollow dots for minimized, `+N` overflow), its accent bar follows the focused member's window, and the group's tooltip shows the member windows as live preview cards with the focused one in front.
+- **Notification badge customization** — `badgeStyle` (count pill or dot), `badgePosition` (any corner) and `badgeColor` (accent, urgent, neutral), with settings rows and fuzzy-search entries. The badge now rides the icon through hover effects.
+- **Contributor integrations** (thanks [@priard](https://github.com/priard)) — urgency on notifications without the shell service (#27), the badge following hover effects (#28), CI security grep and shader-source sync (#29), honest folder-stack truncation and failure labels (#30), warnings for drives pulled while mounted (#31), DockModel behaviour and gate tests (#32), live tooling and a dock benchmark (#33), and a preset-menu flicker fix (#36).
+- **Contribution policy** — pull requests now target `experimental`, enforced in CI; `main` only receives verified release batches.

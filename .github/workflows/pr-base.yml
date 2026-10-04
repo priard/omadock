@@ -1,0 +1,18 @@
+name: PR base gate
+
+# Dual-branch policy: `main` is the stable daily-driver branch and only
+# receives verified release batches, so pull requests must target
+# `experimental`. PRs opened against anything else fail here on purpose.
+on: pull_request
+
+jobs:
+  experimental-base:
+    name: PRs must target experimental
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check base branch
+        run: |
+          if [ "${{ github.base_ref }}" != "experimental" ]; then
+            echo "::error::This PR targets '${{ github.base_ref }}'. Open PRs against 'experimental' — 'main' only receives verified release batches."
+            exit 1
+          fi
