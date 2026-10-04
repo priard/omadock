@@ -509,55 +509,55 @@ PanelWindow {
           // wires root's settings into its rows.
 
           SettingsAppearance {
-            root: root
+            root: panel.root
             panel: panel
             visible: panel.page === "appearance"
           }
 
           SettingsIcons {
-            root: root
+            root: panel.root
             panel: panel
             visible: panel.page === "icons"
           }
 
           SettingsMotion {
-            root: root
+            root: panel.root
             panel: panel
             visible: panel.page === "motion"
           }
 
           SettingsBehavior {
-            root: root
+            root: panel.root
             panel: panel
             visible: panel.page === "behavior"
           }
 
           SettingsPlacement {
-            root: root
+            root: panel.root
             panel: panel
             visible: panel.page === "placement"
           }
 
           SettingsFolders {
-            root: root
+            root: panel.root
             panel: panel
             visible: panel.page === "folders"
           }
 
           SettingsGroups {
-            root: root
+            root: panel.root
             panel: panel
             visible: panel.page === "groups"
           }
 
           SettingsPresets {
-            root: root
+            root: panel.root
             panel: panel
             visible: panel.page === "presets"
           }
 
           SettingsAbout {
-            root: root
+            root: panel.root
             panel: panel
             visible: panel.page === "about" || panel.page === "supporters"
           }
