@@ -5,12 +5,15 @@ to https://github.com/priard/omadock (remote `fork`). No `origin`, so
 `omarchy plugin update` leaves it alone.
 
 Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
+(`main` is upstream's stable branch; it gets release batches from
+`experimental`).
 
 ## Workflow
 
-- `main` on the fork mirrors `upstream/main`.
-- Feature work goes on `feat/*` branches cut from `upstream/main`, so they
-  can be sent upstream as PRs, then merged into `priard`.
+- `main` and `experimental` on the fork mirror upstream's.
+- Upstream takes PRs against `experimental` only (CI enforces it). Feature
+  work goes on `feat/*` branches cut from `upstream/experimental`, then
+  gets merged into `priard`.
 - `priard` is what runs locally: upstream plus unmerged feature branches.
 
 ## Upstreamed
@@ -25,18 +28,18 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 
 - #26 tooltip fade, linger and cross-fade (merged 2026-10-03).
 
+- #27-#33 and #36 integrated into `experimental` 2026-10-04 and released
+  in v4.0.1: notification urgency without the shell service, badge follows
+  hover effects, CI security grep and shader check, stack limits, unsafe
+  drive removal warning, more unit tests, live tooling and the benchmark,
+  preset menu flicker.
+
 ## Open
 
-- #27 urgency on notifications through the popup-file watch (`feat/notification-urgency`).
-- #28 notification badge follows the icon's hover effects (`feat/badge-follows-icon`).
-- #29 CI: security grep and shader source check (`feat/ci-static-checks`).
-- #30 stacks: "20000+" and "Folder could not be read" (`feat/stack-limits`).
-- #31 warn when a drive is pulled out while mounted (`feat/unsafe-removal`).
-- #32 more unit tests (`feat/more-unit-tests`).
-- #33 live checks, IPC itemGeometry/state and the benchmark (`feat/live-tooling`).
+- none.
 
 ## Fork only
 
-- `tests/bench/` benchmark, `bench/results/` history, `tests/run-all.sh`
-  with static checks and live tests (`tests/README.md`).
-- IPC `itemGeometry()` and `state()` for the benchmark and live tests.
+- `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
+  and manifest checks (`tests/README.md`). The benchmark, live tests and
+  IPC `itemGeometry()` / `state()` are upstream since v4.0.1.
