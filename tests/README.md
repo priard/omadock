@@ -19,12 +19,13 @@ Touches nothing outside temporary directories.
 | `unit/test_list_drives.py` | drive listing from lsblk JSON: skips, nesting, dedupe, icons, label cleanup |
 | `unit/test_eject_drive.py` | eject fallback order, missing tools, notification text sanitised |
 | `unit/test_drop_check.py` | MIME matching for files dropped on app icons |
-| `unit/test_capped_gate.sh` | the CappedFileView read gate: FIFO, directory, /dev/zero, oversize |
+| `unit/test_capped_gate.py` | the CappedFileView read gate: FIFO, directory, /dev/zero, oversize |
 | `static/shaders-in-sync.sh` | committed `.qsb` equal the compiled `.frag` sources |
 | `static/manifest.sh` | manifest fields and `omarchy plugin validate` |
 | `static/qmllint.sh` | Qt 6 qmllint, compared with `qmllint-baseline.json` |
-| `static/security_grep.py` | rich text, eval, shell concatenation, `hyprctl eval`, `notify-send`, inline python, Text without PlainText; compared with `security-baseline.json` |
-| `bench/test_bench.py` | benchmark helpers |
+| `static/security-grep.py` | rich text, eval, shell concatenation, inline python, Text without PlainText; `hyprctl eval` / `notify-send` call sites listed for review (upstream CI gate) |
+| `unit/test_bench.py`, `unit/test_security_grep.py` | benchmark helpers, the security grep's own rules |
+| `unit/*.test.mjs` (notification-urgency, stack-labels, dockmodel-perf) | popup-file urgency, stack count labels, rebuild skipping |
 
 JS tests load `DockModel.js` into a `node:vm` context (it uses no Qt
 globals); `DOCKMODEL=path` tests another copy. Python tests use the
@@ -64,11 +65,11 @@ after changes to the code involved.
 
 ## Baselines
 
-After a reviewed change that adds a qmllint warning or a new
-`hyprctl eval` / `notify-send` call site:
+After a reviewed change that adds a qmllint warning:
 
     tests/static/qmllint.sh --update
-    python3 tests/static/security_grep.py --update
 
-and commit the baseline with the change. Shaders: recompile with
+and commit the baseline with the change. New `hyprctl eval` /
+`notify-send` call sites are listed by `static/security-grep.py` without
+failing; review them by hand. Shaders: recompile with
 `/usr/lib/qt6/bin/qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o X.qsb X`.

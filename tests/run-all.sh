@@ -17,13 +17,11 @@ step() {
 offline() {
   step "DockModel (node)" node --test tests/unit/*.test.js tests/unit/*.test.mjs
   step "scripts (python)" python3 -m unittest discover -s tests/unit -p 'test_*.py'
-  step "bench helpers" python3 -m unittest tests/bench/test_bench.py
-  step "capped read gate" bash tests/unit/test_capped_gate.sh
   step "shaders in sync" bash tests/static/shaders-in-sync.sh
   step "manifest" bash tests/static/manifest.sh
   step "manifest (upstream CI gate)" bash tests/manifest-check.sh .
   step "qmllint baseline" bash tests/static/qmllint.sh
-  step "security grep" python3 tests/static/security_grep.py
+  step "security grep" python3 tests/static/security-grep.py
 }
 live() {
   step "smoke" bash tests/smoke-test.sh
