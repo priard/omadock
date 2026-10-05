@@ -33,10 +33,12 @@ BorderSurface {
 
   // Gradient fill (shaders/gradient.frag): the palette's colours fading
   // into each other over the theme background, at the dock's opacity. Under
-  // the grain and the icons; built only while the gradient is on.
+  // the grain and the icons; built only while the gradient is on. A
+  // negative z draws it under this Rectangle itself, so the native rim
+  // (border.color/width) stays on top instead of being painted over.
   Loader {
     anchors.fill: parent
-    z: 0.25
+    z: -1
     active: surface.gradientFill
     sourceComponent: ShaderEffect {
       readonly property var palette: root ? root.gradientColors : []
