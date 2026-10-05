@@ -1,0 +1,31 @@
+name: PR auto-target
+
+# Dual-branch policy, made automatic: a pull request opened against `main` is
+# retargeted to `experimental` and its author is told why. `main` only
+# receives verified release batches (merge --no-ff + tag + GitHub Release).
+# The PR base gate (pr-base.yml) still fails wrong-base PRs; this workflow
+# simply fixes the base so contributors do not have to.
+#
+# Security note: `pull_request_target` runs in the BASE branch context with a
+# write-capable token so fork PRs are served too. It never checks out or
+# executes pull-request code — only two `gh` calls against the API.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  retarget:
+    name: Retarget to experimental
+    runs-on: ubuntu-24.04
+    if: github.base_ref != 'experimental'
+    steps:
+      - name: Change the base and explain
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --base experimental
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body 'Hi! This repository routes every pull request to `experimental` — `main` only receives verified release batches — so I changed this PR base to `experimental` automatically. CI re-runs against the new base. Thank you for contributing!'

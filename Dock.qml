@@ -1965,9 +1965,29 @@ Item {
 
   Connections {
     target: Color
-    function onShellValuesChanged() { root.handleThemeChanged() }
-    function onForegroundChanged() { root.handleThemeChanged() }
-    function onAccentChanged() { root.handleThemeChanged() }
+    function onShellValuesChanged() { root.handleShellThemeChanged() }
+    function onForegroundChanged() { root.handleShellThemeChanged() }
+    function onAccentChanged() { root.handleShellThemeChanged() }
+  }
+
+  // A theme switch replaces the whole current/theme directory, so the file
+  // watches on colors.toml and icons.theme fire once and then follow the
+  // deleted files: from the second switch on the dock kept the first
+  // theme's palette and icon theme. The shell's own colour signals still
+  // arrive on every switch, so they re-read both files (coalesced; their
+  // onLoaded runs handleThemeChanged with the new text).
+  function handleShellThemeChanged() {
+    themeFileReload.restart()
+    root.handleThemeChanged()
+  }
+
+  Timer {
+    id: themeFileReload
+    interval: 50
+    onTriggered: {
+      themeIconsFile.reload()
+      themeColorsFile.reload()
+    }
   }
 
   Connections {
