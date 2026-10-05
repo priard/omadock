@@ -29,14 +29,20 @@ Rectangle {
   border.color: badge.rim
   z: 2
 
-  anchors.right: (badge.onRight && badge.anchorRef) ? badge.anchorRef.right : undefined
-  anchors.left: (!badge.onRight && badge.anchorRef) ? badge.anchorRef.left : undefined
-  anchors.top: (!badge.atBottom && badge.anchorRef) ? badge.anchorRef.top : undefined
-  anchors.bottom: (badge.atBottom && badge.anchorRef) ? badge.anchorRef.bottom : undefined
-  anchors.rightMargin: badge.onRight ? -Style.space(3) : 0
-  anchors.leftMargin: badge.onRight ? 0 : -Style.space(3)
-  anchors.topMargin: badge.atBottom ? 0 : -Style.space(3)
-  anchors.bottomMargin: badge.atBottom ? -Style.space(3) : 0
+  // Placed by x/y, not by switching anchors: when the corner changes, the
+  // left/right (or top/bottom) anchor bindings update one at a time, the
+  // badge is briefly anchored on both sides and stretched over the icon,
+  // and it keeps that size once the other anchor is released.
+  // anchorRef is the badge's parent or a sibling, as anchors required.
+  readonly property real refX: (!badge.anchorRef || badge.anchorRef === badge.parent) ? 0 : badge.anchorRef.x
+  readonly property real refY: (!badge.anchorRef || badge.anchorRef === badge.parent) ? 0 : badge.anchorRef.y
+  readonly property real overhang: Style.space(3)
+  x: !badge.anchorRef ? 0
+    : badge.onRight ? badge.refX + badge.anchorRef.width + badge.overhang - badge.width
+    : badge.refX - badge.overhang
+  y: !badge.anchorRef ? 0
+    : badge.atBottom ? badge.refY + badge.anchorRef.height + badge.overhang - badge.height
+    : badge.refY - badge.overhang
 
   Text {
     id: badgeText
