@@ -50,6 +50,7 @@ Item {
   property real dragStartY: 0
   property real bounceY: 0
   property real homeCenter: 0
+  property int labelSlot: -1
 
   Connections {
     target: root

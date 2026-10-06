@@ -13,6 +13,7 @@ Item {
 
   property var groupData: null
   property real homeCenter: 0
+  property int labelSlot: -1
 
   readonly property string groupId: (groupData && groupData.id) ? groupData.id : ""
   readonly property string groupName: (groupData && groupData.name) ? groupData.name : "Folder"

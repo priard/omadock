@@ -15,6 +15,7 @@ Item {
   property string name: ""
   property string icon: "folder"
   property real homeCenter: 0
+  property int labelSlot: -1
   // Position among the pinned folders; a folder dragged in from outside and
   // headed for this index opens a gap before this item.
   property int slotIndex: -1
