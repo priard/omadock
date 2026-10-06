@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "omadock",
-  "name": "omadock",
-  "version": "4.0.3-priard.1",
+  "name": "OmaDock",
+  "version": "4.0.3",
   "author": "thepathless",
   "license": "MIT",
-  "description": "Clean, modern, high-performance application dock for Omarchy with zero-CPU autohide, tiling window adaptation, and deep customization",
+  "description": "Dock for Omarchy — clean, modern, high-performance application dock with zero-CPU autohide, tiling window adaptation, and deep customization",
   "kinds": [
     "overlay"
   ],
@@ -14,6 +14,7 @@
     "overlay": "DockHost.qml"
   },
   "tags": [
+    "dock",
     "launcher",
     "quickshell",
     "hyprland"

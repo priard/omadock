@@ -330,6 +330,14 @@ Item {
   // Files dragged in from outside: opened with this app when it declares
   // their types (see Dock.beginAppDrop). Refusing the drag lets a folder
   // fall through to the dock's own drop area, which pins it.
+  // Name label (visibility/size/contrast decided in DockLabelLogic).
+  DockLabel {
+    rootRef: item.rootRef
+    name: item.name
+    kind: "app"
+    tile: item
+  }
+
   DropArea {
     anchors.fill: parent
     keys: ["text/uri-list"]

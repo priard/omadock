@@ -1,13 +1,16 @@
-// Regression tests for DockModel.js. The file is plain JS with no Qt
-// globals, so it runs in a vm context; DOCKMODEL overrides the path.
+// Regression tests for DockModel.js and SettingsSearch.js. Both are plain JS
+// with no Qt globals, so they run in one vm context; DOCKMODEL and
+// SETTINGSSEARCH override the paths.
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync, readdirSync } from "node:fs"
 import vm from "node:vm"
 
 const file = process.env.DOCKMODEL || new URL("../../DockModel.js", import.meta.url)
+const searchFile = process.env.SETTINGSSEARCH || new URL("../../SettingsSearch.js", import.meta.url)
 const M = vm.createContext({})
 vm.runInContext(readFileSync(file, "utf8"), M)
+vm.runInContext(readFileSync(searchFile, "utf8"), M)
 // Values from the vm realm have foreign prototypes; compare plain copies.
 const plain = (v) => JSON.parse(JSON.stringify(v))
 

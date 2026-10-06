@@ -24,6 +24,36 @@ Item {
   signal dragMoved(string groupId, real x, real y)
   signal dragDropped(string groupId)
 
+  // Scroll-cycled member preview for the hover bubble's card stack: -1 until
+  // the wheel is used over the tile, then the index the next click focuses.
+  property int previewIndex: -1
+
+  // Wheel over the tile cycles which member window the bubble previews.
+  // The routing and cycling live in DockGroupCycleLogic; this only forwards.
+  function handlePreviewWheel(wheel) {
+    if (!root || !root.advancedTooltips) return
+    var wins = gitem.tooltipWindows
+    if (wins.length < 2) return
+    var cur = gitem.previewIndex
+    if (cur < 0 || cur >= wins.length) {
+      var fi = root.focusedIndex(wins)
+      cur = fi >= 0 ? fi : 0
+    }
+    gitem.previewIndex = root.groupCycleFront("group:" + gitem.groupId, wins, cur, wheel.angleDelta.y)
+  }
+
+  // A scroll-armed preview claims the next click: it focuses the member
+  // window the bubble is showing and disarms, so a plain click (no scroll)
+  // keeps opening the group popup exactly as before.
+  function clickPreviewOr(openPopup) {
+    if (gitem.previewIndex >= 0 && root && gitem.previewIndex < gitem.tooltipWindows.length) {
+      root.focusPreviewedWindow(gitem.tooltipWindows, gitem.previewIndex)
+      gitem.previewIndex = -1
+      return
+    }
+    openPopup()
+  }
+
   // Faded while dragged, fainter still once pulled off the dock.
   opacity: groupArea.dragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
 
@@ -310,8 +340,10 @@ Item {
       anchors.margins: -Style.space(3)
       enabled: gitem.indicatorAppId !== ""
       cursorShape: Qt.PointingHandCursor
+      onWheel: function(wheel) { gitem.handlePreviewWheel(wheel) }
+
       onClicked: {
-        if (root) root.activate(gitem.indicatorAppId)
+        gitem.clickPreviewOr(function() { if (root) root.activate(gitem.indicatorAppId) })
       }
     }
   }
@@ -328,6 +360,9 @@ Item {
     onDragMoved: function(x, y) { gitem.dragMoved(gitem.groupId, x, y) }
     onDragFinished: gitem.dragDropped(gitem.groupId)
 
+    onWheel: function(wheel) { gitem.handlePreviewWheel(wheel) }
+    onContainsMouseChanged: if (!groupArea.containsMouse) gitem.previewIndex = -1
+
     onTapped: function(mouse) {
       var targetWin = root ? root.contentItemRef : null
       if (mouse.button === Qt.RightButton) {
@@ -335,11 +370,21 @@ Item {
         if (!mappedPos) return
         gitem.menuRequested(gitem.groupData, mappedPos.x, 0)
       } else {
-        var centerPos = targetWin ? gitem.mapToItem(targetWin, gitem.width / 2, 0) : null
-        if (!centerPos) return
-        gitem.openGroupRequested(gitem.groupData, centerPos.x, centerPos.y)
+        gitem.clickPreviewOr(function() {
+          var centerPos = targetWin ? gitem.mapToItem(targetWin, gitem.width / 2, 0) : null
+          if (!centerPos) return
+          gitem.openGroupRequested(gitem.groupData, centerPos.x, centerPos.y)
+        })
       }
     }
+  }
+
+  // Name label (visibility/size/contrast decided in DockLabelLogic).
+  DockLabel {
+    rootRef: gitem.rootRef
+    name: gitem.groupName
+    kind: "group"
+    tile: gitem
   }
 
   // Hover tooltip: the member windows as preview cards, like an app's.
@@ -347,6 +392,7 @@ Item {
     dockRoot: root
     text: gitem.groupName + " (" + gitem.groupApps.length + (gitem.groupApps.length === 1 ? " app)" : " apps)")
     windows: gitem.tooltipWindows
+    cycleIndex: gitem.previewIndex
     fallbackIcon: Quickshell.iconPath("folder", true)
     hovered: groupArea.containsMouse
     blocked: (!root || !root.showTooltips || root.activeAppGroupId !== "")

@@ -42,6 +42,11 @@ jobs:
       - name: Security grep
         run: python3 tests/static/security-grep.py
 
+      # Maintainability: file-size cap, composition-root ratchets, logic
+      # modules stay pure (AGENTS.md "Maintainability Rules").
+      - name: Structure check
+        run: python3 tests/static/structure-check.py
+
   qml-lint:
     name: QML syntax gate
     runs-on: ubuntu-24.04
@@ -62,7 +67,7 @@ jobs:
       # exists on an Omarchy host — that runs in the release checklist
       # (AGENTS.md "Verification Commands").
       - name: qmllint
-        run: /usr/lib/qt6/bin/qmllint --silent Dock.qml DockHost.qml components/*.qml
+        run: /usr/lib/qt6/bin/qmllint --silent Dock.qml DockHost.qml components/*.qml components/settings/*.qml components/logic/*.qml
 
       # The committed .qsb binaries must be exactly what the .frag sources
       # compile to (qsb output is deterministic), so they carry nothing the

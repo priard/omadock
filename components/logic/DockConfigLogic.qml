@@ -1,0 +1,341 @@
+import QtQuick
+import "../../DockModel.js" as DockModel
+
+// Config and preset logic, extracted from Dock.qml so the root file only
+// declares state and wiring. Every function is stateless: the dock root is
+// passed in and owns all state. Bodies are transcribed from Dock.qml — the
+// behavior contract is the unit tests plus the live smoke test.
+
+QtObject {
+  // ------------------------------------------------------- the look
+  // The look: every value a preset holds, parsed and clamped exactly as the
+  // config file is. Used when the config loads and when a preset applies.
+  // Sets properties only; callers save and update the blur rule.
+  function applyLook(root, parsed) {
+    // Migrates the old boolean: an explicit magnification:false meant no growth.
+    root.hoverEffect = parsed && ["zoom", "wave", "lift", "glow", "glitch", "off"].indexOf(parsed.hoverEffect) >= 0
+      ? parsed.hoverEffect
+      : ((parsed && parsed.magnification === false) ? "off" : "zoom")
+    root.launchBounce = parsed && parsed.launchBounce !== false
+    root.configuredIconSize = parsed && typeof parsed.iconSize === "number" && isFinite(parsed.iconSize) && parsed.iconSize > 0
+      ? Math.max(16, Math.min(96, Math.round(parsed.iconSize))) : 0
+    if (parsed && (parsed.opacity === "theme" || parsed.opacity === "auto" || parsed.opacity === -1)) {
+      root.dockOpacity = -1.0
+    } else if (parsed && typeof parsed.opacity === "number") {
+      root.dockOpacity = Math.max(0.0, Math.min(1.0, parsed.opacity))
+    } else {
+      root.dockOpacity = 1.0
+    }
+    if (parsed && (parsed.borderOpacity === "theme" || parsed.borderOpacity === "auto" || parsed.borderOpacity === -1)) {
+      root.borderOpacity = -1.0
+    } else if (parsed && typeof parsed.borderOpacity === "number") {
+      root.borderOpacity = Math.max(0.0, Math.min(1.0, parsed.borderOpacity))
+    } else {
+      root.borderOpacity = -1.0
+    }
+    root.dockShape = parsed && typeof parsed.shape === "string" ? parsed.shape : "rounded"
+    root.cornerRadius = parsed && typeof parsed.cornerRadius === "number" && isFinite(parsed.cornerRadius) && parsed.cornerRadius >= 0
+      ? Math.max(2, Math.round(parsed.cornerRadius)) : -1
+    root.dockBgColor = parsed && typeof parsed.bgColor === "string" ? parsed.bgColor : "theme"
+    root.showBackground = parsed ? parsed.showBackground !== false : true
+    root.bgFill = (parsed && parsed.bgFill === "gradient") ? "gradient" : "solid"
+    root.gradientPreset = parsed && typeof parsed.gradientPreset === "string" ? parsed.gradientPreset : "theme"
+    root.gradientStrength = parsed && typeof parsed.gradientStrength === "number" ? Math.max(0, Math.min(1, parsed.gradientStrength)) : 0.6
+    root.grain = parsed && typeof parsed.grain === "number" ? Math.max(0, Math.min(1, parsed.grain)) : 0
+    root.showShadow = parsed ? parsed.showShadow !== false : true
+    root.splitSections = parsed ? parsed.splitSections === true : false
+    root.shadowStrength = parsed && typeof parsed.shadowStrength === "number"
+      ? Math.max(0, Math.min(1, parsed.shadowStrength))
+      : 0.4
+    root.blurMode = (parsed && (parsed.blur === "on" || parsed.blur === "off")) ? parsed.blur : "system"
+    root.iconStyle = (parsed && ["mono", "pixel", "dots"].indexOf(parsed.iconStyle) >= 0) ? parsed.iconStyle : "original"
+    root.iconTint = (parsed && (parsed.iconTint === "accent" || parsed.iconTint === "bw")) ? parsed.iconTint : "text"
+    root.iconHoverOriginal = parsed ? parsed.iconHoverOriginal === true : false
+    root.iconHoverReveal = parsed ? parsed.iconHoverReveal === true : false
+    root.iconContrast = parsed && typeof parsed.iconContrast === "number" ? Math.max(0, Math.min(1, parsed.iconContrast)) : 0
+    root.iconStrength = parsed && typeof parsed.iconStrength === "number" ? Math.max(0, Math.min(1, parsed.iconStrength)) : 1
+    root.iconGrid = parsed && typeof parsed.iconGrid === "number"
+      ? Math.max(8, Math.min(32, Math.round(parsed.iconGrid)))
+      : 16
+    root.showBorder = parsed ? parsed.showBorder !== false : true
+    root.indicatorShape = (parsed && (parsed.indicatorShape === "rounded" || parsed.indicatorShape === "square")) ? parsed.indicatorShape : "theme"
+    root.borderWidth = parsed && typeof parsed.borderWidth === "number"
+      ? Math.max(1, Math.min(6, parsed.borderWidth))
+      : 1.5
+    // Anything else, including the retired "theme" style, falls back to rounded.
+    root.groupStyle = (parsed && ["square", "none"].indexOf(parsed.groupStyle) >= 0) ? parsed.groupStyle : "rounded"
+    root.groupIconEffects = (parsed && parsed.groupIconEffects === "none") ? "none" : "theme"
+    root.folderColor = parsed && typeof parsed.folderColor === "string" ? parsed.folderColor : "theme"
+    root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" && isFinite(parsed.itemSpacing)
+      ? Math.max(0, Math.min(32, Math.round(parsed.itemSpacing))) : 4
+    root.sectionSpacing = parsed && typeof parsed.sectionSpacing === "number" ? Math.max(0, Math.min(48, Math.round(parsed.sectionSpacing))) : 18
+    root.dividerGeometry = parsed && parsed.dividerGeometry === "long" ? "long" : "classic"
+    root.dividerHeight = parsed && typeof parsed.dividerHeight === "number" && isFinite(parsed.dividerHeight) ? Math.max(20, Math.min(100, Math.round(parsed.dividerHeight))) : 70
+    root.dividerStyle = parsed && ["theme", "custom"].indexOf(parsed.dividerStyle) >= 0 ? parsed.dividerStyle : "simple"
+    root.dividerWidth = parsed && typeof parsed.dividerWidth === "number" && isFinite(parsed.dividerWidth) ? Math.max(1, Math.min(6, Math.round(parsed.dividerWidth * 2) / 2)) : 1.5
+    root.dividerOpacity = parsed && typeof parsed.dividerOpacity === "number" && isFinite(parsed.dividerOpacity) ? Math.max(0, Math.min(1, parsed.dividerOpacity)) : 0.4
+    // Theme dividers without a border, saved before they turned custom.
+    // Converted in place: saving here would write the rest of the config
+    // before it is read.
+    if (root.dividerStyle === "theme" && !root.showBorder) {
+      root.dividerWidth = root.borderWidth
+      root.dividerOpacity = Math.round(root.rimAlpha * 100) / 100
+      root.dividerStyle = "custom"
+    }
+  }
+
+  // ------------------------------------------------- the config file
+  // Parses and applies omadock.json text. The caller owns the file access.
+  function loadConfig(root, rawText) {
+    var raw = DockModel.readCapped(rawText, DockModel.MAX_CONFIG_BYTES).trim()
+    var parsed = {}
+    if (raw) {
+      try {
+        parsed = JSON.parse(raw)
+      } catch (e) {
+        console.warn("[omadock] Failed parsing omadock.json, using defaults:", e)
+        parsed = {}
+      }
+    }
+    root.alignment = (parsed && (parsed.alignment || parsed.position)) ? String(parsed.alignment || parsed.position).toLowerCase() : "center"
+    if (root.alignment !== "left" && root.alignment !== "right") root.alignment = "center"
+    root.showRemovableDrives = parsed ? parsed.showRemovableDrives !== false : true
+    root.warnUnsafeRemoval = parsed ? parsed.warnUnsafeRemoval !== false : true
+    if (parsed && DockModel.isList(parsed.appGroups)) {
+      // Persisted collections are shape- and size-bounded before reaching the
+      // long-lived shell (see DockModel boundAppGroups / boundPinnedFolders).
+      root.appGroups = DockModel.boundAppGroups(parsed.appGroups)
+    } else {
+      root.appGroups = []
+    }
+    root.presets = parsed ? DockModel.boundPresets(parsed.presets) : []
+    root.autohide = parsed && parsed.autohide !== false
+    root.intelligentAutohide = parsed && parsed.intelligentAutohide !== false
+    root.showAppsButton = parsed && parsed.showAppsButton !== false
+    root.showTooltips = parsed && parsed.showTooltips !== false
+    root.showMinimizedTiles = parsed ? parsed.showMinimizedTiles !== false : true
+    root.advancedTooltips = parsed && parsed.advancedTooltips !== false
+    root.screenName = parsed && typeof parsed.screen === "string" ? parsed.screen : ""
+    root.multiMonitor = parsed ? parsed.multiMonitor === true : false
+    root.perMonitorApps = parsed ? parsed.perMonitorApps !== false : true
+    applyLook(root, parsed)
+    root.blurSize = parsed && typeof parsed.blurSize === "number" ? Math.max(0, Math.min(20, Math.round(parsed.blurSize))) : 0
+    root.systemBlurSize = DockModel.boundSystemBlurSize(parsed ? parsed.systemBlurSize : 0)
+    root.applyBlurRule(false)
+    if (parsed && typeof parsed.minimizeMode === "string") {
+      root.minimizeMode = parsed.minimizeMode
+    } else if (parsed && parsed.clickToMinimize === true) {
+      root.minimizeMode = "active"
+    } else {
+      root.minimizeMode = "active"
+    }
+    root.keepPointer = parsed ? parsed.keepPointer !== false : true
+    root.showUrgentHint = parsed ? parsed.showUrgentHint !== false : true
+    root.urgentOnNotification = parsed ? parsed.urgentOnNotification !== false : true
+    root.showNotificationBadges = parsed ? parsed.showNotificationBadges !== false : true
+    // Bounded spellings: anything else falls back to the classic badge.
+    root.badgeStyle = (parsed && parsed.badgeStyle === "dot") ? "dot" : "count"
+    root.badgePosition = (parsed && ["top-left", "top-right", "bottom-left", "bottom-right"].indexOf(parsed.badgePosition) >= 0) ? parsed.badgePosition : "top-right"
+    root.badgeColor = (parsed && ["accent", "urgent", "neutral"].indexOf(parsed.badgeColor) >= 0) ? parsed.badgeColor : "accent"
+    // Name labels (DockLabelLogic): bounded spellings, labels off by default.
+    root.showLabels = !!(parsed && parsed.showLabels === true)
+    root.labelKind = (parsed && ["all", "apps", "groups", "folders"].indexOf(parsed.labelKind) >= 0) ? parsed.labelKind : "all"
+    root.labelPlacement = (parsed && parsed.labelPlacement === "above") ? "above" : "below"
+    root.labelSize = (parsed && ["small", "medium", "large"].indexOf(parsed.labelSize) >= 0) ? parsed.labelSize : "small"
+    root.labelContrast = (parsed && ["theme", "high", "pill"].indexOf(parsed.labelContrast) >= 0) ? parsed.labelContrast : "theme"
+    root.urgentSound = parsed ? parsed.urgentSound !== false : true
+    root.urgentSoundName = DockModel.cleanSoundName(parsed ? parsed.urgentSoundName : "bell")
+    root.revealDelay = parsed && typeof parsed.revealDelay === "number"
+      ? Math.max(0, Math.min(2000, Math.round(parsed.revealDelay)))
+      : 160
+    root.tooltipDelay = parsed && typeof parsed.tooltipDelay === "number"
+      ? Math.max(0, Math.min(5000, Math.round(parsed.tooltipDelay)))
+      : 450
+    root.wheelStepDelay = parsed && typeof parsed.wheelStepDelay === "number"
+      ? Math.max(0, Math.min(1000, Math.round(parsed.wheelStepDelay)))
+      : 150
+    if (parsed && DockModel.isList(parsed.pinnedFolders)) {
+      root.pinnedFolders = DockModel.boundPinnedFolders(parsed.pinnedFolders)
+    } else {
+      root.pinnedFolders = [
+        { path: "~/Downloads", name: "Downloads", icon: "folder-download" }
+      ]
+    }
+  }
+
+  // Reads no file, so bindings can use the current configuration.
+  function buildConfig(root, base) {
+    var conf = base && typeof base === "object" && !Array.isArray(base) ? base : {}
+    conf.alignment = root.alignment || "center"
+    delete conf.position
+    conf.showRemovableDrives = root.showRemovableDrives
+    conf.warnUnsafeRemoval = root.warnUnsafeRemoval
+    conf.appGroups = DockModel.boundAppGroups(root.appGroups)
+    conf.autohide = root.autohide
+    conf.intelligentAutohide = root.intelligentAutohide
+    conf.showAppsButton = root.showAppsButton
+    conf.showTooltips = root.showTooltips
+    conf.showMinimizedTiles = root.showMinimizedTiles
+    conf.hoverEffect = root.hoverEffect
+    delete conf.magnification
+    conf.launchBounce = root.launchBounce
+    conf.advancedTooltips = root.advancedTooltips
+    if (root.screenName) conf.screen = root.screenName
+    else delete conf.screen
+    conf.multiMonitor = root.multiMonitor
+    conf.perMonitorApps = root.perMonitorApps
+    if (root.configuredIconSize > 0) conf.iconSize = root.configuredIconSize
+    else delete conf.iconSize
+    conf.opacity = root.dockOpacity < 0 ? "theme" : root.dockOpacity
+    conf.borderOpacity = root.borderOpacity < 0 ? "theme" : root.borderOpacity
+    conf.shape = root.dockShape
+    if (root.cornerRadius >= 0) conf.cornerRadius = root.cornerRadius
+    else delete conf.cornerRadius
+    conf.bgColor = root.dockBgColor
+    conf.showBackground = root.showBackground
+    conf.bgFill = root.bgFill
+    conf.gradientPreset = root.gradientPreset
+    conf.gradientStrength = root.gradientStrength
+    conf.grain = root.grain
+    conf.showShadow = root.showShadow
+    conf.splitSections = root.splitSections
+    conf.shadowStrength = root.shadowStrength
+    conf.blur = root.blurMode
+    if (root.blurSize > 0) conf.blurSize = root.blurSize
+    else delete conf.blurSize
+    if (root.systemBlurSize > 0) conf.systemBlurSize = root.systemBlurSize
+    conf.iconStyle = root.iconStyle
+    conf.iconTint = root.iconTint
+    conf.iconHoverOriginal = root.iconHoverOriginal
+    conf.iconHoverReveal = root.iconHoverReveal
+    conf.iconContrast = root.iconContrast
+    conf.iconStrength = root.iconStrength
+    conf.iconGrid = root.iconGrid
+    conf.showBorder = root.showBorder
+    conf.indicatorShape = root.indicatorShape
+    conf.borderWidth = root.borderWidth
+    conf.groupStyle = root.groupStyle
+    conf.groupIconEffects = root.groupIconEffects
+    conf.folderColor = root.folderColor
+    conf.itemSpacing = root.itemSpacing
+    conf.sectionSpacing = root.sectionSpacing
+    conf.dividerGeometry = root.dividerGeometry
+    conf.dividerHeight = root.dividerHeight
+    conf.dividerStyle = root.dividerStyle
+    conf.dividerWidth = root.dividerWidth
+    conf.dividerOpacity = root.dividerOpacity
+    conf.minimizeMode = root.minimizeMode
+    conf.clickToMinimize = root.minimizeMode !== "off"
+    conf.keepPointer = root.keepPointer
+    conf.showUrgentHint = root.showUrgentHint
+    conf.urgentOnNotification = root.urgentOnNotification
+    conf.showNotificationBadges = root.showNotificationBadges
+    conf.badgeStyle = root.badgeStyle
+    conf.badgePosition = root.badgePosition
+    conf.badgeColor = root.badgeColor
+    conf.showLabels = root.showLabels
+    conf.labelKind = root.labelKind
+    conf.labelPlacement = root.labelPlacement
+    conf.labelSize = root.labelSize
+    conf.labelContrast = root.labelContrast
+    conf.urgentSound = root.urgentSound
+    conf.urgentSoundName = root.urgentSoundName
+    conf.revealDelay = root.revealDelay
+    conf.tooltipDelay = root.tooltipDelay
+    conf.wheelStepDelay = root.wheelStepDelay
+    conf.pinnedFolders = DockModel.boundPinnedFolders(root.pinnedFolders)
+    conf.presets = DockModel.boundPresets(root.presets)
+    return conf
+  }
+
+  // ------------------------------------------------- appearance presets
+  // Named copies of the look (DockModel.LOOK_KEYS), at most six, kept in the
+  // config. Applying one goes through applyLook, like loading the config.
+
+  function presetIndex(root, id) {
+    var list = root.presets || []
+    for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return i
+    return -1
+  }
+
+  // The preset with this name, ignoring case; "" when none or the name is
+  // longer than a preset name can be.
+  function presetIdByName(root, name) {
+    var raw = String(name == null ? "" : name).trim()
+    if (raw === "" || raw.length > DockModel.MAX_PRESET_NAME) return ""
+    var want = DockModel.cleanPresetName(raw).toLowerCase()
+    var list = root.presets || []
+    for (var i = 0; i < list.length; i++)
+      if (list[i] && list[i].name.toLowerCase() === want) return list[i].id
+    return ""
+  }
+
+  function presetNameTaken(root, name, exceptId) {
+    var id = presetIdByName(root, name)
+    return id !== "" && id !== exceptId
+  }
+
+  function nextPresetName(root) {
+    for (var n = 1; n <= DockModel.MAX_PRESETS + 1; n++)
+      if (!presetNameTaken(root, "Preset " + n, "")) return "Preset " + n
+    return "Preset"
+  }
+
+  function replacePreset(root, i, preset) {
+    var next = root.presets.slice()
+    next[i] = preset
+    root.presets = next
+    root.saveConfig()
+  }
+
+  // A new preset from the current look; returns its id, or "" when the list
+  // is full. A missing or taken name becomes "Preset N".
+  function savePreset(root, name) {
+    if (!root.canSavePreset) return ""
+    var clean = DockModel.cleanPresetName(name)
+    if (clean === "" || presetNameTaken(root, clean, "")) clean = nextPresetName(root)
+    var id = "preset_" + Date.now()
+    while (presetIndex(root, id) >= 0) id += "0"
+    root.presets = (root.presets || []).concat([{ id: id, name: clean, look: root.currentLook }])
+    root.saveConfig()
+    return id
+  }
+
+  // Refuses an empty name or one another preset has.
+  function renamePreset(root, id, name) {
+    var i = presetIndex(root, id)
+    var clean = DockModel.cleanPresetName(name)
+    if (i < 0 || clean === "" || presetNameTaken(root, clean, id)) return false
+    var p = root.presets[i]
+    replacePreset(root, i, { id: p.id, name: clean, look: p.look })
+    return true
+  }
+
+  function updatePreset(root, id) {
+    var i = presetIndex(root, id)
+    if (i < 0) return false
+    var p = root.presets[i]
+    replacePreset(root, i, { id: p.id, name: p.name, look: root.currentLook })
+    return true
+  }
+
+  function deletePreset(root, id) {
+    var i = presetIndex(root, id)
+    if (i < 0) return false
+    var next = root.presets.slice()
+    next.splice(i, 1)
+    root.presets = next
+    root.saveConfig()
+    return true
+  }
+
+  // Keys a preset lacks (saved before they existed) keep their current value.
+  function applyPreset(root, id) {
+    var i = presetIndex(root, id)
+    if (i < 0) return false
+    applyLook(root, Object.assign({}, root.currentLook, root.presets[i].look))
+    root.applyBlurRule(false)
+    root.saveConfig()
+    return true
+  }
+}

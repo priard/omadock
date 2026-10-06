@@ -169,6 +169,14 @@ Item {
     }
   }
 
+  // Name label (visibility/size/contrast decided in DockLabelLogic).
+  DockLabel {
+    rootRef: fitem.rootRef
+    name: fitem.name
+    kind: "folder"
+    tile: fitem
+  }
+
   // Hover tooltip — uses our own HoverTooltip so textFormat: Text.PlainText is enforced.
   HoverTooltip {
     dockRoot: root

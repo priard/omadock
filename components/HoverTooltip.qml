@@ -13,6 +13,10 @@ Item {
   // Windows shown as live preview cards under the label (an app group's
   // member windows); empty keeps the plain one-line bubble.
   property var windows: []
+  // >= 0 pins which window sits at the front of the stack (a scroll-cycled
+  // member preview); -1 keeps the default front: the focused window when
+  // there is one, else the first.
+  property int cycleIndex: -1
   property url fallbackIcon: ""
   property bool hovered: false
   property bool blocked: false
@@ -106,6 +110,7 @@ Item {
             active: wanted && life.alive
             fallbackIcon: bubble.fallbackIcon
             frontIndex: {
+              if (bubble.cycleIndex >= 0 && bubble.cycleIndex < bubble.windows.length) return bubble.cycleIndex
               var fi = bubble.dockRoot ? bubble.dockRoot.focusedIndex(bubble.windows) : -1
               return fi >= 0 ? fi : 0
             }

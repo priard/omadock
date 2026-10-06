@@ -4,7 +4,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
-import "../DockModel.js" as DockModel
+import "../SettingsSearch.js" as SettingsSearch
 import "settings"
 
 // Full-screen overlay holding the dock settings: a sidebar of categories and
@@ -59,7 +59,7 @@ PanelWindow {
   ]
 
   // ---------------------------------------------------------- settings search
-  // Hits rebuild as the query changes (DockModel.searchSettings). Every row
+  // Hits rebuild as the query changes (SettingsSearch.searchSettings). Every row
   // carrying a key is registered under it in registerRows(); a picked hit
   // switches to the row's page and flashes it.
   property var searchHits: []
@@ -300,7 +300,7 @@ PanelWindow {
           width: parent.width
           placeholderText: "Search settings"
           foreground: Color.menu.text
-          onTextChanged: panel.searchHits = text.trim() === "" ? [] : DockModel.searchSettings(text)
+          onTextChanged: panel.searchHits = text.trim() === "" ? [] : SettingsSearch.searchSettings(text)
         }
 
         Column {

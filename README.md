@@ -14,7 +14,7 @@
 <br />
 
 <p align="center">
-  <img src="assets/preview-desktop.png" alt="omadock on Omarchy Desktop" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
+  <img src="assets/preview-desktop.png" alt="omadock on an Omarchy desktop (Ristretto theme) with app, group and folder name labels below the icons" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
 </p>
 
 <p align="center">
@@ -68,7 +68,7 @@ To everyone who donates — really, truly, thank you. 🙏
 Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live window previews, app groups, multi-monitor docks. Beautiful, opinionated, and strictly **0.00% background CPU**.
 
 <p align="center">
-  <img src="assets/screenshot-transparent.png" alt="omadock Close-up View" width="700" />
+  <img src="assets/screenshot-transparent.png" alt="omadock close-up: name labels under the icons over the translucent gradient dock" width="700" />
 </p>
 
 ### ✨ Key Highlights
@@ -82,6 +82,7 @@ Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live wi
 - **🔔 Attention glow & chimes** — bouncing alerts and audio pings.
 - **🔴 Sticky notification badges** — counts matching notifications on pinned, running, and foldered apps; folder tiles sum their members. Counts stay until the app is focused — through dismissals, expiry, and shell restarts. These are not unread-message counts.
 - **🖥️ CLI app identity** — Antigravity and btop keep their own icons when launched in a terminal; the terminal icon is only a fallback.
+- **🏷️ Name labels** — apps, groups and folders can wear their names in a band under (or above) the icons, with per-kind targets and size/contrast controls.
 - **⌨️ Keybindings & IPC** — wired for `~/.config/hypr/bindings.lua` out of the box.
 
 ---
@@ -127,7 +128,7 @@ Every icon shows all its windows at a glance: **▬** active · **●** open · 
 When a window is parked on `special:minimized`, omadock generates a live visual preview tile between your pinned and running applications:
 
 <div align="center">
-  <img src="assets/preview-dock.png" alt="omadock Preview Tiles" width="700" style="border-radius: 8px;" />
+  <img src="assets/preview-dock.png" alt="A minimized window parked on the dock as a live preview tile, next to the folder tiles" width="560" style="border-radius: 8px;" />
 </div>
 
 - **📸→🖱️** Thumbnails appear on minimize; **left-click restores** to the active workspace.
@@ -246,8 +247,19 @@ Deep Linux desktop and compositor integration:
 ### 🗂 11. Window Preview Cards & Smooth Tooltips
 
 - Hovering an app with several windows shows them as a **card stack of live thumbnails** in the tooltip; the wheel browses the stack (paced by `wheelStepDelay`), a click raises the chosen window.
+- **App groups carry the same stack** — the group's tooltip shows its member windows with the focused one in front, and the wheel over the group tile cycles which member the bubble previews; the next click focuses exactly that window.
 - Tooltips fade in with a small rise, linger 200 ms after the pointer leaves, and cross-fade from icon to icon along the dock — no re-dwelling as you move.
 - Menus, folder stacks, app groups and tooltips live in their own focus-grabbing popup windows while the dock layer hugs the card — dock VRAM cost drops from 194 MiB to 26 MiB.
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><img src="assets/preview-group-cycle-1.png" width="330" alt="An app group's tooltip previewing one member window" /></td>
+      <td align="center"><img src="assets/preview-group-cycle-2.png" width="330" alt="After one wheel tick the bubble previews the other member window" /></td>
+    </tr>
+  </table>
+  <img src="assets/preview-group-cycle.gif" width="560" alt="Animated demo: hovering an app group, wheel-cycling its member previews, then clicking to focus the previewed window" />
+</div>
 
 ---
 
@@ -264,28 +276,28 @@ The settings at a glance:
 <div align="center">
   <table>
     <tr>
-      <th align="center" width="25%">Settings Menu</th>
       <th align="center" width="25%">Appearance</th>
-      <th align="center" width="25%">Placement & Alignment</th>
-      <th align="center" width="25%">Behavior & Windows</th>
+      <th align="center" width="25%">Icons</th>
+      <th align="center" width="25%">Motion & Effects</th>
+      <th align="center" width="25%">Behavior</th>
     </tr>
     <tr>
-      <td align="center" valign="top"><img src="assets/preview-settings-1.png" width="200" alt="Main Settings Menu" /></td>
-      <td align="center" valign="top"><img src="assets/preview-settings-2.png" width="200" alt="Appearance Settings" /></td>
-      <td align="center" valign="top"><img src="assets/preview-settings-3.png" width="200" alt="Placement & Alignment Settings" /></td>
-      <td align="center" valign="top"><img src="assets/preview-settings-4.png" width="200" alt="Behavior & Windows Settings" /></td>
+      <td align="center" valign="top"><img src="assets/preview-settings-1.png" width="200" alt="Appearance settings page" /></td>
+      <td align="center" valign="top"><img src="assets/preview-settings-2.png" width="200" alt="Icons settings page" /></td>
+      <td align="center" valign="top"><img src="assets/preview-settings-3.png" width="200" alt="Motion & Effects settings page" /></td>
+      <td align="center" valign="top"><img src="assets/preview-settings-4.png" width="200" alt="Behavior settings page" /></td>
     </tr>
     <tr>
-      <th align="center" width="25%">Effects & Animations</th>
-      <th align="center" width="25%">Size & Spacing</th>
-      <th align="center" width="25%">Folders & Stacks</th>
-      <th align="center" width="25%">App Folders & Groups</th>
+      <th align="center" width="25%">Placement</th>
+      <th align="center" width="25%">Folders</th>
+      <th align="center" width="25%">App Groups</th>
+      <th align="center" width="25%">Presets</th>
     </tr>
     <tr>
-      <td align="center" valign="top"><img src="assets/preview-settings-5.png" width="200" alt="Effects & Animations Settings" /></td>
-      <td align="center" valign="top"><img src="assets/preview-settings-6.png" width="200" alt="Size & Spacing Settings" /></td>
-      <td align="center" valign="top"><img src="assets/preview-settings-7.png" width="200" alt="Folders & Stacks Settings" /></td>
-      <td align="center" valign="top"><img src="assets/preview-settings-8.png" width="200" alt="App Folders & Groups Settings" /></td>
+      <td align="center" valign="top"><img src="assets/preview-settings-5.png" width="200" alt="Placement settings page" /></td>
+      <td align="center" valign="top"><img src="assets/preview-settings-6.png" width="200" alt="Folders settings page" /></td>
+      <td align="center" valign="top"><img src="assets/preview-settings-7.png" width="200" alt="App Groups settings page" /></td>
+      <td align="center" valign="top"><img src="assets/preview-settings-8.png" width="200" alt="Presets settings page" /></td>
     </tr>
   </table>
 </div>
@@ -295,7 +307,48 @@ The settings at a glance:
 - **Placement & Alignment**: `Center (Default)`, `Left Aligned`, `Right Aligned` along the screen edge.
 - **Color Presets**: Theme Auto, Pure Black, Mocha, Deep Slate, Midnight Blue, Dark Navy, Emerald Forest, Velvet Ruby.
 - **Icon Sizing**: Small ($28\text{px}$), Medium ($36\text{px}$), Large ($44\text{px}$), Extra Large ($52\text{px}$).
+- **Icon Styles**: `Original`, `Mono`, `Pixel` (coarse grid) and `Dots` (dithered dot matrix), with grid size, tint, contrast and hover-reveal controls.
 - **App Folders & Groups**: Automatic smart collections from running apps, drag-to-group, in-place title renaming, and column scaling.
+
+<div align="center">
+  <img src="assets/preview-icon-styles.png" width="700" alt="The same dock rendered with the original, pixel and dot-matrix icon styles (top to bottom), icon tint off and an 8-px grid" />
+</div>
+
+---
+
+### 🏷️ Name labels
+
+*Settings → Appearance → Labels* puts every item's name in a band over the icon row — below the icons (at the dock's edge) or above them (keeping the indicator side clear). The fuzzy search jumps straight to any of them: type `pill`, pick *Label contrast*, and the panel scrolls to the row.
+
+<div align="center">
+  <img src="assets/preview-labels.png" width="700" alt="Name labels in pill contrast: each name sits in its own dark pill under the icon" />
+</div>
+
+- **Name labels**: master toggle for the label band.
+- **Label targets**: which items carry a name — `All`, `Apps`, `Groups` or `Folders`.
+- **Label placement**: `Below` the icons, or `Above` them.
+- **Label size**: `Small`, `Medium`, `Large`.
+- **Label contrast**: `Theme` ink, `High` contrast (black or white, whichever reads better), or `Pill` (each name in its own dark pill).
+
+<div align="center">
+  <img src="assets/preview-settings-labels.png" width="420" alt="The Labels section in Settings → Appearance, with the dock underneath previewing pill labels live" />
+</div>
+
+---
+
+### 🌈 One dock, every Omarchy theme
+
+The dock follows your Omarchy theme's palette and wallpaper — three of the twenty-plus themes out of the box:
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><img src="assets/preview-theme-tokyo-night.jpg" width="300" alt="omadock under the Tokyo Night theme" /><br /><sub>Tokyo Night</sub></td>
+      <td align="center"><img src="assets/preview-theme-vantablack.jpg" width="300" alt="omadock under the Vantablack theme" /><br /><sub>Vantablack</sub></td>
+      <td align="center"><img src="assets/preview-theme-catppuccin-latte.jpg" width="300" alt="omadock under the Catppuccin Latte theme" /><br /><sub>Catppuccin Latte</sub></td>
+    </tr>
+  </table>
+</div>
 
 ---
 
@@ -316,7 +369,7 @@ omarchy-shell omadock applyPreset "Night"
 | **Middle Click** | ❖ Omarchy Logo | Spawns default terminal emulator |
 | **Left Click** | Application Icon | Launches app / focuses / restores window |
 | **Middle Click** | Application Icon | Launches a **new instance** of the application |
-| **Scroll Wheel** | Application Icon | Flips through the app's windows in its tooltip; a click focuses the chosen one |
+| **Scroll Wheel** | Application Icon / App Group | Flips through the windows the tooltip previews; a click focuses the chosen one |
 | **Right Click** | Application Icon | Context menu (Window list, Desktop Actions, Pin, Close) |
 | **Left Click** | Folder Stack | Toggles recent-files popover |
 | **Right Click** | Folder Stack | Folder options (Open in File Manager, Unpin) |
@@ -374,6 +427,11 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "keepPointer": true,
   "wheelStepDelay": 150,
   "iconHoverReveal": false,
+  "showLabels": false,
+  "labelKind": "all",
+  "labelPlacement": "below",
+  "labelSize": "small",
+  "labelContrast": "theme",
   "showAppsButton": true,
   "showTooltips": true,
   "advancedTooltips": true,
@@ -441,6 +499,11 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `iconStrength` | `number` | `1` | `mono` / `dots`: how much of the effect covers the original icon, `0`–`1`. |
 | `iconHoverOriginal` | `bool` | `false` | With an icon style on, the hovered icon (dock, group tiles, an opened group) shows as shipped. |
 | `iconHoverReveal` | `bool` | `false` | With `iconHoverOriginal`, hover dissolves the original icon back in as a dithered reveal instead of a hard switch. |
+| `showLabels` | `bool` | `false` | Shows item names in a band over the icon row. |
+| `labelKind` | `string` | `"all"` | Which items carry a name label: `"all"`, `"apps"`, `"groups"` or `"folders"`. |
+| `labelPlacement` | `string` | `"below"` | `"below"` the icons (at the dock's edge) or `"above"` them (the indicator side stays clear). |
+| `labelSize` | `string` | `"small"` | Label text size: `"small"`, `"medium"` or `"large"`. |
+| `labelContrast` | `string` | `"theme"` | Label ink: `"theme"`, `"high"` (black or white, whichever contrasts more) or `"pill"` (each name in its own dark pill). |
 | `keepPointer` | `bool` | `true` | Focusing a window from the dock keeps the pointer where it is instead of warping it to the window centre. |
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
 | `hoverEffect` | `string` | `"zoom"` | Hover mode: magnification `"zoom"` or `"wave"`; effects `"lift"`, `"glow"`, `"glitch"` (shaders); or `"off"`. |

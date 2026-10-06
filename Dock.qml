@@ -9,6 +9,7 @@ import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
 import "components"
+import "components/logic"
 
 Item {
   id: root
@@ -59,12 +60,7 @@ Item {
     return out
   }
 
-  function pickScreen() {
-    var name = root.forcedScreenName || root.screenName
-    var s = name ? root.screenForName(name) : null
-    if (s) return s
-    return root.realScreens.length > 0 ? root.realScreens[0] : null
-  }
+  function pickScreen() { return screenLogic.pickScreen(root) }
 
   readonly property var dockScreen: root.pickScreen()
 
@@ -87,26 +83,9 @@ Item {
   readonly property real outputScale: root.lookupOutputScale(root.monitorRev)
   onDockScreenChanged: root.recheckOutputScale()
 
-  function lookupOutputScale(_rev) {
-    // HyprlandMonitor.scale stops tracking after load, but the monitor's
-    // physical size and Qt's logical screen size stay live — their ratio is
-    // the output scale. Diagonal over diagonal, since width alone breaks on a
-    // rotated output. m.scale is only a last resort. _rev is the binding's
-    // re-run hook (monitorRev), not an input.
-    var m = root.dockScreen ? Hyprland.monitorFor(root.dockScreen) : null
-    var lw = Screen.width
-    var lh = Screen.height
-    if (m && m.width > 0 && m.height > 0 && lw > 0 && lh > 0) {
-      return Math.sqrt((m.width * m.width + m.height * m.height) / (lw * lw + lh * lh))
-    }
-    return (m && m.scale > 0) ? m.scale : 1
-  }
+  function lookupOutputScale(_rev) { return screenLogic.lookupOutputScale(root, _rev) }
 
-  function recheckOutputScale() {
-    Hyprland.refreshMonitors()
-    scaleRevBump.ticks = 0
-    scaleRevBump.restart()
-  }
+  function recheckOutputScale() { return screenLogic.recheckOutputScale(root) }
 
   // Bounded burst, not a poll: stops on its own after two seconds.
   Timer {
@@ -147,47 +126,13 @@ Item {
   property bool perMonitorApps: true
   readonly property bool filterByMonitor: root.perMonitorApps && root.forcedScreenName !== ""
 
-  function monitorNameForWorkspace(target) {
-    if (!target || !Hyprland.workspaces) return ""
-    var list = Hyprland.workspaces.values || []
-    for (var i = 0; i < list.length; i++) {
-      var ws = list[i]
-      if (!ws) continue
-      if (String(ws.name || "") === target || String(ws.id) === target)
-        return (ws.monitor && ws.monitor.name) ? String(ws.monitor.name) : ""
-    }
-    return ""
-  }
+  function monitorNameForWorkspace(target) { return screenLogic.monitorNameForWorkspace(root, target) }
 
-  // The monitor a window belongs to. A parked window sits on the shared
-  // special workspace, so it belongs to the monitor it was minimized from.
-  function monitorNameForHypr(h) {
-    if (!h) return ""
-    var addr = root.windowAddress(h)
-    var origin = (addr && root.minimizedOrigins) ? root.minimizedOrigins[addr] : undefined
-    if (origin !== undefined) {
-      var fromOrigin = root.monitorNameForWorkspace(String(origin))
-      if (fromOrigin) return fromOrigin
-    }
-    // The workspace's monitor tracks moveworkspace events; the window's own
-    // monitor is only a fallback.
-    var mon = (h.workspace && h.workspace.monitor) ? h.workspace.monitor : h.monitor
-    return (mon && mon.name) ? String(mon.name) : ""
-  }
+  function monitorNameForHypr(h) { return screenLogic.monitorNameForHypr(root, h) }
 
-  // Unresolved handles count as local: a window may show on every dock for a
-  // beat while Hyprland catches up, but it never vanishes from all of them.
-  function isHyprOnThisMonitor(h) {
-    if (!root.filterByMonitor) return true
-    var name = root.monitorNameForHypr(h)
-    return name === "" || name === root.forcedScreenName
-  }
+  function isHyprOnThisMonitor(h) { return screenLogic.isHyprOnThisMonitor(root, h) }
 
-  function isToplevelOnThisMonitor(top) {
-    if (!root.filterByMonitor) return true
-    var h = root.hyprToplevelFor(top)
-    return h ? root.isHyprOnThisMonitor(h) : true
-  }
+  function isToplevelOnThisMonitor(top) { return screenLogic.isToplevelOnThisMonitor(root, top) }
 
   onFilterByMonitorChanged: modelTimer.restart()
 
@@ -196,22 +141,9 @@ Item {
   onParkedAtChanged: root.pushSharedState()
   onSharedStateChanged: root.pullSharedState()
 
-  function pushSharedState() {
-    if (!root.sharedState || root._syncingShared) return
-    root._syncingShared = true
-    root.sharedState.minimizedOrigins = root.minimizedOrigins
-    root.sharedState.parkedAt = root.parkedAt
-    root._syncingShared = false
-  }
+  function pushSharedState() { return screenLogic.pushSharedState(root) }
 
-  function pullSharedState() {
-    if (!root.sharedState || root._syncingShared) return
-    root._syncingShared = true
-    root.minimizedOrigins = root.sharedState.minimizedOrigins || ({})
-    root.parkedAt = root.sharedState.parkedAt || ({})
-    root._syncingShared = false
-    modelTimer.restart()
-  }
+  function pullSharedState() { return screenLogic.pullSharedState(root) }
 
   Connections {
     target: root.sharedState
@@ -219,147 +151,58 @@ Item {
     function onParkedAtChanged() { root.pullSharedState() }
   }
 
-  function screenForName(name) {
-    var list = root.realScreens
-    for (var i = 0; i < list.length; i++)
-      if (list[i].name === name) return list[i]
-    return null
-  }
+  function screenForName(name) { return screenLogic.screenForName(root, name) }
 
   readonly property var appLibrary: (shell && shell.appLibrary) ? shell.appLibrary : localAppLibrary
 
+  // <id>Ref aliases expose this file's ids to extracted logic modules
+  // (dockWindowRef above is the same mechanism, declared as an alias).
+  readonly property var appDropCheckRef: appDropCheck
+  readonly property var customFolderPickerProcRef: customFolderPickerProc
+  readonly property var dockFileRef: dockFile
+  readonly property var dropFolderCheckRef: dropFolderCheck
+  readonly property var dropFolderProbeRef: dropFolderProbe
+  readonly property var ejectProcRef: ejectProc
+  readonly property var folderStackScannerRef: folderStackScanner
+  readonly property var launchPruneTimerRef: launchPruneTimer
+  readonly property var modelTimerRef: modelTimer
+  readonly property var removableDrivesScannerRef: removableDrivesScanner
+  readonly property var scaleRevBumpRef: scaleRevBump
+  readonly property var terminalHostDebounceRef: terminalHostDebounce
+  readonly property var themeChangeTimerRef: themeChangeTimer
+  readonly property var themeIconsFileRef: themeIconsFile
+  readonly property var debounceOverlapTimerRef: debounceOverlapTimer
+  readonly property var hideTimerRef: hideTimer
+  readonly property var menuPresetTimerRef: menuPresetTimer
+  readonly property var noWarpProcRef: noWarpProc
+  readonly property var notificationBadgeTimerRef: notificationBadgeTimer
+  readonly property var revealHoverRef: revealHover
+  readonly property var revealTimerRef: revealTimer
+  readonly property var themeFileReloadRef: themeFileReload
+  readonly property var badgeFileRef: badgeFile
+  readonly property var badgeSaveDebounceRef: badgeSaveDebounce
+  readonly property var configFileRef: configFile
+  // ------------------------------------------------------ logic modules
+  DockConfigLogic { id: configLogic }
+  DockWindowLogic { id: windowLogic }
+  DockGroupsLogic { id: groupsLogic }
+  DockNotifLogic { id: notifLogic }
+  DockFolderLogic { id: folderLogic }
+  DockSettingsLogic { id: settingsLogic }
+  DockPinLogic { id: pinLogic }
+  DockContextLogic { id: contextLogic }
+  DockScreenLogic { id: screenLogic }
+  DockStyleLogic { id: styleLogic }
+  DockStateLogic { id: stateLogic }
+  DockPersistLogic { id: persistLogic }
+  DockGroupCycleLogic { id: groupCycleLogic }
+  DockLabelLogic { id: labelLogic }
+
   // Fallback standalone application library for host capability gates (e.g. Omarchy 4.x scoped plugins)
-  QtObject {
+
+  LocalAppLibrary {
     id: localAppLibrary
-
-    signal appsChanged()
-
-    // Absolute-path icon index, mirroring the host AppLibrary. Qt's themed
-    // lookup resolves against the *configured* icon theme, so a theme that is
-    // named but not installed (e.g. Omarchy's vantablack -> "Yaru-gray", which
-    // yaru-icon-theme no longer ships) makes Quickshell.iconPath() return ""
-    // for every name and the dock renders blank slots. The host's own menu
-    // survives that because it consults this index first; the fallback library
-    // has to do the same or it is strictly more fragile than the host.
-    property var iconIndex: ({})
-
-    function sortedEntries(query) {
-      try {
-        var values = DesktopEntries.applications.values
-        if (!values) return []
-        return values.filter(function(e) { return !e.noDisplay })
-      } catch (e) {
-        console.warn("[omadock] Failed reading desktop entries:", e)
-        return []
-      }
-    }
-
-    function entryName(entry) {
-      if (!entry) return ""
-      var target = (entry && entry.entry) ? entry.entry : entry
-      var n = String(target.name || "")
-      return n !== "" ? n : String(target.id || "")
-    }
-
-    function iconSource(icon) {
-      var value = String(icon || "")
-      if (value === "") return localAppLibrary.fallbackIcon()
-      if (value.indexOf("file://") === 0 || value.indexOf("image://") === 0) return value
-      if (value.charAt(0) === "/") return Util.fileUrl(value)
-      // Reading iconIndex registers the dependency, so swapping the property
-      // after a scan re-evaluates every binding that called through here.
-      var found = localAppLibrary.iconIndex[value]
-      if (found) return Util.fileUrl(found)
-      var themed = ""
-      try {
-        themed = Quickshell.iconPath(value, true)
-      } catch (e) {
-        console.warn("[omadock] Failed resolving themed icon path:", value, e)
-      }
-      if (themed && themed.length > 0) return themed
-      return localAppLibrary.fallbackIcon()
-    }
-
-    // Generic placeholder, resolved through the same index so it survives a
-    // broken theme too. Returns "" only if nothing at all is on disk, which
-    // callers already treat as "draw nothing".
-    function fallbackIcon() {
-      var found = localAppLibrary.iconIndex["application-x-executable"]
-      if (found) return Util.fileUrl(found)
-      var themed = ""
-      try {
-        themed = Quickshell.iconPath("application-x-executable", true)
-      } catch (e) {
-        console.warn("[omadock] Failed resolving fallback icon path:", e)
-      }
-      return themed || ""
-    }
-
-    function refreshIcons() {
-      if (!iconIndexScan.running) iconIndexScan.running = true
-    }
-
-    // SVGs before PNGs so the first hit per name is the scalable one; awk
-    // keeps only that first hit, so QML parses ~2 300 lines instead of ~23 600.
-    function iconIndexScanCommand() {
-      return [
-        'dirs="$HOME/.icons $HOME/.local/share/icons";',
-        'IFS=":"; for d in ${XDG_DATA_DIRS:-/usr/local/share:/usr/share}; do dirs="$dirs $d/icons"; done; unset IFS;',
-        '{ for ext in svg png; do',
-        '  for base in $dirs; do',
-        '    [[ -d $base ]] && find "$base" \\( -path "*/apps/*" -o -path "*/devices/*" -o -path "*/places/*" -o -path "*/mimetypes/*" \\) -name "*.$ext" 2>/dev/null;',
-        '  done;',
-        '  find /usr/share/pixmaps -maxdepth 1 -name "*.$ext" 2>/dev/null;',
-        'done; } | awk -F/ \'{ n = $NF; sub(/\\.[^.]*$/, "", n); if (!(n in seen)) { seen[n] = 1; print } }\''
-      ].join(' ')
-    }
-
-    function launch(desktopId, name) {
-      var id = String(desktopId || "")
-      if (id === "") return
-      // Always append .desktop — DesktopEntry.id strips the extension, so
-      // ids like org.telegram.desktop need it re-added to resolve correctly.
-      // Redirect stdout and stderr to /dev/null so spawned applications don't inherit
-      // transient QProcess pipes that close when gtk-launch exits (causing EPIPE crashes).
-      var args = ["bash", "-c", "exec uwsm-app -- gtk-launch -- \"$1\" >/dev/null 2>&1", "_", id + ".desktop"]
-      var desktop = DockModel.entryFor(root.appRows, id)
-      // GTK's generic terminal launch loses the CLI app-id, so a known CLI
-      // product would come back wearing its terminal's identity. Route only
-      // those two through Omarchy's TUI wrapper with the already parsed argv;
-      // every other terminal entry keeps its normal launch path.
-      if (desktop && DockModel.isKnownCli(id) && desktop.runInTerminal && desktop.command && desktop.command.length > 0) {
-        var tuiCommand = ["omarchy-launch-tui", "--app-id=org.omarchy." + id].concat(DockModel.toArray(desktop.command))
-        args = ["bash", "-c", 'cd -- "$1" || exit; shift; exec "$@" >/dev/null 2>&1',
-                "_", desktop.workingDirectory || Quickshell.env("HOME")].concat(tuiCommand)
-      }
-      // gtk-launch exits non-zero up front when the desktop file no longer
-      // resolves (stale pin, uninstalled app), but execDetached cannot
-      // observe exit codes. Launches run through launchProc so failures
-      // surface a notification instead of bouncing silently. The overlap
-      // fallback keeps rare concurrent clicks fire-and-forget; the probe
-      // itself exits within milliseconds.
-      if (launchProc.running) {
-        Quickshell.execDetached(args)
-        return
-      }
-      launchProc.pendingName = String(name || id)
-      launchProc.command = args
-      launchProc.running = true
-    }
-  }
-
-  // One-shot scans only: started on load, on app-list changes and on theme
-  // changes. Nothing polls, so the dock stays at 0% CPU when idle.
-  Process {
-    id: iconIndexScan
-    command: ["bash", "-c", localAppLibrary.iconIndexScanCommand()]
-    // One collected read, parsed once: a callback per line cost ~23 600
-    // GUI-thread calls on every start and theme change.
-    stdout: StdioCollector { id: iconIndexOut; waitForEnd: true }
-    onExited: {
-      localAppLibrary.iconIndex = DockModel.parseIconIndex(iconIndexOut.text)
-      localAppLibrary.appsChanged()
-    }
+    rootRef: root
   }
 
   // Launch wrapper: one-shot, event-driven (a failed gtk-launch probe exits
@@ -375,21 +218,6 @@ Item {
     }
   }
 
-  // Coalesces bursts of app-list changes (one package install touches many
-  // entries) into a single rescan.
-  Timer {
-    id: iconIndexDebounce
-    interval: 750
-    onTriggered: if (!iconIndexScan.running) iconIndexScan.running = true
-  }
-
-  Connections {
-    target: (root.appLibrary === localAppLibrary && typeof DesktopEntries !== "undefined") ? DesktopEntries : null
-    function onApplicationsChanged() {
-      iconIndexDebounce.restart()
-      localAppLibrary.appsChanged()
-    }
-  }
 
   // Build the index once at load, but only when the host withheld its own
   // library — with a host library present the index would be dead weight.
@@ -400,7 +228,7 @@ Item {
     // ran on a fresh install. Real values re-apply unchanged once the async
     // gate lands them.
     root.loadConfig()
-    if (root.appLibrary === localAppLibrary) iconIndexScan.running = true
+    if (root.appLibrary === localAppLibrary) localAppLibrary.refreshIcons()
     // Fills HyprlandMonitor.scale for outputScale.
     root.recheckOutputScale()
   }
@@ -464,18 +292,7 @@ Item {
     }
     return n
   }
-  // Slot index of running entry idx among VISIBLE icons only. Fully-tiled
-  // entries collapse to zero width, so they must not consume a slot in the
-  // wave home-center arithmetic — every icon after one would drift by a
-  // full slot. Same predicate as visibleRunningCount, so they never disagree.
-  function visibleRunningSlotBefore(idx) {
-    var n = 0
-    for (var i = 0; i < idx && i < root.runningSection.length; i++) {
-      var e = root.runningSection[i]
-      if (!(root.showMinimizedTiles && e && DockModel.allWindowsMinimized(e.windowList, root.liveWsNameOf, root.minimizedWorkspace))) n++
-    }
-    return n
-  }
+  function visibleRunningSlotBefore(idx) { return styleLogic.visibleRunningSlotBefore(root, idx) }
   // Pinned-group | running divider. Sits after the tile section when tiles
   // exist, so it doubles as the right tile divider.
   readonly property bool hasSeparator: (root.pinnedSection.length > 0 || root.hasTiles) && root.visibleRunningCount > 0
@@ -559,15 +376,7 @@ Item {
   // Where the row starts within the card (card-local coordinates).
   readonly property real baseRowLeft: dockCard ? dockCard.contentLeftInset : Style.space(5)
 
-  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth) {
-    var seps = (typeof sepCount === "number") ? sepCount : (sepCount ? 1 : 0)
-    return root.baseRowLeft
-      + elementIndex * root.gapWidth
-      + slotsBefore * root.iconSlot
-      + seps * root.separatorWidth
-      + (extraLeftWidth || 0)
-      + root.iconSlot / 2
-  }
+  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth) { return styleLogic.slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth) }
 
   // Width the tile section consumes ahead of elements that follow it,
   // including its left divider.
@@ -576,30 +385,15 @@ Item {
     : 0
   readonly property int tileElements: root.hasTiles ? root.tileCount : 0
 
-  function magnifyAt(homeCenter) {
-    if (!root.waveHover) return 0
-    var distance = root.pointerX - homeCenter
-    if (Math.abs(distance) >= root.magnifyRange) return 0
-    return 0.5 * (1 + Math.cos(Math.PI * distance / root.magnifyRange))
-  }
+  function magnifyAt(homeCenter) { return styleLogic.magnifyAt(root, homeCenter) }
 
-  function magnifyScaleAt(homeCenter) {
-    return 1 + (root.magnifyPeak - 1) * root.magnifyAt(homeCenter)
-  }
+  function magnifyScaleAt(homeCenter) { return styleLogic.magnifyScaleAt(root, homeCenter) }
 
-  // Layout slot expansion handles spacing naturally; manual translation nudges are deprecated.
-  function waveOffsetAt(homeCenter) {
-    return 0
-  }
+  function waveOffsetAt(homeCenter) { return styleLogic.waveOffsetAt(root, homeCenter) }
 
   // ------------------------------------------------- contrast
 
-  // The bar foreground is tuned for the bar's own background. A custom dock
-  // colour can land on the same side of the scale — a light theme's dark text
-  // on a dark card, or the reverse — so flip only when the two collide.
-  function isLight(value) {
-    return (0.2126 * value.r + 0.7152 * value.g + 0.0722 * value.b) > 0.5
-  }
+  function isLight(value) { return styleLogic.isLight(root, value) }
 
   // Corner radius for the dock card. An automatic "rounded" tracks the card's
   // own height, so the panel keeps the same visual softness at any icon size.
@@ -622,9 +416,7 @@ Item {
     return root.roundedRadius
   }
 
-  function cardRadius(height) {
-    return root.effectiveCardRadius
-  }
+  function cardRadius(height) { return styleLogic.cardRadius(root, height) }
 
   readonly property color dockForeground: {
     var custom = String(root.dockBgColor || "")
@@ -676,11 +468,7 @@ Item {
   // Pinned apps and app groups in dock order (DockModel.pinnedRow).
   readonly property var pinnedRow: DockModel.pinnedRow(root.pinnedSection, root.appGroups)
 
-  // Keys and lookups for the keyed Repeater models (KeyedListModel), which
-  // keep the delegates of items that stay when these lists are replaced.
-  function pinnedRowKey(item) {
-    return item.kind === "group" ? "group:" + item.id : "app:" + item.appId
-  }
+  function pinnedRowKey(item) { return styleLogic.pinnedRowKey(root, item) }
   readonly property var pinnedRowKeys: root.pinnedRow.map(root.pinnedRowKey)
   readonly property var pinnedRowByKey: {
     var map = {}
@@ -699,57 +487,9 @@ Item {
   // running, and foldered (grouped) apps alike.
   readonly property var notifEntries: root.pinnedSection.concat(root.runningSection).concat(root.groupedSection || [])
 
-  function refreshDock() {
-    var tops = ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []
-    if (root.filterByMonitor) tops = tops.filter(root.isToplevelOnThisMonitor)
-    var next = root.appLibrary
-      ? DockModel.buildEntries(root.pinnedIds, tops, root.appRows,
-                               root.appLibrary, root.hyprToplevelFor, root.minimizedWorkspace, root.minimizedOrigins, root.appGroups, root.terminalHosts, root.terminalApps)
-      : { pinned: [], running: [] }
-    // An equal model would only re-run every delegate's bindings.
-    if (!DockModel.sameModel(next, root.dockModel)) root.dockModel = next
-    root.rescanMinimizedWindows()
-    root.pruneLaunching()
-    root.pruneWindowState()
-    notificationBadgeTimer.restart()
-  }
+  function refreshDock() { return stateLogic.refreshDock(root) }
 
-  function rescanMinimizedWindows() {
-    var mins = []
-    var tops = Hyprland.toplevels ? Hyprland.toplevels.values : []
-    for (var i = 0; i < tops.length; i++) {
-      var h = tops[i]
-      if (!h) continue
-      var addr = root.windowAddress(h)
-      if (!addr) continue
-      var isParked = (h.workspace && String(h.workspace.name || "") === root.minimizedWorkspace)
-                  || (root.minimizedOrigins && root.minimizedOrigins[addr] !== undefined)
-      if (!isParked) continue
-      if (!root.isHyprOnThisMonitor(h)) continue
-      var top = root.liveToplevelForAddress(addr)
-      var title = String((top && top.title) || h.title || "Window")
-      var appId = ""
-      var hClass = (h && h.lastIpcObject) ? (h.lastIpcObject["class"] || h.lastIpcObject["initialClass"] || "") : ""
-      appId = (top && top.appId) ? DockModel.normalizeId(top.appId)
-        : (hClass ? DockModel.normalizeId(hClass) : "")
-      mins.push({ address: addr, title: title, appId: appId, waylandToplevel: top })
-    }
-    // Oldest parked first, so the tiles read chronologically left to right.
-    mins.sort(function (a, b) {
-      var ta = root.parkedAt[a.address] !== undefined ? root.parkedAt[a.address] : 0
-      var tb = root.parkedAt[b.address] !== undefined ? root.parkedAt[b.address] : 0
-      return ta - tb
-    })
-    // Assign only on real change: a fresh array per rebuild would recreate
-    // every tile delegate on unrelated events, eating clicks and forcing
-    // pointless capture re-negotiations.
-    var sig = ""
-    for (var s = 0; s < mins.length; s++) sig += JSON.stringify([mins[s].address, mins[s].title, mins[s].appId]) + ","
-    if (sig !== root._minimizedSig) {
-      root._minimizedSig = sig
-      root.minimizedWindows = mins
-    }
-  }
+  function rescanMinimizedWindows() { return stateLogic.rescanMinimizedWindows(root) }
 
   readonly property string activeId: {
     var top = ToplevelManager.activeToplevel
@@ -773,14 +513,7 @@ Item {
   // inside the parking lot. Bounded; addresses vanish when their windows do.
   property var focusOrder: []
 
-  function rememberFocus(addr) {
-    if (!addr) return
-    var out = [addr]
-    for (var i = 0; i < root.focusOrder.length && out.length < 12; i++) {
-      if (root.focusOrder[i] !== addr) out.push(root.focusOrder[i])
-    }
-    root.focusOrder = out
-  }
+  function rememberFocus(addr) { return stateLogic.rememberFocus(root, addr) }
 
   readonly property int focusedWorkspaceId: Hyprland.focusedWorkspace
     ? Hyprland.focusedWorkspace.id
@@ -1033,18 +766,9 @@ Item {
   // same accent would otherwise vanish into it.
   readonly property color iconTintColor: root.tintFor(root.iconTint, root.dockForeground, root.iconBackdropColor)
 
-  // Tint for an iconTint mode ("text", "accent", "bw") over a backdrop.
-  function tintFor(mode, textColor, backdrop) {
-    if (mode === "bw") return root.blackOrWhiteOn(backdrop)
-    return root.readableOn(mode === "accent" ? Color.accent : textColor, backdrop)
-  }
+  function tintFor(mode, textColor, backdrop) { return styleLogic.tintFor(root, mode, textColor, backdrop) }
 
-  // Near black or near white, whichever contrasts more with the backdrop.
-  function blackOrWhiteOn(backdrop) {
-    var dark = Qt.color("#141414")
-    var light = Qt.color("#f2f2f2")
-    return root.contrastRatio(dark, backdrop) >= root.contrastRatio(light, backdrop) ? dark : light
-  }
+  function blackOrWhiteOn(backdrop) { return styleLogic.blackOrWhiteOn(root, backdrop) }
 
   // Best guess at the colour behind the icons: the card's fill (for a
   // gradient, its colours averaged and mixed into the base by the strength
@@ -1106,34 +830,10 @@ Item {
     return c
   }
 
-  // WCAG relative luminance and contrast ratio.
-  function luminance(c) {
-    function lin(v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
-    return 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b)
-  }
-  function contrastRatio(a, b) {
-    var la = root.luminance(a), lb = root.luminance(b)
-    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
-  }
+  function luminance(c) { return styleLogic.luminance(root, c) }
+  function contrastRatio(a, b) { return styleLogic.contrastRatio(root, a, b) }
 
-  // A colour with the given hue and saturation, moved in lightness away
-  // from the backdrop (darker on a light one, lighter on a dark one) until
-  // it reaches a 3:1 contrast ratio, the WCAG minimum for graphics.
-  function readableOn(color, backdrop) {
-    var c = Qt.color(color)
-    var bg = Qt.color(backdrop)
-    if (root.contrastRatio(c, bg) >= 3) return c
-    var darker = root.luminance(bg) > 0.18
-    var h = c.hslHue < 0 ? 0 : c.hslHue
-    var sat = c.hslSaturation
-    var best = c
-    for (var step = 1; step <= 20; step++) {
-      var l = darker ? Math.max(0, c.hslLightness - step * 0.05) : Math.min(1, c.hslLightness + step * 0.05)
-      best = Qt.hsla(h, sat, l, c.a)
-      if (root.contrastRatio(best, bg) >= 3) break
-    }
-    return best
-  }
+  function readableOn(color, backdrop) { return styleLogic.readableOn(root, color, backdrop) }
   // Without a card to cast one, each icon casts its own shadow.
   readonly property bool iconShadow: root.showShadow && !root.showBackground && root.shadowStrength > 0
   property bool showBorder: true
@@ -1164,25 +864,7 @@ Item {
   // on the dock's own backdrop.
   readonly property color symbolicIconColor: root.symbolicColorOn(root.iconBackdropColor)
 
-  // Symbolic icon colour over a given backdrop: white or black when set,
-  // for "bw" whichever of the two contrasts more with that backdrop (so a
-  // folder can be dark on the dock and light in a dark stack popup), and
-  // otherwise white or black to suit the theme.
-  function symbolicColorOn(backdrop) {
-    var c
-    if (root.folderColor === "white") c = Qt.color("#ffffff")
-    else if (root.folderColor === "black") c = Qt.color("#111111")
-    else if (root.folderColor === "bw") c = root.blackOrWhiteOn(backdrop)
-    else c = Qt.color((Color.bar.background.hslLightness < 0.5 || Color.background.hslLightness < 0.5) ? "#ffffff" : "#111111")
-    // Pure white glares next to the app icons; mix a little of the backdrop
-    // into light glyphs so they sit in the panel instead.
-    if (c.hslLightness > 0.5) {
-      var bg = Qt.color(backdrop)
-      var k = root.symbolicLightSoftening
-      c = Qt.rgba(c.r + (bg.r - c.r) * k, c.g + (bg.g - c.g) * k, c.b + (bg.b - c.b) * k, 1)
-    }
-    return c
-  }
+  function symbolicColorOn(backdrop) { return styleLogic.symbolicColorOn(root, backdrop) }
   // Share of the backdrop mixed into light symbolic glyphs.
   readonly property real symbolicLightSoftening: 0.25
   property int itemSpacing: 4
@@ -1201,6 +883,13 @@ Item {
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
   property bool urgentOnNotification: true
+  // ---- name labels on the tiles (policy in DockLabelLogic)
+  property bool showLabels: false
+  property string labelKind: "all"        // all | apps | groups | folders
+  property string labelPlacement: "below" // below | above
+  property string labelSize: "small"      // small | medium | large
+  property string labelContrast: "theme"  // theme | high | pill
+
   property bool showNotificationBadges: true
   // Badge look: what the pill carries, which corner it sits on, its colour.
   property string badgeStyle: "count"
@@ -1492,335 +1181,43 @@ Item {
     }
   }
 
-  // A chooser closed by the compositor rather than through its own Cancel may
-  // never answer the portal, which would leave the picker process waiting and
-  // swallow every later click. Asking again restarts it instead.
-  function pickCustomFolder() {
-    if (customFolderPickerProc.running) {
-      customFolderPickerProc.running = false
-      Qt.callLater(function() { customFolderPickerProc.running = true })
-      return
-    }
-    customFolderPickerProc.running = true
-  }
+  function pickCustomFolder() { return folderLogic.pickCustomFolder(root) }
 
-  function scanRemovableDrives() {
-    if (!root.showRemovableDrives) {
-      root.mountedDrives = []
-      return
-    }
-    if (!removableDrivesScanner.running) removableDrivesScanner.running = true
-  }
+  function scanRemovableDrives() { return folderLogic.scanRemovableDrives(root) }
 
-  function openDriveContext(dev, mp, name, space, cx, cy) {
-    root.closeContext()
-    root.closeFolderStack()
-    root.closeAppGroup()
-    root.contextAppId = "__drive_context__"
-    root.contextDriveDev = dev || ""
-    root.contextDriveMount = mp || ""
-    root.contextDriveName = name || "Drive"
-    root.contextDriveSpace = space || ""
-    root.contextX = cx
-    root.contextY = cy
-  }
+  function openDriveContext(dev, mp, name, space, cx, cy) { return folderLogic.openDriveContext(root, dev, mp, name, space, cx, cy) }
 
-  function ejectDrive(dev, mountpoint, name) {
-    ejectProc.dev = dev || ""
-    ejectProc.mountpoint = mountpoint || ""
-    ejectProc.driveName = name || "Drive"
-    ejectProc.running = true
-  }
+  function ejectDrive(dev, mountpoint, name) { return folderLogic.ejectDrive(root, dev, mountpoint, name) }
 
-  function setDockAlignment(align) {
-    var a = String(align || "").toLowerCase()
-    root.alignment = (a === "left" || a === "right") ? a : "center"
-    root.saveConfig()
-    if (root.intelligentAutohide) debounceOverlapTimer.restart()
-    root.syncVisibility()
-  }
+  function setDockAlignment(align) { return stateLogic.setDockAlignment(root, align) }
 
-  function setDockPosition(pos) {
-    setDockAlignment(pos)
-  }
+  function setDockPosition(pos) { return stateLogic.setDockPosition(root, pos) }
 
-  function openAppGroup(gdata, cx, cy) {
-    if (root.activeAppGroupId === (gdata && gdata.id ? gdata.id : "")) {
-      root.closeAppGroup()
-      return
-    }
-    root.closeContext()
-    root.closeFolderStack()
-    root.activeAppGroupId = (gdata && gdata.id) ? gdata.id : ""
-    root.activeAppGroupData = gdata
-    root.activeAppGroupX = cx
-    root.syncVisibility()
-  }
+  function openAppGroup(gdata, cx, cy) { return groupsLogic.openAppGroup(root, gdata, cx, cy) }
 
-  function closeAppGroup() {
-    root.activeAppGroupId = ""
-    root.activeAppGroupData = null
-    root.syncVisibility()
-  }
+  function closeAppGroup() { return groupsLogic.closeAppGroup(root) }
 
-  function openAppGroupContext(gdata, cx, cy) {
-    root.closeContext()
-    root.closeFolderStack()
-    root.closeAppGroup()
-    root.contextAppId = "__app_group_context__"
-    root.contextAppGroupData = gdata
-    root.contextX = cx
-    root.contextY = cy
-  }
+  function openAppGroupContext(gdata, cx, cy) { return groupsLogic.openAppGroupContext(root, gdata, cx, cy) }
 
-  function createAppGroupFromRunning() {
-    var all = (root.pinnedSection || []).concat(root.runningSection || [])
-    var ids = []
-    for (var i = 0; i < all.length; i++) {
-      if (all[i] && all[i].running && all[i].appId && ids.indexOf(all[i].appId) < 0) {
-        ids.push(all[i].appId)
-      }
-    }
-    if (ids.length === 0) return
-    var newGroup = {
-      id: "group_" + Date.now(),
-      name: "Group " + (root.appGroups ? (root.appGroups.length + 1) : 1),
-      icon: "folder",
-      apps: ids,
-      cols: 3
-    }
-    root.appGroups = (root.appGroups || []).concat([newGroup])
-    root.saveConfig()
-  }
+  function createAppGroupFromRunning() { return groupsLogic.createAppGroupFromRunning(root) }
 
-  function createAppGroupFromDrop(targetAppId, draggedAppId) {
-    if (!targetAppId || !draggedAppId || targetAppId === draggedAppId) return
-    var targetEntry = DockModel.entryFor(root.appRows, targetAppId)
-    var folderName = "Folder"
-    if (targetEntry && targetEntry.name) {
-      folderName = targetEntry.name + " & more"
-    }
+  function createAppGroupFromDrop(targetAppId, draggedAppId) { return groupsLogic.createAppGroupFromDrop(root, targetAppId, draggedAppId) }
 
-    // The group takes the place of the app it was dropped on.
-    var pinsNow = root.pinnedIds || []
-    var at = pinsNow.indexOf(targetAppId)
-    var anchor = ""
-    for (var n = at + 1; at >= 0 && n < pinsNow.length; n++) {
-      if (pinsNow[n] !== targetAppId && pinsNow[n] !== draggedAppId) { anchor = pinsNow[n]; break }
-    }
-    var newGroup = {
-      id: "group_" + Date.now(),
-      name: folderName,
-      icon: "folder",
-      apps: [targetAppId, draggedAppId],
-      cols: 3,
-      before: anchor
-    }
-    root.appGroups = (root.appGroups || []).concat([newGroup])
+  function addAppToGroup(groupId, appId) { return groupsLogic.addAppToGroup(root, groupId, appId) }
 
-    // Remove grouped items from pinnedIds so they now live inside the folder
-    var pins = root.pinnedIds || []
-    var nextPins = []
-    for (var p = 0; p < pins.length; p++) {
-      if (pins[p] !== targetAppId && pins[p] !== draggedAppId) {
-        nextPins.push(pins[p])
-      }
-    }
-    root.setPinned(nextPins)
-    root.saveConfig()
-  }
+  function updateAppGroupName(groupId, newName) { return groupsLogic.updateAppGroupName(root, groupId, newName) }
 
-  function addAppToGroup(groupId, appId) {
-    if (!groupId || !appId) return
-    var groups = root.appGroups || []
-    var next = []
-    for (var i = 0; i < groups.length; i++) {
-      var g = groups[i]
-      if (g && g.id === groupId) {
-        var curApps = DockModel.toArray(g.apps)
-        if (curApps.indexOf(appId) < 0) curApps.push(appId)
-        next.push({ id: g.id, name: g.name, icon: g.icon, apps: curApps, cols: g.cols || 3, before: g.before || "" })
-      } else {
-        next.push(g)
-      }
-    }
-    root.appGroups = next
+  function renameAppGroup(groupId, newName) { return groupsLogic.renameAppGroup(root, groupId, newName) }
 
-    // Remove from pinnedIds if it was pinned
-    var pins = root.pinnedIds || []
-    var nextPins = []
-    for (var p = 0; p < pins.length; p++) {
-      if (pins[p] !== appId) nextPins.push(pins[p])
-    }
-    root.setPinned(nextPins)
-    root.saveConfig()
-  }
+  function updateAppGroupColumns(groupId, cols) { return groupsLogic.updateAppGroupColumns(root, groupId, cols) }
 
-  function updateAppGroupName(groupId, newName) {
-    if (!groupId || !newName) return
-    var groups = root.appGroups || []
-    var next = []
-    for (var i = 0; i < groups.length; i++) {
-      var g = groups[i]
-      if (g && g.id === groupId) {
-        next.push({ id: g.id, name: newName.trim(), icon: g.icon, apps: g.apps, cols: g.cols || 3, before: g.before || "" })
-      } else {
-        next.push(g)
-      }
-    }
-    root.appGroups = next
-    if (root.activeAppGroupData && root.activeAppGroupData.id === groupId) {
-      root.activeAppGroupData = Object.assign({}, root.activeAppGroupData, { name: newName.trim() })
-    }
-    root.saveConfig()
-  }
+  function removeAppFromGroup(groupId, appId, insertBeforeId) { return groupsLogic.removeAppFromGroup(root, groupId, appId, insertBeforeId) }
 
-  function renameAppGroup(groupId, newName) {
-    root.updateAppGroupName(groupId, newName)
-  }
+  function ungroupAppGroup(groupId) { return groupsLogic.ungroupAppGroup(root, groupId) }
 
-  function updateAppGroupColumns(groupId, cols) {
-    if (!groupId || !cols) return
-    var groups = root.appGroups || []
-    var next = []
-    var c = Math.max(2, Math.min(4, cols))
-    for (var i = 0; i < groups.length; i++) {
-      var g = groups[i]
-      if (g && g.id === groupId) {
-        next.push({ id: g.id, name: g.name, icon: g.icon, apps: g.apps, cols: c, before: g.before || "" })
-      } else {
-        next.push(g)
-      }
-    }
-    root.appGroups = next
-    if (root.activeAppGroupData && root.activeAppGroupData.id === groupId) {
-      root.activeAppGroupData = Object.assign({}, root.activeAppGroupData, { cols: c })
-    }
-    root.saveConfig()
-  }
+  function removeAppGroup(groupId) { return groupsLogic.removeAppGroup(root, groupId) }
 
-  function removeAppFromGroup(groupId, appId, insertBeforeId) {
-    if (!groupId || !appId) return
-    var groups = root.appGroups || []
-    var next = []
-    var remainingApps = []
-
-    for (var i = 0; i < groups.length; i++) {
-      var g = groups[i]
-      if (g && g.id === groupId) {
-        var curApps = DockModel.toArray(g.apps)
-        var filtered = []
-        for (var a = 0; a < curApps.length; a++) {
-          if (curApps[a] !== appId) filtered.push(curApps[a])
-        }
-        remainingApps = filtered
-        if (filtered.length > 1) {
-          next.push({ id: g.id, name: g.name, icon: g.icon, apps: filtered, cols: g.cols || 3, before: g.before || "" })
-        }
-      } else {
-        next.push(g)
-      }
-    }
-    root.appGroups = next
-
-    var pins = (root.pinnedIds || []).slice()
-
-    // If remaining length === 1, dissolve group: extract single remaining app into pinnedIds
-    if (remainingApps.length === 1) {
-      var lastApp = remainingApps[0]
-      if (pins.indexOf(lastApp) < 0) {
-        pins.push(lastApp)
-      }
-      if (root.activeAppGroupId === groupId) {
-        root.closeAppGroup()
-      }
-    } else if (remainingApps.length === 0) {
-      if (root.activeAppGroupId === groupId) {
-        root.closeAppGroup()
-      }
-    }
-
-    // Restore removed app to pinned items if not dragging (e.g. context menu ungroup)
-    if (!root.dragSourceGroupId) {
-      if (pins.indexOf(appId) < 0) {
-        if (insertBeforeId) {
-          var toIdx = pins.indexOf(DockModel.stripDesktop(insertBeforeId))
-          if (toIdx >= 0) pins.splice(toIdx, 0, appId)
-          else pins.push(appId)
-        } else {
-          pins.push(appId)
-        }
-      }
-    }
-
-    root.setPinned(pins)
-    root.saveConfig()
-
-    if (remainingApps.length > 1 && root.activeAppGroupId === groupId) {
-      var foundGroup = null
-      for (var j = 0; j < next.length; j++) {
-        if (next[j].id === groupId) { foundGroup = next[j]; break }
-      }
-      if (foundGroup) root.activeAppGroupData = foundGroup
-      else root.closeAppGroup()
-    }
-  }
-
-  // Dissolves a group: its apps become pins where the group stood. Removing
-  // a group (removeAppGroup) drops its apps from the dock instead, as
-  // dragging a pin off the dock unpins it.
-  function ungroupAppGroup(groupId) {
-    if (!groupId) return
-    if (root.activeAppGroupId === groupId) root.closeAppGroup()
-    root.applyPinnedRow(DockModel.ungroupRow(root.pinnedRow, groupId))
-  }
-
-  function removeAppGroup(groupId) {
-    var groups = root.appGroups || []
-    var next = []
-    for (var i = 0; i < groups.length; i++) {
-      if (groups[i] && groups[i].id !== groupId) {
-        next.push(groups[i])
-      }
-    }
-    root.appGroups = next
-    root.saveConfig()
-    if (root.activeAppGroupId === groupId) root.closeAppGroup()
-  }
-
-  function syncVisibility() {
-    // Mode 1: Always Show
-    if (!root.autohide) {
-      hideTimer.stop()
-      revealTimer.stop()
-      root.dockVisible = true
-      return
-    }
-
-    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (revealHover && revealHover.hovered) || root.contextAppId !== "" || root.dockDragActive || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen || root.externalDragOver || root.appDropTargetId !== ""
-
-    // Hovered, Context Menu Open, or Dragging: keep visible
-    if (isHovered) {
-      hideTimer.stop()
-      if (root.dockVisible) revealTimer.stop()
-      else if (!revealTimer.running) revealTimer.restart()
-      return
-    }
-
-    revealTimer.stop()
-
-    // Mode 3: Intelligent Autohide without window overlap -> stay visible on empty desktop
-    if (root.intelligentAutohide && !root.windowsOverlapDock) {
-      hideTimer.stop()
-      root.dockVisible = true
-      return
-    }
-
-    // Standard Autohide OR Intelligent Autohide with overlapping window -> hide after delay
-    if (root.dockVisible) {
-      hideTimer.restart()
-    }
-  }
+  function syncVisibility() { return stateLogic.syncVisibility(root) }
 
   onContextAppIdChanged: root.syncVisibility()
   onActiveStackFolderChanged: root.syncVisibility()
@@ -1970,16 +1367,7 @@ Item {
     function onAccentChanged() { root.handleShellThemeChanged() }
   }
 
-  // A theme switch replaces the whole current/theme directory, so the file
-  // watches on colors.toml and icons.theme fire once and then follow the
-  // deleted files: from the second switch on the dock kept the first
-  // theme's palette and icon theme. The shell's own colour signals still
-  // arrive on every switch, so they re-read both files (coalesced; their
-  // onLoaded runs handleThemeChanged with the new text).
-  function handleShellThemeChanged() {
-    themeFileReload.restart()
-    root.handleThemeChanged()
-  }
+  function handleShellThemeChanged() { return stateLogic.handleShellThemeChanged(root) }
 
   Timer {
     id: themeFileReload
@@ -2167,15 +1555,7 @@ Item {
     }
   }
 
-  function updateNotifService() {
-    if (!root.notifService && root.shell && typeof root.shell.serviceFor === "function") {
-      var s = root.shell.serviceFor("omarchy.notifications") || root.shell.firstPartyServiceFor("omarchy.notifications")
-      if (s) {
-        root.notifService = s
-        root._notifServiceAttempts = 0
-      }
-    }
-  }
+  function updateNotifService() { return notifLogic.updateNotifService(root) }
 
   // Startup retry poll for the notifications service. Self-terminates once
   // resolved; capped at ~5s (25 ticks) so a shell that never exposes the
@@ -2192,72 +1572,15 @@ Item {
     }
   }
 
-  // Restores the sticky badge session after a shell restart: counts and the
-  // rows already counted, bounded and sanitized on the way in.
-  function loadBadgeState() {
-    if (root._savingBadges) return
-    var st = DockModel.parseBadgeState(DockModel.readCapped(badgeFile.text, DockModel.MAX_BADGE_BYTES))
-    root.notificationBadges = st.counts
-    root._notifSeenKeys = st.seenKeys
-    root._notifSeenOrder = st.seenOrder
-  }
+  function loadBadgeState() { return persistLogic.loadBadgeState(root) }
 
-  function scheduleBadgeSave() {
-    badgeSaveDebounce.restart()
-  }
+  function scheduleBadgeSave() { return persistLogic.scheduleBadgeSave(root) }
 
-  function flushBadgeState() {
-    root._savingBadges = true
-    badgeFile.setText(DockModel.serializeBadgeState(root.notificationBadges, root._notifSeenOrder))
-    Qt.callLater(function() { root._savingBadges = false })
-  }
+  function flushBadgeState() { return persistLogic.flushBadgeState(root) }
 
-  // Sticky badges: a count arrives with its notification and stays until its
-  // app is focused (clearNotificationBadgesFor). Rows are deduped by
-  // DockModel.notificationRowKey, so model churn and re-emitted snapshots
-  // never double-count; the seen-key store is bounded to the same 512 as the
-  // row walks. The 20ms timer debounces the several signals that ask for a
-  // rebuild.
-  function processNotifRowSticky(row) {
-    if (!row || !root.showNotificationBadges) return
-    var key = DockModel.notificationRowKey(row)
-    if (!key || root._notifSeenKeys[key]) return
-    root._notifSeenKeys[key] = true
-    root._notifSeenOrder.push(key)
-    while (root._notifSeenOrder.length > 512) delete root._notifSeenKeys[root._notifSeenOrder.shift()]
+  function processNotifRowSticky(row) { return notifLogic.processNotifRowSticky(root, row) }
 
-    var rowCounts = DockModel.notificationCounts(root.notifEntries, root.appRows, [row])
-    var ids = []
-    for (var id in rowCounts) {
-      // A focused app shows no badge; its counts clear at the focus event.
-      if (id && !(root.activeId && DockModel.isAppMatch(id, root.activeId))) ids.push(id)
-    }
-    if (ids.length) root.notificationBadges = DockModel.bumpNotificationCounts(root.notificationBadges, ids, 1)
-    // The seen key counts as a state change too: a row skipped now must stay
-    // counted-out after a restart.
-    root.scheduleBadgeSave()
-  }
-
-  function refreshNotificationBadges() {
-    if (!root.showNotificationBadges) {
-      if (root._notifSeenOrder.length) {
-        root._notifSeenKeys = {}
-        root._notifSeenOrder = []
-      }
-      if (JSON.stringify(root.notificationBadges) !== "{}") root.notificationBadges = {}
-      root.scheduleBadgeSave()
-      return
-    }
-    // The watcher's snapshot rows hold every live popup, so nothing is lost
-    // to a dismissal between two emissions.
-    var rows = root.notificationPopupRows
-    var popups = root.notifService ? root.notifService.popupModel : null
-    if (popups) {
-      rows = []
-      for (var i = 0; i < Math.min(popups.count, 512); i++) rows.push(popups.get(i))
-    }
-    for (var r = 0; r < Math.min(rows.length, 512); r++) root.processNotifRowSticky(rows[r])
-  }
+  function refreshNotificationBadges() { return notifLogic.refreshNotificationBadges(root) }
 
   // Overlay plugins may not receive the first-party notification service.
   // The shell's active-popup files offer a read-only, event-driven fallback,
@@ -2298,67 +1621,7 @@ Item {
   onNotifServiceChanged: notificationBadgeTimer.restart()
   onShowNotificationBadgesChanged: notificationBadgeTimer.restart()
 
-  function handleNotificationReceived(row) {
-    if (!row) return
-    var ts = row.timestamp || row.id || 0
-    if (ts && ts === root._lastProcessedNotifTimestamp) return
-    root._lastProcessedNotifTimestamp = ts
-
-    var allEntries = root.notifEntries
-    var matchedEntries = DockModel.findNotificationTargets(allEntries, root.appRows, row)
-    if (!matchedEntries || matchedEntries.length === 0) return
-
-    var activeHandle = root.hyprToplevelFor(ToplevelManager.activeToplevel)
-    var activeAddr = root.windowAddress(activeHandle)
-
-    var map = DockModel.copyMap(root.urgentMap)
-    var found = false
-    var eventKeys = []
-
-    for (var e = 0; e < matchedEntries.length; e++) {
-      var entry = matchedEntries[e]
-      if (!entry) continue
-      var appId = entry.appId || entry.id
-      var wins = entry.windowList || []
-      var isFocused = false
-
-      for (var w = 0; w < wins.length; w++) {
-        var wa = wins[w] ? wins[w].address : ""
-        if (wa && wa === activeAddr) {
-          isFocused = true
-          break
-        }
-      }
-
-      if (!isFocused && root.activeId && (DockModel.isAppMatch(appId, root.activeId) || (entry.id && DockModel.isAppMatch(entry.id, root.activeId)))) {
-        isFocused = true
-      }
-
-      // Foreground Suppression Rule: An app currently focused in the foreground suppresses urgency bounce
-      if (!isFocused) {
-        map[appId] = true
-        eventKeys.push(appId)
-        for (var w2 = 0; w2 < wins.length; w2++) {
-          var wa2 = wins[w2] ? wins[w2].address : ""
-          if (wa2) { map[wa2] = true; eventKeys.push(wa2) }
-        }
-        found = true
-      }
-    }
-
-    if (found) {
-      root.urgentMap = map
-      root.urgentEventKeys = eventKeys
-      root.urgentEvents++
-      modelTimer.restart()
-    }
-
-    // Play notification alert sound (suppressed if DND is active)
-    // Only one dock chimes when several run side by side.
-    if (root.isPrimary && root.urgentSound && root.urgentSoundName !== "none" && !root.isDndActive) {
-      Quickshell.execDetached(["canberra-gtk-play", "-i", root.urgentSoundName])
-    }
-  }
+  function handleNotificationReceived(row) { return notifLogic.handleNotificationReceived(root, row) }
 
   Connections {
     target: root.notifService ? root.notifService.popupModel : null
@@ -2398,176 +1661,20 @@ Item {
 
   // ------------------------------------------------- functions
 
-  function loadPinned() {
-    root.pinnedIds = DockModel.parsePinned(DockModel.readCapped(dockFile.text, DockModel.MAX_DOCK_JSON_BYTES))
-  }
+  function loadPinned() { return persistLogic.loadPinned(root) }
 
-  // The look: every value a preset holds, parsed and clamped exactly as the
-  // config file is. Used when the config loads and when a preset applies.
-  // Sets properties only; callers save and update the blur rule.
-  function applyLook(parsed) {
-    // Migrates the old boolean: an explicit magnification:false meant no growth.
-    root.hoverEffect = parsed && ["zoom", "wave", "lift", "glow", "glitch", "off"].indexOf(parsed.hoverEffect) >= 0
-      ? parsed.hoverEffect
-      : ((parsed && parsed.magnification === false) ? "off" : "zoom")
-    root.launchBounce = parsed && parsed.launchBounce !== false
-    root.configuredIconSize = parsed && typeof parsed.iconSize === "number" && isFinite(parsed.iconSize) && parsed.iconSize > 0
-      ? Math.max(16, Math.min(96, Math.round(parsed.iconSize))) : 0
-    if (parsed && (parsed.opacity === "theme" || parsed.opacity === "auto" || parsed.opacity === -1)) {
-      root.dockOpacity = -1.0
-    } else if (parsed && typeof parsed.opacity === "number") {
-      root.dockOpacity = Math.max(0.0, Math.min(1.0, parsed.opacity))
-    } else {
-      root.dockOpacity = 1.0
-    }
-    if (parsed && (parsed.borderOpacity === "theme" || parsed.borderOpacity === "auto" || parsed.borderOpacity === -1)) {
-      root.borderOpacity = -1.0
-    } else if (parsed && typeof parsed.borderOpacity === "number") {
-      root.borderOpacity = Math.max(0.0, Math.min(1.0, parsed.borderOpacity))
-    } else {
-      root.borderOpacity = -1.0
-    }
-    root.dockShape = parsed && typeof parsed.shape === "string" ? parsed.shape : "rounded"
-    root.cornerRadius = parsed && typeof parsed.cornerRadius === "number" && isFinite(parsed.cornerRadius) && parsed.cornerRadius >= 0
-      ? Math.max(2, Math.round(parsed.cornerRadius)) : -1
-    root.dockBgColor = parsed && typeof parsed.bgColor === "string" ? parsed.bgColor : "theme"
-    root.showBackground = parsed ? parsed.showBackground !== false : true
-    root.bgFill = (parsed && parsed.bgFill === "gradient") ? "gradient" : "solid"
-    root.gradientPreset = parsed && typeof parsed.gradientPreset === "string" ? parsed.gradientPreset : "theme"
-    root.gradientStrength = parsed && typeof parsed.gradientStrength === "number" ? Math.max(0, Math.min(1, parsed.gradientStrength)) : 0.6
-    root.grain = parsed && typeof parsed.grain === "number" ? Math.max(0, Math.min(1, parsed.grain)) : 0
-    root.showShadow = parsed ? parsed.showShadow !== false : true
-    root.splitSections = parsed ? parsed.splitSections === true : false
-    root.shadowStrength = parsed && typeof parsed.shadowStrength === "number"
-      ? Math.max(0, Math.min(1, parsed.shadowStrength))
-      : 0.4
-    root.blurMode = (parsed && (parsed.blur === "on" || parsed.blur === "off")) ? parsed.blur : "system"
-    root.iconStyle = (parsed && ["mono", "pixel", "dots"].indexOf(parsed.iconStyle) >= 0) ? parsed.iconStyle : "original"
-    root.iconTint = (parsed && (parsed.iconTint === "accent" || parsed.iconTint === "bw")) ? parsed.iconTint : "text"
-    root.iconHoverOriginal = parsed ? parsed.iconHoverOriginal === true : false
-    root.iconHoverReveal = parsed ? parsed.iconHoverReveal === true : false
-    root.iconContrast = parsed && typeof parsed.iconContrast === "number" ? Math.max(0, Math.min(1, parsed.iconContrast)) : 0
-    root.iconStrength = parsed && typeof parsed.iconStrength === "number" ? Math.max(0, Math.min(1, parsed.iconStrength)) : 1
-    root.iconGrid = parsed && typeof parsed.iconGrid === "number"
-      ? Math.max(8, Math.min(32, Math.round(parsed.iconGrid)))
-      : 16
-    root.showBorder = parsed ? parsed.showBorder !== false : true
-    root.indicatorShape = (parsed && (parsed.indicatorShape === "rounded" || parsed.indicatorShape === "square")) ? parsed.indicatorShape : "theme"
-    root.borderWidth = parsed && typeof parsed.borderWidth === "number"
-      ? Math.max(1, Math.min(6, parsed.borderWidth))
-      : 1.5
-    // Anything else, including the retired "theme" style, falls back to rounded.
-    root.groupStyle = (parsed && ["square", "none"].indexOf(parsed.groupStyle) >= 0) ? parsed.groupStyle : "rounded"
-    root.groupIconEffects = (parsed && parsed.groupIconEffects === "none") ? "none" : "theme"
-    root.folderColor = parsed && typeof parsed.folderColor === "string" ? parsed.folderColor : "theme"
-    root.itemSpacing = parsed && typeof parsed.itemSpacing === "number" && isFinite(parsed.itemSpacing)
-      ? Math.max(0, Math.min(32, Math.round(parsed.itemSpacing))) : 4
-    root.sectionSpacing = parsed && typeof parsed.sectionSpacing === "number" ? Math.max(0, Math.min(48, Math.round(parsed.sectionSpacing))) : 18
-    root.dividerGeometry = parsed && parsed.dividerGeometry === "long" ? "long" : "classic"
-    root.dividerHeight = parsed && typeof parsed.dividerHeight === "number" && isFinite(parsed.dividerHeight) ? Math.max(20, Math.min(100, Math.round(parsed.dividerHeight))) : 70
-    root.dividerStyle = parsed && ["theme", "custom"].indexOf(parsed.dividerStyle) >= 0 ? parsed.dividerStyle : "simple"
-    root.dividerWidth = parsed && typeof parsed.dividerWidth === "number" && isFinite(parsed.dividerWidth) ? Math.max(1, Math.min(6, Math.round(parsed.dividerWidth * 2) / 2)) : 1.5
-    root.dividerOpacity = parsed && typeof parsed.dividerOpacity === "number" && isFinite(parsed.dividerOpacity) ? Math.max(0, Math.min(1, parsed.dividerOpacity)) : 0.4
-    // Theme dividers without a border, saved before they turned custom.
-    // Converted in place: saving here would write the rest of the config
-    // before it is read.
-    if (root.dividerStyle === "theme" && !root.showBorder) {
-      root.dividerWidth = root.borderWidth
-      root.dividerOpacity = Math.round(root.rimAlpha * 100) / 100
-      root.dividerStyle = "custom"
-    }
-  }
+  function applyLook(parsed) { configLogic.applyLook(root, parsed) }
 
-  function loadConfig() {
-    var raw = DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES).trim()
-    var parsed = {}
-    if (raw) {
-      try {
-        parsed = JSON.parse(raw)
-      } catch (e) {
-        console.warn("[omadock] Failed parsing omadock.json, using defaults:", e)
-        parsed = {}
-      }
-    }
-    root.alignment = (parsed && (parsed.alignment || parsed.position)) ? String(parsed.alignment || parsed.position).toLowerCase() : "center"
-    if (root.alignment !== "left" && root.alignment !== "right") root.alignment = "center"
-    root.showRemovableDrives = parsed ? parsed.showRemovableDrives !== false : true
-    root.warnUnsafeRemoval = parsed ? parsed.warnUnsafeRemoval !== false : true
-    if (parsed && DockModel.isList(parsed.appGroups)) {
-      // Persisted collections are shape- and size-bounded before reaching the
-      // long-lived shell (see DockModel boundAppGroups / boundPinnedFolders).
-      root.appGroups = DockModel.boundAppGroups(parsed.appGroups)
-    } else {
-      root.appGroups = []
-    }
-    root.presets = parsed ? DockModel.boundPresets(parsed.presets) : []
-    root.autohide = parsed && parsed.autohide !== false
-    root.intelligentAutohide = parsed && parsed.intelligentAutohide !== false
-    root.showAppsButton = parsed && parsed.showAppsButton !== false
-    root.showTooltips = parsed && parsed.showTooltips !== false
-    root.showMinimizedTiles = parsed ? parsed.showMinimizedTiles !== false : true
-    root.advancedTooltips = parsed && parsed.advancedTooltips !== false
-    root.screenName = parsed && typeof parsed.screen === "string" ? parsed.screen : ""
-    root.multiMonitor = parsed ? parsed.multiMonitor === true : false
-    root.perMonitorApps = parsed ? parsed.perMonitorApps !== false : true
-    root.applyLook(parsed)
-    root.blurSize = parsed && typeof parsed.blurSize === "number" ? Math.max(0, Math.min(20, Math.round(parsed.blurSize))) : 0
-    root.systemBlurSize = DockModel.boundSystemBlurSize(parsed ? parsed.systemBlurSize : 0)
-    root.applyBlurRule(false)
-    if (parsed && typeof parsed.minimizeMode === "string") {
-      root.minimizeMode = parsed.minimizeMode
-    } else if (parsed && parsed.clickToMinimize === true) {
-      root.minimizeMode = "active"
-    } else {
-      root.minimizeMode = "active"
-    }
-    root.keepPointer = parsed ? parsed.keepPointer !== false : true
-    root.showUrgentHint = parsed ? parsed.showUrgentHint !== false : true
-    root.urgentOnNotification = parsed ? parsed.urgentOnNotification !== false : true
-    root.showNotificationBadges = parsed ? parsed.showNotificationBadges !== false : true
-    // Bounded spellings: anything else falls back to the classic badge.
-    root.badgeStyle = (parsed && parsed.badgeStyle === "dot") ? "dot" : "count"
-    root.badgePosition = (parsed && ["top-left", "top-right", "bottom-left", "bottom-right"].indexOf(parsed.badgePosition) >= 0) ? parsed.badgePosition : "top-right"
-    root.badgeColor = (parsed && ["accent", "urgent", "neutral"].indexOf(parsed.badgeColor) >= 0) ? parsed.badgeColor : "accent"
-    root.urgentSound = parsed ? parsed.urgentSound !== false : true
-    root.urgentSoundName = DockModel.cleanSoundName(parsed ? parsed.urgentSoundName : "bell")
-    root.revealDelay = parsed && typeof parsed.revealDelay === "number"
-      ? Math.max(0, Math.min(2000, Math.round(parsed.revealDelay)))
-      : 160
-    root.tooltipDelay = parsed && typeof parsed.tooltipDelay === "number"
-      ? Math.max(0, Math.min(5000, Math.round(parsed.tooltipDelay)))
-      : 450
-    root.wheelStepDelay = parsed && typeof parsed.wheelStepDelay === "number"
-      ? Math.max(0, Math.min(1000, Math.round(parsed.wheelStepDelay)))
-      : 150
-    if (parsed && DockModel.isList(parsed.pinnedFolders)) {
-      root.pinnedFolders = DockModel.boundPinnedFolders(parsed.pinnedFolders)
-    } else {
-      root.pinnedFolders = [
-        { path: "~/Downloads", name: "Downloads", icon: "folder-download" }
-      ]
-    }
-  }
+  function loadConfig() { configLogic.loadConfig(root, configFile.text) }
 
-  function rescanApps() {
-    terminalHostDebounce.restart()
-    root.appRows = root.appLibrary ? root.appLibrary.sortedEntries("") : []
-    root.refreshDock()
-  }
+  function rescanApps() { return contextLogic.rescanApps(root) }
 
   // Up to five sources report one theme switch (three Color signals, the
   // icon theme file, the colors file); each used to rescan apps and rebuild
   // the dock. After the first load they coalesce into one run once the
   // burst is over; the first load applies at once so icons do not flash.
   property bool _themeApplied: false
-  function handleThemeChanged() {
-    if (!root._themeApplied) {
-      root._themeApplied = true
-      root.applyThemeChange()
-      return
-    }
-    themeChangeTimer.restart()
-  }
+  function handleThemeChanged() { return contextLogic.handleThemeChanged(root) }
 
   Timer {
     id: themeChangeTimer
@@ -2575,59 +1682,13 @@ Item {
     onTriggered: root.applyThemeChange()
   }
 
-  function applyThemeChange() {
-    try {
-      var t = DockModel.readCapped(themeIconsFile.text, DockModel.MAX_ICONS_THEME_BYTES).trim()
-      if (t) root.currentIconThemeName = t
-    } catch (e) {
-      console.warn("[omadock] Failed reading icon theme:", e)
-    }
-    root.themeVersion++
-    if (root.appLibrary) {
-      try {
-        root.appLibrary.refreshIcons()
-      } catch (e) {
-        console.warn("[omadock] Failed refreshing appLibrary icons:", e)
-      }
-    }
-    root.rescanApps()
-  }
+  function applyThemeChange() { return contextLogic.applyThemeChange(root) }
 
-  function folderColorLabel(colorId) {
-    if (!colorId || colorId === "theme" || colorId === "auto") return "Auto (Theme)"
-    if (colorId === "white") return "White"
-    if (colorId === "black") return "Black"
-    if (colorId === "bw") return "Black or white"
-    var map = {
-      "Yaru-sage": "Sage Green",
-      "Yaru-olive": "Olive",
-      "Yaru-blue": "Blue",
-      "Yaru-purple": "Purple",
-      "Yaru-magenta": "Magenta",
-      "Yaru-red": "Red",
-      "Yaru-yellow": "Yellow",
-      "Yaru-wartybrown": "Brown",
-      "Yaru-prussiangreen": "Teal",
-      "Yaru-dark": "Charcoal"
-    }
-    return map[colorId] || colorId
-  }
+  function folderColorLabel(colorId) { return contextLogic.folderColorLabel(root, colorId) }
 
-  function setFolderColor(color) {
-    root.folderColor = color
-    root.themeVersion++
-    root.saveConfig()
-  }
+  function setFolderColor(color) { return contextLogic.setFolderColor(root, color) }
 
-  function openDockSettingsMenu(x, y) {
-    root.contextName = "Dock Settings"
-    root.contextWindows = 0
-    root.contextWindowList = []
-    root.contextPinned = false
-    root.contextX = x
-    root.contextY = y
-    root.contextAppId = "__dock_settings__"
-  }
+  function openDockSettingsMenu(x, y) { return contextLogic.openDockSettingsMenu(root, x, y) }
 
   // ------------------------------------------------- compositor blur
   // Hyprland blurs layers through layer rules, which can switch blur on or
@@ -2641,21 +1702,7 @@ Item {
   // session (the Lua state outlives the shell) is always reconciled.
   property string _appliedBlurMode: ""
 
-  function applyBlurRule(force) {
-    if (!root.isPrimary) return
-    if (force || root.blurMode !== root._appliedBlurMode) {
-      var lua = "if _G.omadock_blur_rule then _G.omadock_blur_rule:set_enabled(false) end"
-      if (root.blurMode !== "system") {
-        lua += " _G.omadock_blur_rule = hl.layer_rule({ match = { namespace = \"^omadock$\" }, blur = "
-          + (root.blurMode === "on" ? "true" : "false") + ", blur_popups = "
-          + (root.blurMode === "on" ? "true" : "false") + ", ignore_alpha = 0.05 })"
-      }
-      Quickshell.execDetached(["hyprctl", "eval", lua])
-      root._appliedBlurMode = root.blurMode
-    }
-    // The size can change while the mode stays the same.
-    root.applyBlurSize(force)
-  }
+  function applyBlurRule(force) { return settingsLogic.applyBlurRule(root, force) }
 
   // Global blur size the dock asks for while blur is "on"; 0 leaves it alone.
   property int blurSize: 0
@@ -2664,29 +1711,11 @@ Item {
   property int systemBlurSize: 0
   property int _appliedBlurSize: 0
 
-  function setHyprBlurSize(size) {
-    Quickshell.execDetached(["hyprctl", "eval",
-      "hl.config({ decoration = { blur = { size = " + Math.round(size) + " } } })"])
-  }
+  function setHyprBlurSize(size) { return settingsLogic.setHyprBlurSize(root, size) }
 
-  function applyBlurSize(force) {
-    if (!root.isPrimary) return
-    var want = (root.blurMode === "on" && root.blurSize > 0) ? root.blurSize : 0
-    if (!force && want === root._appliedBlurSize) return
-    if (want > 0) root.setHyprBlurSize(want)
-    else if (root._appliedBlurSize > 0 && root.systemBlurSize > 0) root.setHyprBlurSize(root.systemBlurSize)
-    root._appliedBlurSize = want
-  }
+  function applyBlurSize(force) { return settingsLogic.applyBlurSize(root, force) }
 
-  // currentSize: Hyprland's blur size right now, read by the settings panel;
-  // remembered as the system size the first time the dock overrides it.
-  function setBlurSize(size, currentSize) {
-    if (root.systemBlurSize <= 0 && root._appliedBlurSize <= 0 && currentSize > 0)
-      root.systemBlurSize = DockModel.boundSystemBlurSize(currentSize)
-    root.blurSize = Math.max(1, Math.min(20, Math.round(size)))
-    root.applyBlurSize(false)
-    root.saveConfig()
-  }
+  function setBlurSize(size, currentSize) { return settingsLogic.setBlurSize(root, size, currentSize) }
 
   // ------------------------------------------------- drops from outside
   // Folders dragged in from a file manager are pinned as stacks. Hover
@@ -2709,16 +1738,7 @@ Item {
   readonly property string dropPreviewPath: (root.dropPinArmed && root.externalDragOver) ? root.dropCandidatePath : ""
   property int dropInsertIndex: -1
 
-  // Called on drag enter: finds the first directory among the dragged URLs.
-  function previewDraggedFolder(urls) {
-    root.dropCandidatePath = ""
-    root.dropPinArmed = false
-    var paths = root.localPathsFromUrls(urls)
-    if (paths.length === 0) return
-    if (dropFolderProbe.running) dropFolderProbe.running = false
-    dropFolderProbe.command = ["sh", "-c", 'for p; do [ -d "$p" ] && { printf "%s\\n" "$p"; exit 0; }; done', "sh"].concat(paths)
-    dropFolderProbe.running = true
-  }
+  function previewDraggedFolder(urls) { return pinLogic.previewDraggedFolder(root, urls) }
 
   Process {
     id: dropFolderProbe
@@ -2730,35 +1750,16 @@ Item {
     }
   }
 
-  function insertFolderPin(path, name, icon, index) {
-    if (root.isFolderPinned(path)) return
-    var next = (root.pinnedFolders || []).slice()
-    var at = (index >= 0 && index <= next.length) ? index : next.length
-    next.splice(at, 0, { path: path, name: name || "Folder", icon: icon || DockModel.folderIconFor(path, "") })
-    root.pinnedFolders = next
-    root.saveConfig()
-  }
+  function insertFolderPin(path, name, icon, index) { return pinLogic.insertFolderPin(root, path, name, icon, index) }
 
   // Local filesystem path of a helper in scripts/.
   function scriptPath(name) {
     return decodeURIComponent(Qt.resolvedUrl("scripts/" + name).toString().replace(/^file:\/\//, ""))
   }
 
-  function localPathsFromUrls(urls) {
-    return DockModel.localPathsFromUrls(urls)
-  }
+  function localPathsFromUrls(urls) { return pinLogic.localPathsFromUrls(root, urls) }
 
-  function pinDroppedFolders(urls) {
-    var paths = root.localPathsFromUrls(urls)
-    dropFolderCheck.insertAt = root.dropInsertIndex
-    root.dropPinArmed = false
-    root.dropCandidatePath = ""
-    root.dropInsertIndex = -1
-    if (paths.length === 0) return
-    // Only directories are pinned; the check runs out of process.
-    dropFolderCheck.command = ["sh", "-c", 'for p; do [ -d "$p" ] && printf "%s\\n" "$p"; done', "sh"].concat(paths)
-    dropFolderCheck.running = true
-  }
+  function pinDroppedFolders(urls) { return pinLogic.pinDroppedFolders(root, urls) }
 
   Process {
     id: dropFolderCheck
@@ -2778,28 +1779,7 @@ Item {
     }
   }
 
-  // ------------------------------------------------- media controls
-  // The MPRIS player an app exposes, matched on the player's DesktopEntry
-  // (or, failing that, its Identity) against the dock app id. Proxies such as
-  // playerctld name no app, so they never match. A playing instance wins
-  // when an app exposes several (e.g. browser tabs).
-  function mediaPlayerFor(appId) {
-    if (!appId || appId.indexOf("__") === 0) return null
-    var list = (Mpris.players && Mpris.players.values) ? Mpris.players.values : []
-    var fallback = null
-    for (var i = 0; i < list.length; i++) {
-      var p = list[i]
-      if (!p) continue
-      var entry = String(p.desktopEntry || "").replace(/\.desktop$/, "")
-      var ident = String(p.identity || "")
-      var matches = (entry !== "" && DockModel.isAppMatch(appId, entry))
-        || (entry === "" && ident !== "" && DockModel.isAppMatch(appId, ident))
-      if (!matches) continue
-      if (p.isPlaying) return p
-      if (!fallback) fallback = p
-    }
-    return fallback
-  }
+  function mediaPlayerFor(appId) { return pinLogic.mediaPlayerFor(root, appId) }
 
   // Player for the app whose context menu is open, if any.
   readonly property var contextPlayer: root.mediaPlayerFor(root.contextAppId)
@@ -2815,57 +1795,15 @@ Item {
   property string _appDropOpenId: ""  // dropped while pending: open on "yes"
   onAppDropTargetIdChanged: root.syncVisibility()
 
-  // The desktop entry id an app launches through (same lookup as launchApp).
-  function desktopIdFor(appId) {
-    var deskEntry = DockModel.entryFor(root.appRows, appId)
-    if (!deskEntry && typeof DesktopEntries !== "undefined" && DesktopEntries)
-      deskEntry = DesktopEntries.heuristicLookup(appId) || DesktopEntries.byId(appId)
-    return (deskEntry && deskEntry.id) ? deskEntry.id : appId
-  }
+  function desktopIdFor(appId) { return pinLogic.desktopIdFor(root, appId) }
 
-  function beginAppDrop(appId, urls) {
-    root.appDropTargetId = appId
-    root._appDropOpenId = ""
-    root.appDropPaths = root.localPathsFromUrls(urls)
-    if (root.appDropPaths.length === 0) {
-      root.appDropState = "no"
-      return
-    }
-    root.appDropState = "pending"
-    if (appDropCheck.running) appDropCheck.running = false
-    appDropCheck.command = ["python3",
-      decodeURIComponent(Qt.resolvedUrl("scripts/drop-check.py").toString().replace(/^file:\/\//, "")),
-      root.desktopIdFor(appId)].concat(root.appDropPaths)
-    appDropCheck.running = true
-  }
+  function beginAppDrop(appId, urls) { return pinLogic.beginAppDrop(root, appId, urls) }
 
-  function endAppDrop(appId) {
-    if (root.appDropTargetId !== appId) return
-    root.appDropTargetId = ""
-    // A drop still waiting on the check keeps its state until it answers.
-    if (root._appDropOpenId === "") root.appDropState = ""
-  }
+  function endAppDrop(appId) { return pinLogic.endAppDrop(root, appId) }
 
-  // Returns false when the app cannot take the files (the drop is refused).
-  function dropOnApp(appId) {
-    root.appDropTargetId = ""
-    if (root.appDropState === "yes") {
-      root.openFilesWith(appId, root.appDropPaths)
-      root.appDropState = ""
-      return true
-    }
-    if (root.appDropState === "pending") {
-      root._appDropOpenId = appId
-      return true
-    }
-    root.appDropState = ""
-    return false
-  }
+  function dropOnApp(appId) { return pinLogic.dropOnApp(root, appId) }
 
-  function openFilesWith(appId, paths) {
-    if (!paths || paths.length === 0) return
-    Quickshell.execDetached(["uwsm-app", "--", "gtk-launch", "--", root.desktopIdFor(appId) + ".desktop"].concat(paths))
-  }
+  function openFilesWith(appId, paths) { return pinLogic.openFilesWith(root, appId, paths) }
 
   Process {
     id: appDropCheck
@@ -2884,143 +1822,47 @@ Item {
     }
   }
 
-  function setBlurMode(mode) {
-    root.blurMode = mode
-    root.applyBlurRule(false)
-    root.saveConfig()
-  }
+  function setBlurMode(mode) { return settingsLogic.setBlurMode(root, mode) }
 
-  function openSettingsPanel() {
-    root.closeContext()
-    root.closeFolderStack()
-    root.closeAppGroup()
-    root.settingsPanelOpen = true
-  }
+  function openSettingsPanel() { return stateLogic.openSettingsPanel(root) }
 
-  function closeSettingsPanel() {
-    root.settingsPanelOpen = false
-    root.syncVisibility()
-  }
+  function closeSettingsPanel() { return stateLogic.closeSettingsPanel(root) }
 
-  // Plain value settings from the settings panel: set, persist.
-  function setOption(key, value) {
-    root[key] = value
-    root.saveConfig()
-  }
+  function setOption(key, value) { return settingsLogic.setOption(root, key, value) }
 
-  // Leaving "theme" for "custom" starts from the rim's width and opacity, so
-  // the lines look the same until changed.
-  function setDividerStyle(style) {
-    if (style === "custom" && root.dividerStyle === "theme") {
-      root.dividerWidth = root.borderWidth
-      root.dividerOpacity = Math.round(root.rimAlpha * 100) / 100
-    }
-    root.dividerStyle = style
-    root.saveConfig()
-  }
+  function setDividerStyle(style) { return settingsLogic.setDividerStyle(root, style) }
 
-  // "theme" dividers follow the rim, so they turn "custom" when it goes
-  // away: they keep their look and stay adjustable.
-  function setShowBorder(show) {
-    if (!show && root.dividerStyle === "theme") root.setDividerStyle("custom")
-    root.showBorder = show
-    root.saveConfig()
-  }
+  function setShowBorder(show) { return settingsLogic.setShowBorder(root, show) }
 
-  function setDockScreen(name) {
-    root.screenName = name || ""
-    root.saveConfig()
-  }
+  function setDockScreen(name) { return settingsLogic.setDockScreen(root, name) }
 
-  function setAutohideMode(mode) {
-    if (mode === "always") {
-      root.autohide = false
-      root.intelligentAutohide = false
-    } else if (mode === "intelligent") {
-      root.autohide = true
-      root.intelligentAutohide = true
-    } else if (mode === "autohide") {
-      root.autohide = true
-      root.intelligentAutohide = false
-    }
-    root.saveConfig()
-    root.syncVisibility()
-  }
+  function setAutohideMode(mode) { return settingsLogic.setAutohideMode(root, mode) }
 
-  function setDockOpacity(val) {
-    root.dockOpacity = val
-    root.saveConfig()
-  }
+  function setDockOpacity(val) { return settingsLogic.setDockOpacity(root, val) }
 
-  function setBorderOpacity(val) {
-    root.borderOpacity = val
-    root.saveConfig()
-  }
+  function setBorderOpacity(val) { return settingsLogic.setBorderOpacity(root, val) }
 
-  function setHoverEffect(mode) {
-    root.hoverEffect = mode
-    root.saveConfig()
-  }
+  function setHoverEffect(mode) { return settingsLogic.setHoverEffect(root, mode) }
 
-  function setDockShape(shape) {
-    root.dockShape = shape
-    root.saveConfig()
-  }
+  function setDockShape(shape) { return settingsLogic.setDockShape(root, shape) }
 
-  function setDockBgColor(col) {
-    root.dockBgColor = col
-    root.saveConfig()
-  }
+  function setDockBgColor(col) { return settingsLogic.setDockBgColor(root, col) }
 
-  function setIconSize(sz) {
-    root.configuredIconSize = sz
-    root.saveConfig()
-  }
+  function setIconSize(sz) { return settingsLogic.setIconSize(root, sz) }
 
-  function setItemSpacing(sp) {
-    root.itemSpacing = sp
-    root.saveConfig()
-  }
+  function setItemSpacing(sp) { return settingsLogic.setItemSpacing(root, sp) }
 
-  function setUrgentSoundName(name) {
-    name = DockModel.cleanSoundName(name)
-    root.urgentSoundName = name
-    root.urgentSound = name !== "none"
-    if (name !== "none" && !root.isDndActive) {
-      Quickshell.execDetached(["canberra-gtk-play", "-i", name])
-    }
-    root.saveConfig()
-  }
+  function setUrgentSoundName(name) { return settingsLogic.setUrgentSoundName(root, name) }
 
   // ------------------------------------------------- window plumbing
 
-  function hyprToplevelFor(toplevel) {
-    if (!toplevel || !Hyprland.toplevels) return null
-    var list = Hyprland.toplevels.values
-    for (var i = 0; i < list.length; i++)
-      if (list[i] && list[i].wayland === toplevel) return list[i]
-    return null
-  }
+  function hyprToplevelFor(toplevel) { return windowLogic.hyprToplevelFor(root, toplevel) }
 
-  // Accepts a toplevel handle or a raw address string; every address-keyed
-  // lookup goes through here so "574e…" and "0x574e…" can never diverge.
-  function windowAddress(handle) {
-    var raw = (handle && handle.address !== undefined && handle.address !== null) ? handle.address : handle
-    var value = String(raw == null ? "" : raw).trim()
-    if (!value) return ""
-    if (value.slice(0, 2) === "0x" || value.slice(0, 2) === "0X") value = value.slice(2)
-    return "0x" + value.toLowerCase()
-  }
+  function windowAddress(handle) { return windowLogic.windowAddress(root, handle) }
 
-  function luaString(value) {
-    return String(value == null ? "" : value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')
-  }
+  function luaString(value) { return windowLogic.luaString(root, value) }
 
-  // Hyprland 0.56 moved dispatchers to Lua; Quickshell reports which syntax
-  // the running compositor speaks.
-  function hyprDispatch(lua, legacy) {
-    Hyprland.dispatch(Hyprland.usingLua ? lua : legacy)
-  }
+  function hyprDispatch(lua, legacy) { return windowLogic.hyprDispatch(root, lua, legacy) }
 
   // Runs action with Hyprland's pointer warps switched off. Activation goes
   // over Wayland and workspace switches over the IPC socket, so the setting
@@ -3029,14 +1871,19 @@ Item {
   // shell crash; repeated calls extend the window instead of saving "true".
   property var pendingNoWarpActions: []
 
-  function withoutPointerWarp(action) {
-    if (!root.keepPointer || !Hyprland.usingLua) {
-      action()
-      return
-    }
-    root.pendingNoWarpActions = root.pendingNoWarpActions.concat([action])
-    if (!noWarpProc.running) noWarpProc.running = true
-  }
+  // modelTimer lives in this file; extracted logic modules rebuild the model
+  // through this indirection instead of referencing the timer id directly.
+  function modelTimerRestart() { modelTimer.restart() }
+
+  // App-group member preview: scroll cycling + click-to-focus (hover bubble)
+  function groupCycleFront(key, windows, frontIndex, angleDelta) { return groupCycleLogic.cycleFront(root, key, windows, frontIndex, angleDelta) }
+  function focusPreviewedWindow(windows, frontIndex) { return groupCycleLogic.focusPreviewed(root, windows, frontIndex) }
+
+  // Name labels: rendering policy (visibility, size, contrast, band)
+  function labelStyle(kind) { return labelLogic.style(root, kind) }
+  function labelBandHeight() { return labelLogic.bandHeight(root) }
+
+  function withoutPointerWarp(action) { return stateLogic.withoutPointerWarp(root, action) }
 
   Process {
     id: noWarpProc
@@ -3058,358 +1905,37 @@ Item {
     }
   }
 
-  function workspaceTarget(workspace) {
-    if (!workspace) return ""
-    var name = String(workspace.name || "")
-    return name !== "" ? name : String(workspace.id)
-  }
+  function workspaceTarget(workspace) { return windowLogic.workspaceTarget(root, workspace) }
 
-  function liveToplevelForAddress(addr) {
-    if (!addr) return null
-    var want = root.windowAddress(addr)
-    try {
-      var tops = ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []
-      for (var i = 0; i < tops.length; i++) {
-        var top = tops[i]
-        if (!top) continue
-        var h = root.hyprToplevelFor(top)
-        if (root.windowAddress(h) === want) return top
-      }
-    } catch (e) {
-      console.warn("[omadock] Failed resolving live toplevel for address:", e)
-    }
-    return null
-  }
+  function liveToplevelForAddress(addr) { return windowLogic.liveToplevelForAddress(root, addr) }
 
-  function liveHyprToplevelForAddress(addr) {
-    if (!addr) return null
-    var want = root.windowAddress(addr)
-    try {
-      var tops = Hyprland.toplevels ? Hyprland.toplevels.values : []
-      for (var i = 0; i < tops.length; i++) {
-        var h = tops[i]
-        if (h && root.windowAddress(h) === want) return h
-      }
-    } catch (e) {
-      console.warn("[omadock] Failed resolving live Hyprland toplevel for address:", e)
-    }
-    return null
-  }
+  function liveHyprToplevelForAddress(addr) { return windowLogic.liveHyprToplevelForAddress(root, addr) }
 
-  function focusWindowByAddress(addr, appId) {
-    if (!addr) return
-    root.clearUrgentApp(appId || "", addr)
-    var handle = root.liveHyprToplevelForAddress(addr)
-    var top = root.liveToplevelForAddress(addr)
+  function focusWindowByAddress(addr, appId) { return windowLogic.focusWindowByAddress(root, addr, appId) }
 
-    if (handle) {
-      var workspace = handle.workspace
-      if (workspace && workspace.name === root.minimizedWorkspace) {
-        root.restoreWindow(addr, appId)
-        return
-      }
-      root.withoutPointerWarp(function() {
-        var live = root.liveToplevelForAddress(addr)
-        var h = root.liveHyprToplevelForAddress(addr)
-        if (!live) return
-        DockModel.focusWindow(live)
-        var ws = h ? h.workspace : null
-        if (ws && Hyprland.focusedWorkspace && ws.id !== Hyprland.focusedWorkspace.id) {
-          var targetWs = root.workspaceTarget(ws)
-          if (targetWs) {
-            root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(targetWs) + '" })',
-                              "workspace " + targetWs)
-          }
-        }
-      })
-    } else if (top) {
-      root.focusToplevel(top, appId)
-    }
-  }
+  function focusToplevel(toplevel, appId) { return windowLogic.focusToplevel(root, toplevel, appId) }
 
-  // Brings a window forward cleanly. Native Wayland activation hands over focus
-  // and brings the window forward without desynchronizing layer-shell input
-  // state; withoutPointerWarp keeps Hyprland from moving the pointer to it.
-  // Switches workspace when target is on another workspace.
-  function focusToplevel(toplevel, appId) {
-    if (!toplevel) return
-    var handle = root.hyprToplevelFor(toplevel)
-    var addr = root.windowAddress(handle)
-    if (!addr) {
-      DockModel.focusWindow(toplevel)
-      return
-    }
-    var aid = appId || (toplevel.appId ? DockModel.normalizeId(toplevel.appId) : "")
-    root.clearUrgentApp(aid, addr)
-    var workspace = handle ? handle.workspace : null
+  function minimizeToplevel(topOrAddr, focusNext, appId) { return windowLogic.minimizeToplevel(root, topOrAddr, focusNext, appId) }
 
-    if (workspace && workspace.name === root.minimizedWorkspace) {
-      root.restoreWindow(handle, aid)
-      return
-    }
+  function standingWindowAfterPark(exceptAddress) { return windowLogic.standingWindowAfterPark(root, exceptAddress) }
 
-    // Resolve by address after the subprocess: a window may close meanwhile.
-    root.withoutPointerWarp(function() {
-      var live = addr ? root.liveToplevelForAddress(addr) : null
-      if (!live) return
-      DockModel.focusWindow(live)
-      var h = root.liveHyprToplevelForAddress(addr)
-      var ws = h ? h.workspace : null
-      if (ws && Hyprland.focusedWorkspace && ws.id !== Hyprland.focusedWorkspace.id) {
-        var targetWs = root.workspaceTarget(ws)
-        if (targetWs) {
-          root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(targetWs) + '" })',
-                            "workspace " + targetWs)
-        }
-      }
-    })
-  }
+  function handoffFocusAfterPark(address, focusNext, appId) { return windowLogic.handoffFocusAfterPark(root, address, focusNext, appId) }
 
-  // focusNext names the app window that should take focus once this one is
-  // parked — the click contract's "step to the app's next window". appId
-  // carries the urgent-clear context for focusing it.
-  function minimizeToplevel(topOrAddr, focusNext, appId) {
-    var address = root.windowAddress(typeof topOrAddr === "string" ? topOrAddr : root.hyprToplevelFor(topOrAddr))
-    if (!address) return false
+  function restoreWindow(targetRef, appId, useOrigin) { return windowLogic.restoreWindow(root, targetRef, appId, useOrigin) }
 
-    var wasFocused = root.activeWindowAddress === address
-    var handle = root.liveHyprToplevelForAddress(address)
-    var origin = (handle && handle.workspace) ? root.workspaceTarget(handle.workspace) : root.workspaceTarget(Hyprland.focusedWorkspace)
-    if (!origin || origin === root.minimizedWorkspace) origin = root.workspaceTarget(Hyprland.focusedWorkspace)
-    if (origin === root.minimizedWorkspace) return false
+  function restoreWindowBatch(wins, primaryAddress, useOrigin) { return windowLogic.restoreWindowBatch(root, wins, primaryAddress, useOrigin) }
 
-    var origins = DockModel.copyMap(root.minimizedOrigins)
-    origins[address] = origin
-    root.minimizedOrigins = origins
+  function liveWsNameOf(win) { return windowLogic.liveWsNameOf(root, win) }
 
-    var parkedTimes = DockModel.copyMap(root.parkedAt)
-    parkedTimes[address] = Date.now()
-    root.parkedAt = parkedTimes
+  function isWinParkedLive(win) { return windowLogic.isWinParkedLive(root, win) }
 
+  function windowByAddress(windows, address) { return windowLogic.windowByAddress(root, windows, address) }
 
-    root.hyprDispatch(
-      'hl.dsp.window.move({ window = "address:' + address + '", workspace = "'
-        + root.luaString(root.minimizedWorkspace) + '", follow = false })',
-      "movetoworkspacesilent " + root.minimizedWorkspace + ",address:" + address)
-    if (wasFocused) root.handoffFocusAfterPark(address, focusNext || null, appId || "")
-    return true
-  }
+  function visibleWindows(windows) { return windowLogic.visibleWindows(root, windows) }
 
-  // The window to take focus when a park emptied its workspace: the most
-  // recently focused window still standing, else any standing window. A parked
-  // window still accepts typing, so the keyboard must never stay on one.
-  function standingWindowAfterPark(exceptAddress) {
-    var i, a
-    for (i = 0; i < root.focusOrder.length; i++) {
-      a = root.focusOrder[i]
-      if (!a || a === exceptAddress) continue
-      var h = root.liveHyprToplevelForAddress(a)
-      if (h && !root.isWinParkedLive(h)) return h
-    }
-    var list = Hyprland.toplevels ? Hyprland.toplevels.values : []
-    for (i = 0; i < list.length; i++) {
-      a = root.windowAddress(list[i])
-      if (!a || a === exceptAddress) continue
-      if (!root.isWinParkedLive(list[i])) return list[i]
-    }
-    return null
-  }
+  function focusedIndex(windows) { return windowLogic.focusedIndex(root, windows) }
 
-  // Parking must never leave the keyboard inside the parking lot. The click
-  // contract says parking one of several windows "hands focus straight to a
-  // sibling"; with no sibling it goes to the window used before this one
-  // rather than any particular app. Focus is dispatched, not Wayland-
-  // activated: dispatchers queue in the compositor behind the park move, so
-  // this deterministically beats the compositor's own handoff (an activation
-  // arrived out of order and lost that race on busy workspaces).
-  function handoffFocusAfterPark(address, focusNext, appId) {
-    var target = ""
-    if (focusNext && focusNext.address && root.windowAddress(focusNext) !== address)
-      target = root.windowAddress(focusNext)
-    if (!target) {
-      var prev = root.standingWindowAfterPark(address)
-      if (prev) target = root.windowAddress(prev)
-    }
-    if (!target) return
-    root.withoutPointerWarp(function() {
-      root.hyprDispatch('hl.dsp.focus({ window = "address:' + root.luaString(target) + '" })',
-                        "focuswindow address:" + target)
-    })
-  }
-
-  function restoreWindow(targetRef, appId, useOrigin) {
-    var address = root.windowAddress(targetRef)
-    if (!address) return false
-
-
-    // Default restore target is the workspace the user is on right now;
-    // useOrigin=true sends the window back to where it was parked from.
-    var target = ""
-    if (useOrigin && root.minimizedOrigins[address]) target = root.minimizedOrigins[address]
-    if (!target) target = root.workspaceTarget(Hyprland.focusedWorkspace)
-    if (!target) return false
-
-    var origins = DockModel.copyMap(root.minimizedOrigins)
-    delete origins[address]
-    root.minimizedOrigins = origins
-
-    var parkedTimes = DockModel.copyMap(root.parkedAt)
-    delete parkedTimes[address]
-    root.parkedAt = parkedTimes
-
-    // Silent move (follow = false): a dispatcher-driven window focus would
-    // warp the mouse pointer into the restored window's center. The workspace
-    // switch plus native Wayland activation below focus the window cleanly
-    // and leave the cursor exactly where the user left it.
-    root.hyprDispatch(
-      'hl.dsp.window.move({ window = "address:' + address + '", workspace = "'
-        + root.luaString(target) + '", follow = false })',
-      "movetoworkspacesilent " + target + ",address:" + address)
-    root.withoutPointerWarp(function() {
-      root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(target) + '" })',
-                        "workspace " + target)
-
-      var top = root.liveToplevelForAddress(address)
-      if (top) {
-        DockModel.focusWindow(top)
-      }
-    })
-    return true
-  }
-
-  // Restores a group of windows in one compositor transaction:
-  // all moves are dispatched silently first, then workspace focus and window
-  // activation happen exactly once. This prevents the "one-by-one fullscreen"
-  // flash that occurs when restoreWindow() is called in a loop (each call
-  // previously triggered its own focus switch and Wayland activation).
-  //
-  // primaryAddress: the window to focus after all moves. When null/undefined,
-  // the most-recently-parked window (highest parkedAt timestamp) is chosen.
-  //
-  // useOrigin: when true, each window returns to the workspace it was parked
-  // from (minimizedOrigins). Default restores everything onto the user's
-  // currently active workspace.
-  function restoreWindowBatch(wins, primaryAddress, useOrigin) {
-    if (!wins || wins.length === 0) return
-
-    // Single-copy the maps — O(n) instead of O(n²) individual copies.
-    var origins = DockModel.copyMap(root.minimizedOrigins)
-    var parkedTimes = DockModel.copyMap(root.parkedAt)
-
-    var focusAddr = null
-    var focusTarget = null
-    var bestTime = -1
-
-    for (var i = 0; i < wins.length; i++) {
-      var w = wins[i]
-      if (!w || !w.address) continue
-      var address = w.address
-
-      var target = ""
-      if (useOrigin && origins[address]) target = origins[address]
-      if (!target) target = root.workspaceTarget(Hyprland.focusedWorkspace)
-      if (!target) continue
-
-      var t = parkedTimes[address] !== undefined ? parkedTimes[address] : 0
-      delete origins[address]
-      delete parkedTimes[address]
-
-      // Silent move only — no workspace switch or window focus per iteration.
-      root.hyprDispatch(
-        'hl.dsp.window.move({ window = "address:' + address + '", workspace = "'
-          + root.luaString(target) + '", follow = false })',
-        "movetoworkspacesilent " + target + ",address:" + address)
-
-      // Track which window to focus: explicit override first, then most-recently-parked.
-      if (primaryAddress && address === primaryAddress) {
-        focusAddr = address
-        focusTarget = target
-        bestTime = Infinity
-      } else if (bestTime !== Infinity && t >= bestTime) {
-        bestTime = t
-        focusAddr = address
-        focusTarget = target
-      }
-    }
-
-    // Commit map mutations once.
-    root.minimizedOrigins = origins
-    root.parkedAt = parkedTimes
-
-    // Single workspace switch + single window activation after all moves.
-    if (focusTarget) {
-      root.withoutPointerWarp(function() {
-        root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(focusTarget) + '" })',
-                          "workspace " + focusTarget)
-        var top = root.liveToplevelForAddress(focusAddr)
-        if (top) DockModel.focusWindow(top)
-      })
-    }
-  }
-
-  // The workspace a window sits on right now. Model primitives freeze state at
-  // rebuild time, and Quickshell's Hyprland handle can lag silent moves onto
-  // the special workspace, so park/visibility decisions resolve live at click
-  // time and fall back to the cached name only while no handle exists.
-  function liveWsNameOf(win) {
-    var cached = win ? String(win.workspaceName || "") : ""
-    var addr = win ? root.windowAddress(win) : ""
-    var h = addr ? root.liveHyprToplevelForAddress(addr) : null
-    if (h && h.workspace) return String(h.workspace.name || h.workspace.id || "")
-    if (addr && root.minimizedOrigins && root.minimizedOrigins[addr] !== undefined)
-      return root.minimizedWorkspace
-    return cached
-  }
-
-  function isWinParkedLive(win) {
-    return root.liveWsNameOf(win) === root.minimizedWorkspace
-  }
-
-  // The window an app should act on: the one it was last focused in, as long as
-  // it is still around and not parked.
-  function windowByAddress(windows, address) {
-    if (!address) return null
-    for (var i = 0; i < windows.length; i++) {
-      var win = windows[i]
-      if (!win) continue
-      if (win.address === address) {
-        return !root.isWinParkedLive(win) ? win : null
-      }
-    }
-    return null
-  }
-
-  // The app's windows that are still on screen, in window order.
-  function visibleWindows(windows) {
-    var out = []
-    for (var i = 0; i < windows.length; i++) {
-      var win = windows[i]
-      if (!win) continue
-      if (!root.isWinParkedLive(win)) out.push(win)
-    }
-    return out
-  }
-
-  // Which of these windows holds the focus, if any.
-  function focusedIndex(windows) {
-    if (!root.activeWindowAddress) return -1
-    for (var i = 0; i < windows.length; i++) {
-      if (windows[i] && windows[i].address && windows[i].address === root.activeWindowAddress) return i
-    }
-    return -1
-  }
-
-  // A window of this app on the workspace you are looking at.
-  function windowHere(windows) {
-    for (var i = 0; i < windows.length; i++) {
-      var win = windows[i]
-      var wsName = root.liveWsNameOf(win)
-      if (win && (wsName === String(root.focusedWorkspaceId) || wsName === root.focusedWorkspaceName)) {
-        return win
-      }
-    }
-    return null
-  }
+  function windowHere(windows) { return windowLogic.windowHere(root, windows) }
 
   // Turns wheel events into steps: -1 (up), 1 (down) or 0. High-resolution
   // wheels send many small deltas per notch, so deltas add up to a full notch
@@ -3418,367 +1944,37 @@ Item {
   // queued. Each wheel target keeps its own state under key.
   property var wheelState: ({})
 
-  function wheelStep(key, angleDelta) {
-    if (!angleDelta) return 0
-    var now = Date.now()
-    var st = root.wheelState[key] || { acc: 0, lastEvent: 0, lastStep: 0 }
-    if (now - st.lastEvent > 400 || (st.acc !== 0 && (st.acc > 0) !== (angleDelta > 0))) st.acc = 0
-    st.lastEvent = now
-    st.acc += angleDelta
-    var step = 0
-    if (Math.abs(st.acc) >= 120) {
-      if (now - st.lastStep >= root.wheelStepDelay) {
-        step = st.acc > 0 ? -1 : 1
-        st.lastStep = now
-      }
-      st.acc = 0
-    }
-    // Reuse one slot per current target rather than retaining every app ever scrolled.
-    root.wheelState = ({})
-    root.wheelState[key] = st
-    return step
-  }
+  function wheelStep(key, angleDelta) { return windowLogic.wheelStep(root, key, angleDelta) }
 
-  // One step around the app's windows from wherever the focus is.
-  function stepWindow(windows, direction) {
-    if (windows.length === 0) return null
-    if (windows.length === 1) return windows[0]
+  function stepWindow(windows, direction) { return windowLogic.stepWindow(root, windows, direction) }
 
-    var step = direction < 0 ? -1 : 1
-    var at = root.focusedIndex(windows)
-    if (at < 0) return windows[step > 0 ? 0 : windows.length - 1]
-    return windows[(at + step + windows.length) % windows.length]
-  }
+  function parkedWindows(windows) { return windowLogic.parkedWindows(root, windows) }
 
-  // Handles of this app's parked windows, in window order. Nothing is
-  // remembered for this: the workspace a window sits on is the answer, so a
-  // shell restart cannot lose track of one.
-  function parkedWindows(windows) {
-    var out = []
-    for (var i = 0; i < windows.length; i++) {
-      var win = windows[i]
-      if (win && root.isWinParkedLive(win)) out.push(win)
-    }
-    return out
-  }
+  function recentParked(parked) { return windowLogic.recentParked(root, parked) }
 
-  // The app's parked window that has been waiting the shortest time — the tail of
-  // the chronological FIFO. Windows parked most recently sort first.
-  function recentParked(parked) {
-    if (!parked || parked.length <= 1) return (parked && parked[0]) || null
-    var best = parked[0]
-    var bestTime = (best && best.address && root.parkedAt[best.address] !== undefined) ? root.parkedAt[best.address] : 0
-    for (var i = 1; i < parked.length; i++) {
-      var p = parked[i]
-      var t = (p && p.address && root.parkedAt[p.address] !== undefined) ? root.parkedAt[p.address] : 0
-      if (t > bestTime) {
-        best = p
-        bestTime = t
-      }
-    }
-    return best
-  }
+  function oldestParked(parked) { return windowLogic.oldestParked(root, parked) }
 
-  // The app's parked window that has been waiting the longest — the head of
-  // the chronological FIFO. Windows parked before this shell session have no
-  // timestamp and sort first, matching the "recover the oldest" expectation.
-  function oldestParked(parked) {
-    if (!parked || parked.length <= 1) return (parked && parked[0]) || null
-    var best = parked[0]
-    var bestTime = (best && best.address && root.parkedAt[best.address] !== undefined) ? root.parkedAt[best.address] : 0
-    for (var i = 1; i < parked.length; i++) {
-      var p = parked[i]
-      var t = (p && p.address && root.parkedAt[p.address] !== undefined) ? root.parkedAt[p.address] : 0
-      if (t < bestTime) {
-        best = p
-        bestTime = t
-      }
-    }
-    return best
-  }
+  function recentWindow(appId, windows) { return windowLogic.recentWindow(root, appId, windows) }
 
-  function recentWindow(appId, windows) {
-    return root.windowByAddress(windows, root.appRecentWindow[appId])
-  }
+  function minimizeAllWindows(entry) { return windowLogic.minimizeAllWindows(root, entry) }
 
-  function minimizeAllWindows(entry) {
-    var windows = entry ? (entry.windowList || []) : []
-    var parked = false
-    for (var i = 0; i < windows.length; i++) {
-      var win = windows[i]
-      if (!win || !win.address) continue
-      if (!root.isWinParkedLive(win) && root.minimizeToplevel(win.address))
-        parked = true
-    }
-    return parked
-  }
+  function minimizeOneWindow(entry) { return windowLogic.minimizeOneWindow(root, entry) }
 
-  // The one window this app should put away: the focused one, else the one it
-  // was last focused in, else the first that is still on screen.
-  function minimizeOneWindow(entry) {
-    var windows = entry ? (entry.windowList || []) : []
-    var target = null
+  function minimizeApp(entry) { return windowLogic.minimizeApp(root, entry) }
 
-    for (var i = 0; i < windows.length; i++) {
-      if (windows[i] && windows[i].address && windows[i].address === root.activeWindowAddress) {
-        target = windows[i]
-        break
-      }
-    }
-    if (!target) target = root.recentWindow(entry ? entry.appId : "", windows)
-    if (!target) {
-      for (var j = 0; j < windows.length; j++) {
-        if (windows[j] && !root.isWinParkedLive(windows[j])) {
-          target = windows[j]
-          break
-        }
-      }
-    }
+  function pruneWindowState() { return notifLogic.pruneWindowState(root) }
 
-    return (target && target.address)
-      ? root.minimizeToplevel(target.address, root.stepWindow(root.visibleWindows(windows), 1), entry ? entry.appId : "")
-      : false
-  }
+  function keepUrgentLive(map, live) { return notifLogic.keepUrgentLive(root, map, live) }
 
-  function minimizeApp(entry) {
-    return root.minimizeMode === "all"
-      ? root.minimizeAllWindows(entry)
-      : root.minimizeOneWindow(entry)
-  }
+  function clearNotificationBadgesFor(appId, address) { return notifLogic.clearNotificationBadgesFor(root, appId, address) }
 
-  // Everything the dock remembers about a window is keyed by address, so one
-  // pass over the live windows is enough to drop what closed.
-  function pruneWindowState() {
-    var live = {}
-    var list = Hyprland.toplevels ? Hyprland.toplevels.values : []
-    for (var i = 0; i < list.length; i++) {
-      var address = root.windowAddress(list[i])
-      if (address) live[address] = true
-    }
+  function clearUrgentApp(appId, address) { return notifLogic.clearUrgentApp(root, appId, address) }
 
-    root.minimizedOrigins = root.keepLive(root.minimizedOrigins, live, false)
-    root.parkedAt = root.keepLive(root.parkedAt, live, false)
-    root.appRecentWindow = root.keepLive(root.appRecentWindow, live, true)
-    root.urgentMap = root.keepUrgentLive(root.urgentMap, live)
+  function keepLive(map, live, byValue) { return notifLogic.keepLive(root, map, live, byValue) }
 
-    // recentOpenedWindowAddrs entries carry their own expiry; drop the stale ones.
-    var now = Date.now()
-    var roa = root.recentOpenedWindowAddrs || {}
-    var nextRoa = {}
-    var roaChanged = false
-    for (var rkey in roa) {
-      if (roa[rkey] < now) roaChanged = true
-      else nextRoa[rkey] = roa[rkey]
-    }
-    if (roaChanged) root.recentOpenedWindowAddrs = nextRoa
-  }
+  function minimizeActive() { return windowLogic.minimizeActive(root) }
 
-  // urgentMap mixes two key shapes: "0x…" per-window addresses and bare appIds
-  // set by the notification service. Address keys die with their window; bare appId
-  // keys only survive while the app is running with active windows or launching.
-  function keepUrgentLive(map, live) {
-    var keys = Object.keys(map)
-    if (keys.length === 0) return map
-
-    var next = {}
-    var dropped = false
-    var allEntries = root.notifEntries
-
-    for (var i = 0; i < keys.length; i++) {
-      var key = keys[i]
-      if (key.slice(0, 2) === "0x") {
-        if (!live[key]) dropped = true
-        else next[key] = map[key]
-      } else {
-        var isLiveApp = false
-        if (root.launchPending && root.launchPending[key]) {
-          isLiveApp = true
-        } else {
-          for (var e = 0; e < allEntries.length; e++) {
-            var entry = allEntries[e]
-            if (!entry) continue
-            var eId = entry.appId || entry.id
-            if (eId === key || DockModel.isAppMatch(eId, key)) {
-              var wins = entry.windowList || []
-              for (var w = 0; w < wins.length; w++) {
-                var wa = wins[w] ? wins[w].address : ""
-                if (wa && live[wa]) {
-                  isLiveApp = true
-                  break
-                }
-              }
-              break
-            }
-          }
-        }
-        if (isLiveApp) {
-          next[key] = map[key]
-        } else {
-          dropped = true
-        }
-      }
-    }
-    return dropped ? next : map
-  }
-
-  // Sticky badges are "notifications you have not looked at": they clear for
-  // the app (and whatever entry owns the address) as soon as it gains focus,
-  // independently of whether any urgency entry exists.
-  function clearNotificationBadgesFor(appId, address) {
-    if (!root.notificationBadges) return
-    var next = DockModel.clearNotificationCounts(root.notificationBadges, appId)
-    var normAddr = address ? DockModel.windowAddress({ address: address }) : ""
-    if (normAddr) {
-      var allEntries = root.notifEntries
-      for (var i = 0; i < allEntries.length; i++) {
-        var entry = allEntries[i]
-        var wins = entry ? (entry.windowList || []) : []
-        for (var w = 0; w < wins.length; w++) {
-          if (wins[w] && wins[w].address === normAddr) {
-            next = DockModel.clearNotificationCounts(next, entry.appId || entry.id)
-            break
-          }
-        }
-      }
-    }
-    if (JSON.stringify(next) !== JSON.stringify(root.notificationBadges)) {
-      root.notificationBadges = next
-      root.scheduleBadgeSave()
-    }
-  }
-
-  // Clears urgency entries from urgentMap for an application and its windows.
-  // Called whenever an app/window receives focus or is activated/clicked by user.
-  function clearUrgentApp(appId, address) {
-    root.clearNotificationBadgesFor(appId, address)
-    if (!root.urgentMap) return
-    var hasKeys = false
-    for (var k in root.urgentMap) {
-      if (root.urgentMap[k]) { hasKeys = true; break }
-    }
-    if (!hasKeys) return
-
-    var map = DockModel.copyMap(root.urgentMap)
-    var changed = false
-
-    var normAddr = ""
-    if (address) {
-      var rawAddr = String(address).trim()
-      if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
-      if (rawAddr) normAddr = "0x" + rawAddr
-    }
-
-    if (normAddr && map[normAddr]) {
-      delete map[normAddr]
-      changed = true
-    }
-
-    var allEntries = root.notifEntries
-    var targetEntries = []
-
-    for (var i = 0; i < allEntries.length; i++) {
-      var entry = allEntries[i]
-      if (!entry) continue
-      var entryId = entry.appId || entry.id
-      var matched = false
-
-      if (appId && (entryId === appId || DockModel.isAppMatch(entryId, appId))) {
-        matched = true
-      }
-
-      if (!matched && normAddr && entry.windowList) {
-        for (var w = 0; w < entry.windowList.length; w++) {
-          var winAddr = entry.windowList[w] ? entry.windowList[w].address : ""
-          if (winAddr && winAddr === normAddr) {
-            matched = true
-            break
-          }
-        }
-      }
-
-      if (matched) {
-        targetEntries.push(entry)
-      }
-    }
-
-    if (appId) {
-      var rawId = DockModel.stripDesktop(appId)
-      var normId = DockModel.normalizeId(appId)
-      if (map[appId]) { delete map[appId]; changed = true }
-      if (rawId && map[rawId]) { delete map[rawId]; changed = true }
-      if (normId && map[normId]) { delete map[normId]; changed = true }
-    }
-
-    for (var t = 0; t < targetEntries.length; t++) {
-      var tEntry = targetEntries[t]
-      var tId = tEntry.appId || tEntry.id
-      if (tId && map[tId]) { delete map[tId]; changed = true }
-      if (tEntry.id && map[tEntry.id]) { delete map[tEntry.id]; changed = true }
-      if (tEntry.appId && map[tEntry.appId]) { delete map[tEntry.appId]; changed = true }
-      var tWins = tEntry.windowList || []
-      for (var tw = 0; tw < tWins.length; tw++) {
-        var twAddr = tWins[tw] ? tWins[tw].address : ""
-        if (twAddr && map[twAddr]) {
-          delete map[twAddr]
-          changed = true
-        }
-      }
-    }
-
-    // Also check if any remaining key in map matches appId via DockModel.isAppMatch
-    if (appId) {
-      for (var mKey in map) {
-        if (mKey.slice(0, 2) !== "0x" && DockModel.isAppMatch(mKey, appId)) {
-          delete map[mKey]
-          changed = true
-        }
-      }
-    }
-
-    if (changed) {
-      root.urgentMap = map
-      modelTimer.restart()
-    }
-  }
-
-  // byValue: the map holds addresses as values (app -> window) rather than keys.
-  function keepLive(map, live, byValue) {
-    var keys = Object.keys(map)
-    if (keys.length === 0) return map
-
-    var next = {}
-    var dropped = false
-    for (var i = 0; i < keys.length; i++) {
-      var key = keys[i]
-      if (live[byValue ? map[key] : key]) next[key] = map[key]
-      else dropped = true
-    }
-    return dropped ? next : map
-  }
-
-  // ------------------------------------------------- external keybind hooks
-  // Hyprland plugins cannot register compositor binds directly, but these IPC
-  // targets expose dock actions to `qs -p /usr/share/omarchy/shell ipc call omadock <fn>`
-  // so users can bind them in ~/.config/hypr/bindings.lua, e.g.:
-  //   o.bind("SUPER + M", "Minimize focused",
-  //     "exec qs -p /usr/share/omarchy/shell ipc call omadock minimizeActive")
-  function minimizeActive() {
-    var addr = root.activeWindowAddress
-    if (addr !== "") root.minimizeToplevel(addr)
-  }
-
-  // Returns whether a window was restored, so DockHost can fall through to the
-  // next monitor's dock when this one has nothing parked.
-  function restoreLast() {
-    var parked = []
-    var all = root.pinnedSection.concat(root.runningSection)
-    for (var i = 0; i < all.length; i++) {
-      if (!all[i]) continue
-      parked = parked.concat(root.parkedWindows(all[i].windowList || []))
-    }
-    if (parked.length === 0) return false
-    return root.restoreWindow(root.oldestParked(parked), "")
-  }
+  function restoreLast() { return windowLogic.restoreLast(root) }
 
   // With several docks running, DockHost owns the "omadock" target instead.
   IpcHandler {
@@ -3829,163 +2025,18 @@ Item {
 
   // ------------------------------------------------- launch feedback
 
-  function launchApp(appId, entry) {
-    if (!root.appLibrary) return
-    var target = entry || root.entryForId(appId)
-    var deskEntry = DockModel.entryFor(root.appRows, appId)
-    if (!deskEntry && typeof DesktopEntries !== "undefined" && DesktopEntries) {
-      deskEntry = DesktopEntries.heuristicLookup(appId) || DesktopEntries.byId(appId)
-    }
-    var targetId = (deskEntry && deskEntry.id) ? deskEntry.id : appId
-    var targetName = (deskEntry && deskEntry.name) ? deskEntry.name : (target && target.name ? target.name : appId)
-    if (deskEntry && deskEntry.id && DockModel.isKnownCli(deskEntry.id) && deskEntry.runInTerminal && deskEntry.command && deskEntry.command.length > 0) {
-      var command = ["omarchy-launch-tui", "--app-id=org.omarchy." + deskEntry.id]
-        .concat(DockModel.toArray(deskEntry.command))
-      Quickshell.execDetached(["bash", "-c", 'cd -- "$1" || exit; shift; exec "$@"',
-        "_", deskEntry.workingDirectory || Quickshell.env("HOME")].concat(command))
-    } else if (deskEntry && deskEntry.id) {
-      root.appLibrary.launch(deskEntry.id, targetName)
-    } else {
-      var webAppMatch = String(appId).match(/^(?:google-chrome|google-chrome-stable|chrome|chromium|brave|edge|microsoft-edge|helium|helium-browser|opera|vivaldi)-(.*?)__?-(?:default|profile.*)$/i)
-                     || String(appId).match(/^(?:google-chrome|google-chrome-stable|chrome|chromium|brave|edge|microsoft-edge|helium|helium-browser|opera|vivaldi)-(.*?)$/i)
-      if (webAppMatch) {
-        var webDomain = webAppMatch[1].replace(/^https?___?/i, "").replace(/__.*$/, "")
-        Quickshell.execDetached(["omarchy-launch-webapp", "https://" + webDomain])
-      } else {
-        root.appLibrary.launch(targetId, targetName)
-      }
-    }
-    root.markLaunching(appId, target ? target.windows : 0)
-  }
+  function launchApp(appId, entry) { return contextLogic.launchApp(root, appId, entry) }
 
-  function markLaunching(appId, windowsBefore) {
-    var pending = DockModel.copyMap(root.launchPending)
-    pending[appId] = { deadline: Date.now() + root.launchTimeout, windows: windowsBefore || 0 }
-    root.launchPending = pending
-    launchPruneTimer.start()
-  }
+  function markLaunching(appId, windowsBefore) { return contextLogic.markLaunching(root, appId, windowsBefore) }
 
-  // A pending launch ends when the app gained a window, or when waiting stops
-  // being informative.
-  function pruneLaunching() {
-    var now = Date.now()
-    var next = {}
-    var remaining = 0
-    var changed = false
+  function pruneLaunching() { return contextLogic.pruneLaunching(root) }
 
-    for (var appId in root.launchPending) {
-      var pending = root.launchPending[appId]
-      var entry = root.entryForId(appId)
-      if ((entry && entry.windows > pending.windows) || now >= pending.deadline) {
-        changed = true
-        continue
-      }
-      next[appId] = pending
-      remaining++
-    }
-
-    if (changed) root.launchPending = next
-    if (remaining === 0) launchPruneTimer.stop()
-  }
-
-  // Reads no file, so bindings can use the current configuration.
-  function buildConfig(base) {
-    var conf = base && typeof base === "object" && !Array.isArray(base) ? base : {}
-    conf.alignment = root.alignment || "center"
-    delete conf.position
-    conf.showRemovableDrives = root.showRemovableDrives
-    conf.warnUnsafeRemoval = root.warnUnsafeRemoval
-    conf.appGroups = DockModel.boundAppGroups(root.appGroups)
-    conf.autohide = root.autohide
-    conf.intelligentAutohide = root.intelligentAutohide
-    conf.showAppsButton = root.showAppsButton
-    conf.showTooltips = root.showTooltips
-    conf.showMinimizedTiles = root.showMinimizedTiles
-    conf.hoverEffect = root.hoverEffect
-    delete conf.magnification
-    conf.launchBounce = root.launchBounce
-    conf.advancedTooltips = root.advancedTooltips
-    if (root.screenName) conf.screen = root.screenName
-    else delete conf.screen
-    conf.multiMonitor = root.multiMonitor
-    conf.perMonitorApps = root.perMonitorApps
-    if (root.configuredIconSize > 0) conf.iconSize = root.configuredIconSize
-    else delete conf.iconSize
-    conf.opacity = root.dockOpacity < 0 ? "theme" : root.dockOpacity
-    conf.borderOpacity = root.borderOpacity < 0 ? "theme" : root.borderOpacity
-    conf.shape = root.dockShape
-    if (root.cornerRadius >= 0) conf.cornerRadius = root.cornerRadius
-    else delete conf.cornerRadius
-    conf.bgColor = root.dockBgColor
-    conf.showBackground = root.showBackground
-    conf.bgFill = root.bgFill
-    conf.gradientPreset = root.gradientPreset
-    conf.gradientStrength = root.gradientStrength
-    conf.grain = root.grain
-    conf.showShadow = root.showShadow
-    conf.splitSections = root.splitSections
-    conf.shadowStrength = root.shadowStrength
-    conf.blur = root.blurMode
-    if (root.blurSize > 0) conf.blurSize = root.blurSize
-    else delete conf.blurSize
-    if (root.systemBlurSize > 0) conf.systemBlurSize = root.systemBlurSize
-    conf.iconStyle = root.iconStyle
-    conf.iconTint = root.iconTint
-    conf.iconHoverOriginal = root.iconHoverOriginal
-    conf.iconHoverReveal = root.iconHoverReveal
-    conf.iconContrast = root.iconContrast
-    conf.iconStrength = root.iconStrength
-    conf.iconGrid = root.iconGrid
-    conf.showBorder = root.showBorder
-    conf.indicatorShape = root.indicatorShape
-    conf.borderWidth = root.borderWidth
-    conf.groupStyle = root.groupStyle
-    conf.groupIconEffects = root.groupIconEffects
-    conf.folderColor = root.folderColor
-    conf.itemSpacing = root.itemSpacing
-    conf.sectionSpacing = root.sectionSpacing
-    conf.dividerGeometry = root.dividerGeometry
-    conf.dividerHeight = root.dividerHeight
-    conf.dividerStyle = root.dividerStyle
-    conf.dividerWidth = root.dividerWidth
-    conf.dividerOpacity = root.dividerOpacity
-    conf.minimizeMode = root.minimizeMode
-    conf.clickToMinimize = root.minimizeMode !== "off"
-    conf.keepPointer = root.keepPointer
-    conf.showUrgentHint = root.showUrgentHint
-    conf.urgentOnNotification = root.urgentOnNotification
-    conf.showNotificationBadges = root.showNotificationBadges
-    conf.badgeStyle = root.badgeStyle
-    conf.badgePosition = root.badgePosition
-    conf.badgeColor = root.badgeColor
-    conf.urgentSound = root.urgentSound
-    conf.urgentSoundName = root.urgentSoundName
-    conf.revealDelay = root.revealDelay
-    conf.tooltipDelay = root.tooltipDelay
-    conf.wheelStepDelay = root.wheelStepDelay
-    conf.pinnedFolders = DockModel.boundPinnedFolders(root.pinnedFolders)
-    conf.presets = DockModel.boundPresets(root.presets)
-    return conf
-  }
+  function buildConfig(base) { return configLogic.buildConfig(root, base) }
 
   // The current look as a preset stores it.
   readonly property var currentLook: DockModel.pickLook(root.buildConfig({}))
 
-  function saveConfig() {
-    // configBase returns null for a file holding anything other than a JSON
-    // object (a typo, an array, an oversize paste): rewriting from {} would
-    // silently drop every key the dock does not own, so skip the save.
-    var conf = configFile.oversized ? null
-      : DockModel.configBase(DockModel.readCapped(configFile.text, DockModel.MAX_CONFIG_BYTES))
-    if (conf === null) {
-      console.warn("[omadock] omadock.json is not a readable JSON object (or is over the size cap); not saving so its other keys survive. Fix the file to save settings again.")
-      return
-    }
-    conf = root.buildConfig(conf)
-    root._savingConfig = true
-    configFile.setText(JSON.stringify(conf, null, 2))
-    Qt.callLater(function() { root._savingConfig = false })
-  }
+  function saveConfig() { return persistLogic.saveConfig(root) }
 
   // ------------------------------------------------- appearance presets
   // Named copies of the look (DockModel.LOOK_KEYS), at most six, kept in the
@@ -4000,123 +2051,25 @@ Item {
     return ""
   }
 
-  function presetIndex(id) {
-    var list = root.presets || []
-    for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return i
-    return -1
-  }
+  function presetIndex(id) { return configLogic.presetIndex(root, id) }
 
-  // The preset with this name, ignoring case; "" when none or the name is
-  // longer than a preset name can be.
-  function presetIdByName(name) {
-    var raw = String(name == null ? "" : name).trim()
-    if (raw === "" || raw.length > DockModel.MAX_PRESET_NAME) return ""
-    var want = DockModel.cleanPresetName(raw).toLowerCase()
-    var list = root.presets || []
-    for (var i = 0; i < list.length; i++)
-      if (list[i] && list[i].name.toLowerCase() === want) return list[i].id
-    return ""
-  }
+  function presetIdByName(name) { return configLogic.presetIdByName(root, name) }
 
-  // Read-only snapshot of the dock items' rectangles in window coordinates,
-  // for the benchmark and live tests (IPC itemGeometry). Changes nothing.
-  function itemGeometry() {
-    var out = []
-    function add(it, kind, id, windows, urgent) {
-      if (!it || !it.visible || it.width <= 0 || it.height <= 0) return
-      var p = it.mapToItem(null, 0, 0)
-      out.push({ id: String(id || ""), kind: kind,
-                 x: Math.round(p.x), y: Math.round(p.y),
-                 w: Math.round(it.width), h: Math.round(it.height),
-                 windows: windows || 0, urgent: urgent === true,
-                 animating: it.urgentFresh === true || it.pulsing === true })
-    }
-    var card = root.dockCardComp
-    // A hidden dock only slides off screen, so its items still look visible.
-    if (!card || !root.dockVisible) return "[]"
-    var i, it
-    for (i = 0; i < card.pinnedRowRepeater.count; i++) {
-      var slot = card.pinnedRowRepeater.itemAt(i)
-      it = slot ? slot.item : null
-      if (!it) continue
-      if (it.groupData !== undefined) add(it, "group", (it.groupData || {}).id, 0, false)
-      else if (it.appId !== undefined) add(it, "app", it.appId, it.windows, it.urgent)
-    }
-    for (i = 0; i < card.runningRepeater.count; i++) {
-      it = card.runningRepeater.itemAt(i)
-      if (it) add(it, "app", it.appId, it.windows, it.urgent)
-    }
-    for (i = 0; i < card.minimizedTilesRepeater.count; i++)
-      add(card.minimizedTilesRepeater.itemAt(i), "tile", "", 1, false)
-    for (i = 0; i < card.foldersRepeater.count; i++) {
-      it = card.foldersRepeater.itemAt(i)
-      if (it) add(it, "folder", it.folderPath, 0, false)
-    }
-    for (i = 0; i < card.drivesRepeater.count; i++) {
-      it = card.drivesRepeater.itemAt(i)
-      if (it) add(it, "drive", it.mountpoint, 0, false)
-    }
-    return JSON.stringify(out)
-  }
+  function itemGeometry() { return contextLogic.itemGeometry(root) }
 
-  function presetNameTaken(name, exceptId) {
-    var id = root.presetIdByName(name)
-    return id !== "" && id !== exceptId
-  }
+  function presetNameTaken(name, exceptId) { return configLogic.presetNameTaken(root, name, exceptId) }
 
-  function nextPresetName() {
-    for (var n = 1; n <= DockModel.MAX_PRESETS + 1; n++)
-      if (!root.presetNameTaken("Preset " + n, "")) return "Preset " + n
-    return "Preset"
-  }
+  function nextPresetName() { return configLogic.nextPresetName(root) }
 
-  function replacePreset(i, preset) {
-    var next = root.presets.slice()
-    next[i] = preset
-    root.presets = next
-    root.saveConfig()
-  }
+  function replacePreset(i, preset) { configLogic.replacePreset(root, i, preset) }
 
-  // A new preset from the current look; returns its id, or "" when the list
-  // is full. A missing or taken name becomes "Preset N".
-  function savePreset(name) {
-    if (!root.canSavePreset) return ""
-    var clean = DockModel.cleanPresetName(name)
-    if (clean === "" || root.presetNameTaken(clean, "")) clean = root.nextPresetName()
-    var id = "preset_" + Date.now()
-    while (root.presetIndex(id) >= 0) id += "0"
-    root.presets = (root.presets || []).concat([{ id: id, name: clean, look: root.currentLook }])
-    root.saveConfig()
-    return id
-  }
+  function savePreset(name) { return configLogic.savePreset(root, name) }
 
-  // Refuses an empty name or one another preset has.
-  function renamePreset(id, name) {
-    var i = root.presetIndex(id)
-    var clean = DockModel.cleanPresetName(name)
-    if (i < 0 || clean === "" || root.presetNameTaken(clean, id)) return false
-    var p = root.presets[i]
-    root.replacePreset(i, { id: p.id, name: clean, look: p.look })
-    return true
-  }
+  function renamePreset(id, name) { return configLogic.renamePreset(root, id, name) }
 
-  function updatePreset(id) {
-    var i = root.presetIndex(id)
-    if (i < 0) return false
-    var p = root.presets[i]
-    root.replacePreset(i, { id: p.id, name: p.name, look: root.currentLook })
-    return true
-  }
+  function updatePreset(id) { return configLogic.updatePreset(root, id) }
 
-  function deletePreset(id) {
-    var i = root.presetIndex(id)
-    if (i < 0) return false
-    var next = root.presets.slice()
-    next.splice(i, 1)
-    root.presets = next
-    root.saveConfig()
-    return true
-  }
+  function deletePreset(id) { return configLogic.deletePreset(root, id) }
 
   // The context menu is a layer popup that Hyprland fades out over ~200 ms.
   // Restyling the dock under it (a border changes the card height and the
@@ -4129,226 +2082,25 @@ Item {
     onTriggered: root.applyPreset(presetId)
   }
 
-  function applyPresetAfterMenu(id) {
-    menuPresetTimer.presetId = id
-    menuPresetTimer.restart()
-  }
+  function applyPresetAfterMenu(id) { return stateLogic.applyPresetAfterMenu(root, id) }
 
-  // Keys a preset lacks (saved before they existed) keep their current value.
-  function applyPreset(id) {
-    var i = root.presetIndex(id)
-    if (i < 0) return false
-    root.applyLook(Object.assign({}, root.currentLook, root.presets[i].look))
-    root.applyBlurRule(false)
-    root.saveConfig()
-    return true
-  }
+  function applyPreset(id) { return configLogic.applyPreset(root, id) }
 
-  // ------------------------------------------------- what a click means
-  //
-  // A left click says "give me this app". Everything below is decided from live
-  // state only — which windows exist, which are parked, whether the focus is
-  // already inside the app — so there is nothing to remember and nothing to go
-  // stale:
-  //
-  //   no windows                      launch it
-  //   focus elsewhere, something parked   bring the parked one back
-  //   focus elsewhere                  focus it, preferring this workspace
-  //   focus inside, mode "all"         park the whole app
-  //   focus inside, several open       step to the app's next window
-  //   focus inside, one open           park it, when parking is on
-  //
-  // Two of those rules carry the weight. Preferring a window on the current
-  // workspace keeps a click from teleporting you while the app is already in
-  // front of you. Stepping through windows is what makes every click on a
-  // multi-window app do something visible: parking one of several hands focus
-  // straight to a sibling, so the app never stops being active, and both a
-  // park-first and a restore-first rule end up stuck — one parks forever, the
-  // other toggles one window forever. Stepping has no such corner, and a
-  // specific window can still be parked from the context menu.
-  function activate(appId) {
-    if (!root.appLibrary) return
+  function activate(appId) { return windowLogic.activate(root, appId) }
 
-    var entry = root.entryForId(appId)
-    var windows = entry ? (entry.windowList || []) : []
-    if (!entry || !entry.running || windows.length === 0) {
-      root.launchApp(appId, entry)
-      return
-    }
+  function windowRowLabel(window) { return windowLogic.windowRowLabel(root, window) }
 
-    var visible = root.visibleWindows(windows)
-    var parked = root.parkedWindows(windows)
-    var focusedIdx = root.focusedIndex(visible)
+  function entryForId(appId) { return pinLogic.entryForId(root, appId) }
 
+  function setPinned(next) { return pinLogic.setPinned(root, next) }
 
-    // Check if this application has any urgent windows or is currently bouncing
-    var hadUrgency = false
-    var urgentWin = null
-    for (var u = 0; u < visible.length; u++) {
-      var ua = visible[u] ? visible[u].address : ""
-      if (ua && root.urgentMap[ua]) {
-        urgentWin = visible[u]
-        hadUrgency = true
-        break
-      }
-    }
+  function applyPinnedRow(row) { return pinLogic.applyPinnedRow(root, row) }
 
-    var urgentParked = null
-    for (var p = 0; p < parked.length; p++) {
-      var pa = parked[p] ? parked[p].address : ""
-      if (pa && root.urgentMap[pa]) {
-        urgentParked = parked[p]
-        hadUrgency = true
-        break
-      }
-    }
+  function togglePin(appId) { return pinLogic.togglePin(root, appId) }
 
-    // Clear urgency map entries for this application immediately on click
-    if (root.urgentMap[appId]) hadUrgency = true
-    root.clearUrgentApp(appId, "")
+  function resolveDesktopEntry(appId) { return pinLogic.resolveDesktopEntry(root, appId) }
 
-    // If an urgent window is parked/minimized: restore it directly to its origin workspace
-    if (urgentParked) {
-      root.restoreWindow(urgentParked.address || urgentParked, appId, true)
-      return
-    }
-
-    // If this app was urgent and not yet focused on screen, focus or restore directly without minimizing
-    if (hadUrgency && focusedIdx < 0) {
-      if (urgentWin && urgentWin.address) {
-        root.focusWindowByAddress(urgentWin.address, appId)
-        return
-      }
-      if (parked.length > 0) {
-        root.restoreWindow(root.oldestParked(parked), appId, true)
-        return
-      }
-      var target = root.windowHere(visible) || root.recentWindow(appId, visible) || visible[0]
-      if (target && target.address) root.focusWindowByAddress(target.address, appId)
-      return
-    }
-
-
-    // 1. If an active window of this application is currently focused
-    if (focusedIdx >= 0) {
-      if (hadUrgency) {
-        // Attention Priority Rule: Clicking an urgent app acknowledges attention and keeps the app in front without minimizing.
-        return
-      }
-
-      if (root.minimizeMode === "all") {
-        root.minimizeAllWindows(entry)
-        return
-      }
-      if (root.minimizeMode === "active") {
-        if (visible[focusedIdx] && visible[focusedIdx].address) {
-          root.minimizeToplevel(visible[focusedIdx].address, root.stepWindow(visible, 1), appId)
-        } else {
-          root.minimizeOneWindow(entry)
-        }
-        return
-      }
-      // If minimize is disabled ("off"), cycle through visible windows
-      if (visible.length > 1) {
-        var next = root.stepWindow(visible, 1)
-        if (next && next.address) root.focusWindowByAddress(next.address, appId)
-        return
-      }
-      return
-    }
-
-    // 2. Nothing focused: bring a visible window of this app forward
-    // (preferring current workspace, then recent, then first).
-    if (visible.length > 0) {
-      var target = root.windowHere(visible) || root.recentWindow(appId, visible) || visible[0]
-      if (target && target.address) root.focusWindowByAddress(target.address, appId)
-    } else if (parked.length > 0) {
-      // Restore the window (preferring most recently parked, or oldest)
-      root.restoreWindow(root.recentParked(parked) || root.oldestParked(parked), appId)
-    }
-  }
-
-  // Menu rows name the workspace a window sits on, including the parked ones.
-  function windowRowLabel(window) {
-    var title = String((window && window.title) || "Window")
-    var wsName = root.liveWsNameOf(window)
-    var isMin = wsName === root.minimizedWorkspace
-    var label = isMin ? "minimized" : (wsName !== "" ? wsName : "")
-    return label !== "" ? "[" + label + "] " + title : title
-  }
-
-  function entryForId(appId) {
-    var i
-    for (i = 0; i < root.pinnedSection.length; i++) {
-      if (root.pinnedSection[i].appId === appId || DockModel.isAppMatch(root.pinnedSection[i].appId, appId))
-        return root.pinnedSection[i]
-    }
-    for (i = 0; i < root.runningSection.length; i++) {
-      if (root.runningSection[i].appId === appId || DockModel.isAppMatch(root.runningSection[i].appId, appId))
-        return root.runningSection[i]
-    }
-    var grouped = root.groupedSection || []
-    for (i = 0; i < grouped.length; i++) {
-      if (grouped[i].appId === appId || DockModel.isAppMatch(grouped[i].appId, appId))
-        return grouped[i]
-    }
-    return null
-  }
-
-  function setPinned(next) {
-    // A group standing before an app that is no longer pinned moves before
-    // the next one that is, instead of dropping to the end.
-    var groups = DockModel.reanchorGroups(root.appGroups, root.pinnedIds, next)
-    root.pinnedIds = next
-    dockFile.setText(DockModel.serializePinned(next))
-    if (groups !== root.appGroups) {
-      root.appGroups = groups
-      root.saveConfig()
-    }
-  }
-
-  // Puts pinned apps and app groups in the order of a pinnedRow.
-  function applyPinnedRow(row) {
-    var state = DockModel.rowState(row, root.pinnedIds)
-    root.appGroups = state.groups
-    root.setPinned(state.pins)
-    root.saveConfig()
-  }
-
-  function togglePin(appId) {
-    var id = DockModel.stripDesktop(appId)
-    if (!id) return
-    // Pin-time validation: never pin an id that no longer resolves to an
-    // installed desktop entry — the pin could only ever bounce silently.
-    // Unpinning bypasses the check so stale pins can always be removed.
-    if (!DockModel.isPinned(root.pinnedIds, id) && !root.resolveDesktopEntry(id)) {
-      root.notifyAppMissing(id, "It cannot be pinned to the dock — reinstall the app first.")
-      return
-    }
-    root.setPinned(DockModel.togglePinned(root.pinnedIds, id))
-  }
-
-  function resolveDesktopEntry(appId) {
-    var entry = DockModel.entryFor(root.appRows, appId)
-    if (!entry && typeof DesktopEntries !== "undefined" && DesktopEntries)
-      entry = DesktopEntries.heuristicLookup(appId) || DesktopEntries.byId(appId)
-    return entry || null
-  }
-
-  // Shared feedback for the "app is gone" classes (launching a stale pin,
-  // pinning an unresolvable id) that used to fail silently. The label is
-  // markup-escaped: notification bodies are rendered as markup.
-  // A drive pulled out while mounted (scripts/drive-removal-watch.py).
-  // The label comes from list-drives.py, already cleaned; it is escaped
-  // again because notification bodies render markup.
-  function notifyUnsafeRemoval(name) {
-    var label = String(name || "A drive").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    Quickshell.execDetached([
-      "bash", root.scriptPath("notify.sh"), "drive-removable-media",
-      "Drive removed without ejecting",
-      label + " was removed while still mounted. Recent changes may not have been written; eject it from the dock next time."
-    ])
-  }
+  function notifyUnsafeRemoval(name) { return contextLogic.notifyUnsafeRemoval(root, name) }
 
   // Event driven: the script blocks on kernel uevents and mount-table
   // changes, so it adds no idle CPU. One dock (the primary) reports.
@@ -4377,98 +2129,19 @@ Item {
     }
   }
 
-  function notifyAppMissing(name, detail) {
-    var label = String(name || "This app").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    Quickshell.execDetached([
-      "bash", root.scriptPath("notify.sh"), "dialog-error",
-      "App no longer installed",
-      label + " is no longer installed. " + String(detail || "Reinstall the app or unpin it from the dock.")
-    ])
-  }
+  function notifyAppMissing(name, detail) { return contextLogic.notifyAppMissing(root, name, detail) }
 
-  function launchDesktopAction(action, appName) {
-    if (!action) return
-    root.markLaunching(root.contextAppId || "", 0)
-    try {
-      if (typeof action.execute === "function") {
-        action.execute()
-        return
-      }
-    } catch (e) {
-      console.warn("[omadock] Failed executing desktop action:", e)
-    }
+  function launchDesktopAction(action, appName) { return contextLogic.launchDesktopAction(root, action, appName) }
 
-    try {
-      if (action.command && action.command.length > 0) {
-        Quickshell.execDetached(action.command)
-      }
-    } catch (e2) {
-      console.warn("[omadock] Failed launching desktop action command:", e2)
-    }
-  }
+  function isWindowFocused(win) { return styleLogic.isWindowFocused(root, win) }
 
-  function isWindowFocused(win) {
-    if (!win || !win.address || !root.activeWindowAddress) return false
-    return win.address === root.activeWindowAddress
-  }
+  function isWindowParked(win) { return styleLogic.isWindowParked(root, win) }
 
-  function isWindowParked(win) {
-    if (!win) return false
-    return root.isWinParkedLive(win)
-  }
+  function syncContextWindows() { return contextLogic.syncContextWindows(root) }
 
-  function syncContextWindows() {
-    if (!root.contextAppId || root.contextAppId === "__dock_settings__" || root.contextAppId === "__folder_context__" || root.contextAppId === "__tile_context__") return
-    var entry = root.entryForId(root.contextAppId)
-    var wins = entry && entry.windowList ? entry.windowList : []
-    if (wins.length === 0) {
-      var allTops = ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []
-      for (var w = 0; w < allTops.length; w++) {
-        var top = allTops[w]
-        if (top && (top.appId === root.contextAppId || DockModel.isAppMatch(top.appId, root.contextAppId))) {
-          var h = root.hyprToplevelFor ? root.hyprToplevelFor(top) : null
-          var addr = root.windowAddress(h)
-          var ws = h ? h.workspace : null
-          var wsName = ws ? String(ws.name || ws.id || "") : (addr && root.minimizedOrigins && root.minimizedOrigins[addr] ? root.minimizedWorkspace : "")
-          var isParked = (wsName === root.minimizedWorkspace) || Boolean(addr && root.minimizedOrigins && root.minimizedOrigins[addr])
-          wins.push({
-            title: String(top.title || "Window"),
-            address: addr,
-            appId: root.contextAppId,
-            workspaceName: isParked ? root.minimizedWorkspace : wsName,
-            isMinimized: isParked
-          })
-        }
-      }
-    }
-    root.contextWindowList = wins
-    root.contextWindows = wins.length
-    if (root.appContextMenuColumnRef && root.appContextMenuColumnRef.selectedWindowIdx >= wins.length) {
-      root.appContextMenuColumnRef.selectedWindowIdx = -1
-    }
-  }
+  function openContext(appId, x, y) { return contextLogic.openContext(root, appId, x, y) }
 
-  function openContext(appId, x, y) {
-    root.contextAppId = appId
-    var entry = root.entryForId(appId)
-    root.contextName = entry ? entry.name : appId
-    root.syncContextWindows()
-
-    var deskEntry = DockModel.entryFor(root.appRows, appId)
-    if (!deskEntry && typeof DesktopEntries !== "undefined" && DesktopEntries) {
-      deskEntry = DesktopEntries.heuristicLookup(appId) || DesktopEntries.byId(appId)
-    }
-    var canonicalId = (deskEntry && deskEntry.id) ? deskEntry.id : appId
-    root.contextPinned = DockModel.isPinned(root.pinnedIds, appId) || (canonicalId !== appId && DockModel.isPinned(root.pinnedIds, canonicalId))
-    root.contextDesktopActions = (deskEntry && deskEntry.actions) ? deskEntry.actions : []
-    if (root.appContextMenuColumnRef) root.appContextMenuColumnRef.selectedWindowIdx = -1
-    root.contextX = x
-    root.contextY = y
-  }
-
-  function closeContext() {
-    root.contextAppId = ""
-  }
+  function closeContext() { return contextLogic.closeContext(root) }
 
   // ------------------------------------------------- minimized tile context
   property var contextTileWins: []
@@ -4476,133 +2149,27 @@ Item {
   property string contextTileName: ""
   property bool contextTilePinned: false
 
-  function openTileContext(wins, appId, cx) {
-    root.contextTileWins = wins || []
-    root.contextTileAppId = appId || ""
-    // Resolve display name from desktop entries
-    var deskEntry = DockModel.entryFor(root.appRows, appId)
-    if (!deskEntry && typeof DesktopEntries !== "undefined" && DesktopEntries)
-      deskEntry = DesktopEntries.heuristicLookup(appId) || DesktopEntries.byId(appId)
-    root.contextTileName = (deskEntry && deskEntry.name) ? deskEntry.name : appId
-    var canonicalId = (deskEntry && deskEntry.id) ? deskEntry.id : appId
-    root.contextTilePinned = DockModel.isPinned(root.pinnedIds, appId)
-      || (canonicalId !== appId && DockModel.isPinned(root.pinnedIds, canonicalId))
-    root.contextX = cx
-    root.contextY = 0
-    root.contextAppId = "__tile_context__"
-    root.syncVisibility()
-  }
+  function openTileContext(wins, appId, cx) { return contextLogic.openTileContext(root, wins, appId, cx) }
 
-  function restoreContextTile() {
-    root.restoreWindowBatch(root.contextTileWins || [])
-  }
+  function restoreContextTile() { return contextLogic.restoreContextTile(root) }
 
-  function restoreContextTileOriginal() {
-    root.restoreWindowBatch(root.contextTileWins || [], null, true)
-  }
+  function restoreContextTileOriginal() { return contextLogic.restoreContextTileOriginal(root) }
 
-  function closeContextTile() {
-    var wins = root.contextTileWins
-    for (var i = 0; i < wins.length; i++) {
-      var w = wins[i]
-      if (w && w.address) root.hyprDispatch(
-        'hl.dsp.window.close({ window = "address:' + w.address + '" })',
-        "closewindow address:" + w.address)
-    }
-  }
+  function closeContextTile() { return contextLogic.closeContextTile(root) }
 
-  function openFolderStack(path, name, cx) {
-    if (root.activeStackFolder === path) {
-      root.closeFolderStack()
-      return
-    }
-    root.closeContext()
-    // Kill any in-flight scan first: assigning running = true while a process
-    // is already running is a no-op in Quickshell, which used to let a slow
-    // older scan race the new one.
-    if (folderStackScanner.running) folderStackScanner.running = false
-    root.activeStackFolder = path
-    // The open stack moves over the new folder together with its content.
-    root.pendingStackX = cx
-    if (root.activeStackEntries.length === 0) root.activeStackX = cx
-    root.activeStackTrail = []
-    root.showStackDir((path || "").replace(/^~/, Quickshell.env("HOME")), name || "Folder")
-    root.syncVisibility()
-  }
+  function openFolderStack(path, name, cx) { return folderLogic.openFolderStack(root, path, name, cx) }
 
-  // Lists dir in the open stack. Kill any in-flight scan first: assigning
-  // running = true while a process is already running is a no-op in
-  // Quickshell, which used to let a slow older scan race the new one.
-  // The scan for the pending folder landed: show it in one step.
-  function applyStackScan(items, count, truncated, failed) {
-    if (root.pendingStackPath === "") return
-    root.activeStackPath = root.pendingStackPath
-    root.activeStackName = root.pendingStackName
-    root.activeStackX = root.pendingStackX
-    root.activeStackTruncated = truncated === true
-    root.activeStackFailed = failed === true
-    root.activeStackTotalCount = count
-    root.activeStackEntries = items
-    root.activeStackLoading = false
-  }
+  function applyStackScan(items, count, truncated, failed) { return folderLogic.applyStackScan(root, items, count, truncated, failed) }
 
-  function showStackDir(dir, name) {
-    if (folderStackScanner.running) folderStackScanner.running = false
-    root.pendingStackPath = dir
-    root.pendingStackName = name
-    root.activeStackLoading = true
-    // First open: nothing to keep on screen, so show the header right away.
-    if (root.activeStackEntries.length === 0) {
-      root.activeStackPath = dir
-      root.activeStackName = name
-    }
-    folderStackScanner.targetFolder = dir
-    folderStackScanner.sortKey = root.folderSortFor(root.activeStackFolder)
-    folderStackScanner.running = true
-  }
+  function showStackDir(dir, name) { return folderLogic.showStackDir(root, dir, name) }
 
-  // Step into a subfolder of the open stack.
-  function enterStackDir(dir, name) {
-    var trail = root.activeStackTrail.slice()
-    trail.push({ path: root.activeStackPath, name: root.activeStackName })
-    root.activeStackTrail = trail
-    root.showStackDir(dir, name || dir.split("/").pop() || "Folder")
-  }
+  function enterStackDir(dir, name) { return folderLogic.enterStackDir(root, dir, name) }
 
-  function stackBack() {
-    var trail = root.activeStackTrail.slice()
-    if (trail.length === 0) return
-    var prev = trail.pop()
-    root.activeStackTrail = trail
-    root.showStackDir(prev.path, prev.name)
-  }
+  function stackBack() { return folderLogic.stackBack(root) }
 
-  function closeFolderStack() {
-    if (folderStackScanner.running) folderStackScanner.running = false
-    root.activeStackFolder = ""
-    root.pendingStackName = ""
-    root.pendingStackPath = ""
-    root.activeStackLoading = false
-    root.activeStackTrail = []
-    root.fileDragOut = false
-    // Cleared once the popup is gone, so its last frame keeps its content.
-    Qt.callLater(function() {
-      if (root.activeStackFolder !== "") return
-      root.activeStackName = ""
-      root.activeStackPath = ""
-      root.activeStackEntries = []
-    })
-  }
+  function closeFolderStack() { return folderLogic.closeFolderStack(root) }
 
-  function openFolderContext(path, name, cx, cy) {
-    root.closeFolderStack()
-    root.contextFolderPath = path
-    root.contextFolderName = name || "Folder"
-    root.contextX = cx
-    root.contextY = cy
-    root.contextAppId = "__folder_context__"
-    root.syncVisibility()
-  }
+  function openFolderContext(path, name, cx, cy) { return folderLogic.openFolderContext(root, path, name, cx, cy) }
 
   // Per-folder stack order, stored on the pinned entry (see list-folder.py).
   readonly property var folderSortLabels: ({
@@ -4613,128 +2180,25 @@ Item {
     size: "Size"
   })
 
-  function folderSortFor(path) {
-    var norm = (path || "").replace(/^~/, Quickshell.env("HOME"))
-    var list = root.pinnedFolders || []
-    for (var i = 0; i < list.length; i++) {
-      if ((list[i].path || "").replace(/^~/, Quickshell.env("HOME")) === norm)
-        return list[i].sort || "modified"
-    }
-    return "modified"
-  }
+  function folderSortFor(path) { return folderLogic.folderSortFor(root, path) }
 
-  function folderViewFor(path) {
-    var norm = (path || "").replace(/^~/, Quickshell.env("HOME"))
-    var list = root.pinnedFolders || []
-    for (var i = 0; i < list.length; i++) {
-      if ((list[i].path || "").replace(/^~/, Quickshell.env("HOME")) === norm)
-        return list[i].view === "grid" ? "grid" : "stack"
-    }
-    return "stack"
-  }
+  function folderViewFor(path) { return folderLogic.folderViewFor(root, path) }
 
-  // Sets one field (sort, view) on a pinned folder's entry and saves.
-  function setFolderOption(path, key, value) {
-    var norm = (path || "").replace(/^~/, Quickshell.env("HOME"))
-    var next = []
-    var list = root.pinnedFolders || []
-    for (var i = 0; i < list.length; i++) {
-      var f = list[i]
-      if ((f.path || "").replace(/^~/, Quickshell.env("HOME")) === norm) {
-        var patch = {}
-        patch[key] = value
-        f = Object.assign({}, f, patch)
-      }
-      next.push(f)
-    }
-    root.pinnedFolders = next
-    root.saveConfig()
-  }
+  function setFolderOption(path, key, value) { return folderLogic.setFolderOption(root, path, key, value) }
 
-  function setFolderSort(path, sort) {
-    root.setFolderOption(path, "sort", sort)
-    // Re-list an open stack of this folder in its new order.
-    var open = String(root.activeStackFolder || "").replace(/^~/, Quickshell.env("HOME"))
-    if (open !== "" && open === (path || "").replace(/^~/, Quickshell.env("HOME")))
-      root.showStackDir(root.activeStackPath, root.activeStackName)
-  }
+  function setFolderSort(path, sort) { return folderLogic.setFolderSort(root, path, sort) }
 
-  function setFolderView(path, view) {
-    root.setFolderOption(path, "view", view === "grid" ? "grid" : "stack")
-  }
+  function setFolderView(path, view) { return folderLogic.setFolderView(root, path, view) }
 
-  function isFolderPinned(path) {
-    var norm = (path || "").replace(/^~/, Quickshell.env("HOME"))
-    var list = root.pinnedFolders || []
-    for (var i = 0; i < list.length; i++) {
-      var p = (list[i].path || "").replace(/^~/, Quickshell.env("HOME"))
-      if (p === norm) return true
-    }
-    return false
-  }
+  function isFolderPinned(path) { return folderLogic.isFolderPinned(root, path) }
 
-  function toggleFolderPin(path, name, icon) {
-    var next = []
-    var found = false
-    var norm = (path || "").replace(/^~/, Quickshell.env("HOME"))
-    var list = root.pinnedFolders || []
-    for (var i = 0; i < list.length; i++) {
-      var f = list[i]
-      var p = (f.path || "").replace(/^~/, Quickshell.env("HOME"))
-      if (p === norm) {
-        found = true
-      } else {
-        next.push(f)
-      }
-    }
-    if (!found) {
-      next.push({ path: path, name: name || "Folder", icon: icon || DockModel.folderIconFor(path, "") })
-    }
-    root.pinnedFolders = next
-    root.saveConfig()
-  }
+  function toggleFolderPin(path, name, icon) { return folderLogic.toggleFolderPin(root, path, name, icon) }
 
-  // Move an app group within the pinned run, or a pinned folder among the
-  // folders, so it lands before the item now at insertIndex (the end when
-  // insertIndex is past the last one).
-  function moveAppGroup(groupId, insertIndex) {
-    var row = root.pinnedRow
-    var from = -1
-    for (var i = 0; i < row.length; i++) {
-      if (row[i].kind === "group" && row[i].id === groupId) { from = i; break }
-    }
-    var next = DockModel.moveBefore(row, from, insertIndex)
-    if (next !== row) root.applyPinnedRow(next)
-  }
+  function moveAppGroup(groupId, insertIndex) { return groupsLogic.moveAppGroup(root, groupId, insertIndex) }
 
-  function moveFolder(path, insertIndex) {
-    var list = root.pinnedFolders || []
-    var from = -1
-    for (var i = 0; i < list.length; i++) {
-      if (list[i] && list[i].path === path) { from = i; break }
-    }
-    var next = DockModel.moveBefore(list, from, insertIndex)
-    if (next === list) return
-    root.pinnedFolders = next
-    root.saveConfig()
-  }
+  function moveFolder(path, insertIndex) { return folderLogic.moveFolder(root, path, insertIndex) }
 
-  // Widest piece of content in the open menu. Only implicit widths are read, so
-  // feeding the result back into every row cannot loop.
-  function menuContentWidth(item) {
-    var widest = 0
-    if (!item) return widest
-
-    var kids = item.children
-    for (var i = 0; i < kids.length; i++) {
-      var kid = kids[i]
-      if (!kid || !kid.visible) continue
-      if (kid.isMenuContent === true && kid.implicitWidth > widest) widest = kid.implicitWidth
-      var nested = root.menuContentWidth(kid)
-      if (nested > widest) widest = nested
-    }
-    return Math.min(Math.max(widest, 220), Style.space(280))
-  }
+  function menuContentWidth(item) { return contextLogic.menuContentWidth(root, item) }
 
   // ------------------------------------- layer-surface recovery (issue #9)
   // Suspend/resume, monitor unplug and DPMS make Hyprland close every layer
@@ -4760,14 +2224,7 @@ Item {
     }
   }
 
-  function recoverDockSurface() {
-    if (!root.dockSurfaceClosed || !root.dockScreen) return
-    root.dockSurfaceClosed = false
-    // Setting visible takes the supported recreate path: setVisibleDirect(true)
-    // builds a new backing window and a fresh wlr-layer-shell surface on the
-    // current screen. Screen reassignment alone cannot revive a deleted one.
-    dockWindow.visible = true
-  }
+  function recoverDockSurface() { return contextLogic.recoverDockSurface(root) }
 
   // ------------------------------------------------- panel window
 
