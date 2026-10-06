@@ -18,18 +18,13 @@ Item {
 
   readonly property var style: root ? root.labelStyle(label.kind) : null
   readonly property real gap: Style.space(2)
-  visible: style ? (style.show && label.name !== "") : false
+  visible: false // rebuilt beside the icon in the next commits
 
   width: tile ? tile.width + Style.space(10) : 0
-  height: style ? style.height : 0
-  x: tile ? (tile.width - width) / 2 : 0
-  y: {
-    if (!style || !tile) return 0
-    return style.above ? -(height + label.gap) : tile.height + label.gap
-  }
+  height: 0
 
   Rectangle {
-    visible: label.style ? label.style.pill : false
+    visible: false
     anchors.fill: parent
     radius: height / 2
     color: Util.alpha(Color.bar.background, 0.85)

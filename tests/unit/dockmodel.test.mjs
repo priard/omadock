@@ -164,3 +164,16 @@ test("the settings module keeps no retired page ids", () => {
   assert.ok(!settingsSources.includes('panel.page === "effects"'))
   assert.ok(!settingsSources.includes('panel.page === "size"'))
 })
+
+test("pickLook carries the label look keys but not behaviour or names", () => {
+  const look = plain(M.pickLook({
+    labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
+    labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
+    labelMode: "hover", labelKind: "apps", labelNames: { a: "A" }
+  }))
+  assert.deepEqual(look, {
+    labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
+    labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
+    iconSize: 0, cornerRadius: -1
+  })
+})

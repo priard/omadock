@@ -883,12 +883,21 @@ Item {
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
   property bool urgentOnNotification: true
-  // ---- name labels on the tiles (policy in DockLabelLogic)
-  property bool showLabels: false
+  // ---- name labels beside the icons (DockLabelLogic, DockLabels.js)
+  property string labelMode: "off"        // off | always | hover
   property string labelKind: "all"        // all | apps | groups | folders
-  property string labelPlacement: "below" // below | above
+  property string labelFont: "theme"      // theme | sans | pixel
   property string labelSize: "small"      // small | medium | large
-  property string labelContrast: "theme"  // theme | high | pill
+  property string labelColor: "theme"     // theme | high | accent
+  property string labelBackground: "none" // none | pill | plate
+  property string labelReveal: "slide"    // slide | typewriter | scramble
+  property string labelEffect: "none"     // none | glow | shadow
+  property int labelMaxWidth: 140
+  property var labelNames: ({})           // appId -> the user's label text
+  property var labelExtras: ({})          // slot -> { owner, width } (DockLabels.withExtra)
+  property int labelsOpen: 0              // hover-mode labels open or closing
+  property string labelEditAppId: ""      // app the Labels page should focus
+  readonly property real labelHoverExtra: labelLogic.hoverExtra(root)
 
   property bool showNotificationBadges: true
   // Badge look: what the pill carries, which corner it sits on, its colour.
@@ -1829,39 +1838,24 @@ Item {
   function closeSettingsPanel() { return stateLogic.closeSettingsPanel(root) }
 
   function setOption(key, value) { return settingsLogic.setOption(root, key, value) }
-
   function setDividerStyle(style) { return settingsLogic.setDividerStyle(root, style) }
-
   function setShowBorder(show) { return settingsLogic.setShowBorder(root, show) }
-
   function setDockScreen(name) { return settingsLogic.setDockScreen(root, name) }
-
   function setAutohideMode(mode) { return settingsLogic.setAutohideMode(root, mode) }
-
   function setDockOpacity(val) { return settingsLogic.setDockOpacity(root, val) }
-
   function setBorderOpacity(val) { return settingsLogic.setBorderOpacity(root, val) }
-
   function setHoverEffect(mode) { return settingsLogic.setHoverEffect(root, mode) }
-
   function setDockShape(shape) { return settingsLogic.setDockShape(root, shape) }
-
   function setDockBgColor(col) { return settingsLogic.setDockBgColor(root, col) }
-
   function setIconSize(sz) { return settingsLogic.setIconSize(root, sz) }
-
   function setItemSpacing(sp) { return settingsLogic.setItemSpacing(root, sp) }
-
   function setUrgentSoundName(name) { return settingsLogic.setUrgentSoundName(root, name) }
 
   // ------------------------------------------------- window plumbing
 
   function hyprToplevelFor(toplevel) { return windowLogic.hyprToplevelFor(root, toplevel) }
-
   function windowAddress(handle) { return windowLogic.windowAddress(root, handle) }
-
   function luaString(value) { return windowLogic.luaString(root, value) }
-
   function hyprDispatch(lua, legacy) { return windowLogic.hyprDispatch(root, lua, legacy) }
 
   // Runs action with Hyprland's pointer warps switched off. Activation goes
@@ -1879,9 +1873,15 @@ Item {
   function groupCycleFront(key, windows, frontIndex, angleDelta) { return groupCycleLogic.cycleFront(root, key, windows, frontIndex, angleDelta) }
   function focusPreviewedWindow(windows, frontIndex) { return groupCycleLogic.focusPreviewed(root, windows, frontIndex) }
 
-  // Name labels: rendering policy (visibility, size, contrast, band)
+  // Name labels: rendering policy and the per-slot width registry
   function labelStyle(kind) { return labelLogic.style(root, kind) }
-  function labelBandHeight() { return labelLogic.bandHeight(root) }
+  function labelName(appId, name) { return labelLogic.displayName(root, appId, name) }
+  function labelTooltipNeeded(kind, wins, hint, shortened) { return labelLogic.tooltipNeeded(root, kind, wins, hint, shortened) }
+  function labelExtraBefore(slot) { return labelLogic.extraBefore(root, slot) }
+  function setLabelExtra(slot, owner, width) { labelLogic.setExtra(root, slot, owner, width) }
+  function setLabelName(appId, name) { labelLogic.setName(root, appId, name) }
+  function openLabelRename(appId) { labelLogic.openRename(root, appId) }
+  function labelNameRows() { return labelLogic.nameRows(root) }
 
   function withoutPointerWarp(action) { return stateLogic.withoutPointerWarp(root, action) }
 

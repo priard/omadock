@@ -32,6 +32,7 @@ QtObject {
       + slotsBefore * root.iconSlot
       + seps * root.separatorWidth
       + (extraLeftWidth || 0)
+      + root.labelExtraBefore(slotsBefore)
       + root.iconSlot / 2
   }
 
