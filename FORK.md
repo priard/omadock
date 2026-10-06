@@ -38,6 +38,10 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   keeps its 2x2 shape with one or two members: merged into `experimental`
   2026-10-04, released in v4.0.3.
 
+- #42 omadock as the notification sender, #44 theme re-read on every
+  switch, #45 rim over a gradient fill, #46 badge placed by x/y: merged
+  2026-10-05/07, on upstream `main` with the Dock.qml split and labels.
+
 ## Open
 
 - none.
