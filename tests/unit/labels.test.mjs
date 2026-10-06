@@ -1,0 +1,186 @@
+// Tests for DockLabels.js, the pure helpers behind the dock's name labels.
+// Plain JS with no Qt globals, run in a vm context like DockModel.js.
+import { test } from "node:test"
+import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import vm from "node:vm"
+
+const file = process.env.DOCKLABELS || new URL("../../DockLabels.js", import.meta.url)
+const L = vm.createContext({})
+vm.runInContext(readFileSync(file, "utf8"), L)
+const plain = (v) => JSON.parse(JSON.stringify(v))
+// 7 px per character, like a monospace caption.
+const fitsChars = (n) => (s) => Array.from(s).length * 7 <= n * 7
+
+test("prettyAppId turns class ids into names", () => {
+  assert.equal(L.prettyAppId("org.omarchy.terminal"), "Terminal")
+  assert.equal(L.prettyAppId("zen-browser"), "Zen Browser")
+  assert.equal(L.prettyAppId("com.github.foo_bar"), "Foo Bar")
+  assert.equal(L.prettyAppId("signal.desktop"), "Signal")
+  assert.equal(L.prettyAppId(""), "")
+  assert.equal(L.prettyAppId(null), "")
+})
+
+test("cleanName drops brackets and subtitles", () => {
+  assert.equal(L.cleanName("Signal - Private Messenger"), "Signal")
+  assert.equal(L.cleanName("Firefox (Beta)"), "Firefox")
+  assert.equal(L.cleanName("GIMP: Image Editor"), "GIMP")
+  assert.equal(L.cleanName("Visual Studio Code — Insiders"), "Visual Studio Code")
+  assert.equal(L.cleanName("(only brackets)"), "(only brackets)")
+})
+
+test("shortenName keeps names that fit", () => {
+  assert.deepEqual(plain(L.shortenName("Signal", fitsChars(10))), { text: "Signal", shortened: false })
+})
+
+test("shortenName cleans before cutting", () => {
+  assert.deepEqual(plain(L.shortenName("Signal - Private Messenger", fitsChars(10))), { text: "Signal", shortened: true })
+})
+
+test("shortenName cuts at word boundaries without an ellipsis", () => {
+  assert.deepEqual(plain(L.shortenName("Visual Studio Code", fitsChars(14))), { text: "Visual Studio", shortened: true })
+  assert.deepEqual(plain(L.shortenName("Zen Browser", fitsChars(5))), { text: "Zen", shortened: true })
+})
+
+test("shortenName ellipsises only a first word that does not fit", () => {
+  assert.deepEqual(plain(L.shortenName("Spotifasolatron", fitsChars(8))), { text: "Spotifa…", shortened: true })
+})
+
+test("shortenName handles empty, blank, tiny widths and wide characters", () => {
+  assert.deepEqual(plain(L.shortenName("", fitsChars(8))), { text: "", shortened: false })
+  assert.deepEqual(plain(L.shortenName("   ", fitsChars(8))), { text: "", shortened: false })
+  assert.deepEqual(plain(L.shortenName("Mattermost", () => false)), { text: "…", shortened: true })
+  assert.equal(L.shortenName("日本語のアプリ名前", fitsChars(4)).text, "日本語…")
+  assert.equal(L.shortenName("🎵🎵🎵🎵🎵🎵", fitsChars(3)).text, "🎵🎵…")
+})
+
+test("labelVisible follows mode and filter", () => {
+  assert.equal(L.labelVisible("off", "all", "app"), false)
+  assert.equal(L.labelVisible("always", "all", "folder"), true)
+  assert.equal(L.labelVisible("hover", "apps", "app"), true)
+  assert.equal(L.labelVisible("hover", "apps", "group"), false)
+  assert.equal(L.labelVisible("always", "folders", "folder"), true)
+  assert.equal(L.labelVisible("bogus", "all", "app"), false)
+})
+
+test("tooltipNeeded only when the tooltip says more than the label", () => {
+  assert.equal(L.tooltipNeeded(false, false, false, false), true)
+  assert.equal(L.tooltipNeeded(true, false, false, false), false)
+  assert.equal(L.tooltipNeeded(true, true, false, false), true)
+  assert.equal(L.tooltipNeeded(true, false, true, false), true)
+  assert.equal(L.tooltipNeeded(true, false, false, true), true)
+})
+
+test("withExtra records, updates and clears by owner", () => {
+  let e = {}
+  e = L.withExtra(e, 2, "a", 40)
+  e = L.withExtra(e, 0, "b", 10)
+  assert.equal(L.extrasBefore(e, 2), 10)
+  assert.equal(L.extrasBefore(e, 3), 50)
+  assert.equal(L.extrasTotal(e), 50)
+  const same = L.withExtra(e, 2, "a", 40)
+  assert.equal(same, e)
+  // Another owner moved into slot 2 first: a's late clear must not erase it.
+  e = L.withExtra(e, 2, "c", 30)
+  e = L.withExtra(e, 2, "a", 0)
+  assert.equal(L.extrasTotal(e), 40)
+  e = L.withExtra(e, 2, "c", 0)
+  assert.equal(L.extrasTotal(e), 10)
+  assert.equal(L.withExtra({}, 5, "x", 0) !== undefined, true)
+})
+
+test("anchoredX keeps a centred dock's leading edge while labels open", () => {
+  // 1000 wide screen, dock 200 wide at rest -> x 400.
+  assert.equal(L.anchoredX(1000, 200, 20, "center", 0), 400)
+  // A hover label adds 80: same x, the dock grows to the right.
+  assert.equal(L.anchoredX(1000, 280, 20, "center", 80), 400)
+  // Always-mode width is not hover extra: it centres.
+  assert.equal(L.anchoredX(1000, 280, 20, "center", 0), 360)
+  assert.equal(L.anchoredX(1000, 280, 20, "left", 80), 20)
+  // Right: the right edge stays (labels open to the left there).
+  assert.equal(L.anchoredX(1000, 280, 20, "right", 80), 700)
+})
+
+test("iconCentre finds the icon in a wide tile", () => {
+  assert.equal(L.iconCentre(100, 60, 0, false), 130)
+  assert.equal(L.iconCentre(100, 160, 100, false), 130)
+  assert.equal(L.iconCentre(100, 160, 100, true), 230)
+})
+
+test("revealFrame types and scrambles without changing length", () => {
+  assert.equal(L.revealFrame("Signal", "slide", 0.2, 1), "Signal")
+  assert.equal(L.revealFrame("Signal", "typewriter", 0, 1), "")
+  assert.equal(L.revealFrame("Signal", "typewriter", 0.5, 1), "Sig")
+  assert.equal(L.revealFrame("Signal", "typewriter", 1, 1), "Signal")
+  const s = L.revealFrame("Zen Browser", "scramble", 0.3, 7)
+  assert.equal(Array.from(s).length, 11)
+  assert.equal(s.slice(0, 3), "Zen")
+  assert.equal(s.charAt(3), " ")
+  assert.equal(L.revealFrame("Zen Browser", "scramble", 1, 7), "Zen Browser")
+  assert.equal(L.revealFrame("Zen", "scramble", 0.3, 7), L.revealFrame("Zen", "scramble", 0.3, 7))
+})
+
+test("boundLabelNames keeps sane string entries only", () => {
+  const raw = JSON.parse('{"a":"  Matter  most ","b":"","c":5,"__proto__":"x","' + "z".repeat(200) + '":"long id"}')
+  raw.d = "x".repeat(60)
+  const out = plain(L.boundLabelNames(raw))
+  assert.deepEqual(Object.keys(out).sort(), ["a", "d"])
+  assert.equal(out.a, "Matter most")
+  assert.equal(out.d.length, 40)
+  assert.deepEqual(plain(L.boundLabelNames(["x"])), {})
+  assert.deepEqual(plain(L.boundLabelNames(null)), {})
+  const many = {}
+  for (let i = 0; i < 300; i++) many["app" + i] = "n" + i
+  assert.equal(Object.keys(L.boundLabelNames(many)).length, 200)
+})
+
+test("withLabelName sets, trims and clears", () => {
+  let n = L.withLabelName({}, "zen", "  Zen ")
+  assert.deepEqual(plain(n), { zen: "Zen" })
+  n = L.withLabelName(n, "zen", "   ")
+  assert.deepEqual(plain(n), {})
+  assert.deepEqual(plain(L.withLabelName({}, "", "x")), {})
+})
+
+test("readLabelConfig defaults", () => {
+  assert.deepEqual(plain(L.readLabelConfig(null)), {
+    labelMode: "off", labelKind: "all", labelFont: "theme", labelSize: "small",
+    labelColor: "theme", labelBackground: "none", labelReveal: "slide",
+    labelEffect: "none", labelMaxWidth: 140, labelNames: {}
+  })
+})
+
+test("readLabelConfig migrates upstream's first label keys", () => {
+  const c = L.readLabelConfig({ showLabels: true, labelPlacement: "above", labelContrast: "pill", labelSize: "large" })
+  assert.equal(c.labelMode, "always")
+  assert.equal(c.labelBackground, "pill")
+  assert.equal(c.labelColor, "theme")
+  assert.equal(c.labelSize, "large")
+  assert.equal(L.readLabelConfig({ showLabels: true, labelContrast: "high" }).labelColor, "high")
+  assert.equal(L.readLabelConfig({ showLabels: false }).labelMode, "off")
+  // New keys win over old ones.
+  assert.equal(L.readLabelConfig({ showLabels: true, labelMode: "hover" }).labelMode, "hover")
+})
+
+test("readLabelConfig validates values", () => {
+  const c = L.readLabelConfig({ labelMode: "sideways", labelFont: "comic", labelMaxWidth: 9999, labelEffect: "glow" })
+  assert.equal(c.labelMode, "off")
+  assert.equal(c.labelFont, "theme")
+  assert.equal(c.labelMaxWidth, 240)
+  assert.equal(c.labelEffect, "glow")
+  assert.equal(L.readLabelConfig({ labelMaxWidth: 10 }).labelMaxWidth, 80)
+  assert.equal(L.readLabelConfig({ labelMaxWidth: "150" }).labelMaxWidth, 140)
+  assert.equal(L.readLabelConfig({ labelMaxWidth: 151.6 }).labelMaxWidth, 152)
+})
+
+test("writeLabelConfig writes new keys and drops old ones", () => {
+  const conf = { showLabels: true, labelPlacement: "below", labelContrast: "pill", other: 1 }
+  const state = L.readLabelConfig({ labelMode: "hover", labelNames: { a: "A" } })
+  L.writeLabelConfig(conf, state)
+  assert.equal(conf.showLabels, undefined)
+  assert.equal(conf.labelPlacement, undefined)
+  assert.equal(conf.labelContrast, undefined)
+  assert.equal(conf.labelMode, "hover")
+  assert.deepEqual(plain(conf.labelNames), { a: "A" })
+  assert.equal(conf.other, 1)
+})
