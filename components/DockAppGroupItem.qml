@@ -14,6 +14,8 @@ Item {
   property var groupData: null
   property real homeCenter: 0
   property int labelSlot: -1
+  readonly property real labelExtra: label.extra
+  readonly property real iconCenterX: iconSlot.x + iconSlot.width / 2
 
   readonly property string groupId: (groupData && groupData.id) ? groupData.id : ""
   readonly property string groupName: (groupData && groupData.name) ? groupData.name : "Folder"
@@ -58,7 +60,7 @@ Item {
   // Faded while dragged, fainter still once pulled off the dock.
   opacity: groupArea.dragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
 
-  width: root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0
+  width: (root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0) + gitem.labelExtra
   height: root ? root.iconSlot : 0
   z: Math.round(gitem.magnifyScale * 100)
 
@@ -166,7 +168,7 @@ Item {
     id: iconSlot
     width: root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
-    anchors.horizontalCenter: parent.horizontalCenter
+    x: (label.mirror ? gitem.labelExtra : 0) + Math.round((gitem.width - gitem.labelExtra - width) / 2)
     anchors.verticalCenter: parent.verticalCenter
 
     Item {
@@ -317,7 +319,7 @@ Item {
   // the row's own layout.
   Item {
     id: indicatorBand
-    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.horizontalCenter: iconSlot.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1)
     width: indicatorRow.width
@@ -380,12 +382,16 @@ Item {
     }
   }
 
-  // Name label (visibility/size/contrast decided in DockLabelLogic).
+  // Name beside the tile (DockLabel, policy in DockLabelLogic).
   DockLabel {
+    id: label
+    z: -1
     rootRef: gitem.rootRef
-    name: gitem.groupName
     kind: "group"
-    tile: gitem
+    name: gitem.groupName
+    hovered: groupArea.containsMouse
+    iconBox: iconSlot
+    slot: gitem.labelSlot
   }
 
   // Hover tooltip: the member windows as preview cards, like an app's.

@@ -1,47 +1,178 @@
 import QtQuick
+import QtQuick.Effects
 import qs.Commons
 import qs.Ui
+import "../DockLabels.js" as DockLabels
 
-// The name label on a dock tile (apps, app groups, folders). Rendering
-// policy — visibility, size, contrast, band height — lives in
-// DockLabelLogic; the tile passes the name it already shows in its tooltip.
-// Purely visual: no input handling, so hover, drag and clicks pass through,
-// and its x/y placement never changes the tile's layout size.
+// The name beside a dock tile's icon (apps, app groups, folders). Policy
+// comes from root.labelStyle() (DockLabelLogic); this item shortens the name
+// to the max width in its own font, animates the reveal, and reports the
+// width it adds to the tile (extra) to the dock's registry, which feeds the
+// zoom/wave centres and the card's hover anchor. No input handling: hover,
+// drag and clicks belong to the tile.
 Item {
   id: label
 
   property var rootRef: null
   readonly property var root: rootRef
-  property string name: ""
   property string kind: "app"
-  property Item tile: parent
+  property string appId: ""
+  property string name: ""
+  property bool hovered: false
+  property Item iconBox: null
+  property int slot: -1
 
   readonly property var style: root ? root.labelStyle(label.kind) : null
-  readonly property real gap: Style.space(2)
-  visible: false // rebuilt beside the icon in the next commits
+  readonly property string fullText: root ? root.labelName(label.appId, label.name) : label.name
+  readonly property bool shown: !!label.style && label.style.show && label.fullText !== ""
+  readonly property bool mirror: !!label.style && label.style.mirror
 
-  width: tile ? tile.width + Style.space(10) : 0
-  height: 0
+  // ---- text and width
+  property string shortText: ""
+  property bool shortened: false
+  readonly property real pad: (label.style && label.style.background !== "none") ? Style.space(6) : Style.space(2)
+  // A plate already frames icon and name, so the name sits closer to the
+  // icon and keeps room before the plate's end instead.
+  readonly property bool plate: !!label.style && label.style.background === "plate"
+  readonly property real gap: label.plate ? Style.space(1) : Style.space(4)
+  readonly property real trail: label.plate ? Style.space(4) : 0
+  readonly property real naturalWidth: label.shown && label.shortText !== ""
+    ? Math.ceil(textWidth.advanceWidth) + label.pad * 2 + label.gap + label.trail : 0
 
+  // The bundled pixel font registers only while it is the chosen one.
+  Loader {
+    active: !!label.style && label.style.family === "Silkscreen"
+    sourceComponent: FontLoader { source: Qt.resolvedUrl("../fonts/Silkscreen-Regular.ttf") }
+  }
+  TextMetrics { id: probe; font: textItem.font }
+  TextMetrics { id: textWidth; font: textItem.font; text: label.shortText }
+
+  function reshorten() {
+    if (!label.style) return
+    var limit = label.style.maxWidth - label.pad * 2 - label.gap - label.trail
+    var r = DockLabels.shortenName(label.fullText, function(t) { probe.text = t; return probe.advanceWidth <= limit })
+    label.shortText = r.text
+    label.shortened = r.shortened
+  }
+  onFullTextChanged: Qt.callLater(label.reshorten)
+  onStyleChanged: Qt.callLater(label.reshorten)
+
+  // ---- open state (hover mode arrives in Task 5; always mode is open)
+  readonly property bool wantOpen: label.shown && !label.style.hover
+  property real progress: label.wantOpen ? 1 : 0
+  Behavior on progress { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+  readonly property real extra: Math.round(label.progress * label.naturalWidth)
+
+  // ---- width registry
+  readonly property string owner: String(label)
+  property int _slot: -1
+  function syncExtra() {
+    if (!label.root) return
+    if (label._slot >= 0 && label._slot !== label.slot) label.root.setLabelExtra(label._slot, label.owner, 0)
+    label._slot = label.slot
+    if (label.slot >= 0) label.root.setLabelExtra(label.slot, label.owner, label.extra)
+  }
+  onExtraChanged: label.syncExtra()
+  onSlotChanged: label.syncExtra()
+  Component.onCompleted: { label.reshorten(); label.syncExtra() }
+  Component.onDestruction: if (label.root && label._slot >= 0) label.root.setLabelExtra(label._slot, label.owner, 0)
+
+  // ---- reveal (typewriter / scramble swap the text; slide just grows)
+  property real revealT: 1
+  property string revealStyle: "slide"
+  property real seed: 0
+  readonly property string drawnText: DockLabels.revealFrame(label.shortText, label.revealStyle, label.revealT, label.seed)
+  NumberAnimation {
+    id: revealAnim
+    target: label; property: "revealT"; from: 0; to: 1
+    duration: Math.min(300, 25 * Math.max(1, label.shortText.length))
+  }
+  function reveal(styleName) {
+    label.revealStyle = styleName
+    label.seed = Math.random() * 100
+    revealAnim.restart()
+  }
+  onWantOpenChanged: if (label.wantOpen && label.style) label.reveal(label.style.reveal)
+  onShortTextChanged: if (label.wantOpen && label.style && label.revealT >= 1 && !revealAnim.running) label.reveal(label.style.reveal)
+
+  // ---- hover sync with the icon's HoverFx
+  property real hoverLevel: label.hovered ? 1 : 0
+  Behavior on hoverLevel { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  readonly property string hoverEffect: label.root ? label.root.hoverEffect : ""
+  readonly property real liftY: label.hoverEffect === "lift" && label.root ? -label.root.baseIconArt * 0.16 * label.hoverLevel : 0
+  onHoveredChanged: if (label.hovered && label.hoverEffect === "glitch" && label.progress > 0.5) label.reveal("scramble")
+  readonly property real glowLevel: !label.style ? 0
+    : Math.max(label.style.effect === "glow" ? 0.55 + 0.45 * label.hoverLevel : 0,
+               label.hoverEffect === "glow" ? label.hoverLevel : 0)
+
+  // ---- geometry: beside the icon, the whole tile height
+  x: label.mirror ? 0 : (label.iconBox ? label.iconBox.x + label.iconBox.width : 0)
+  width: label.extra
+  height: parent ? parent.height : 0
+  visible: label.extra > 0
+
+  // Plate: one rounded surface behind icon and name.
   Rectangle {
-    visible: false
-    anchors.fill: parent
-    radius: height / 2
-    color: Util.alpha(Color.bar.background, 0.85)
+    visible: !!label.style && label.style.background === "plate"
+    readonly property real iconW: label.iconBox ? label.iconBox.width : 0
+    // Inset so the plates of neighbouring tiles never touch.
+    readonly property real inset: Style.space(3)
+    x: (label.mirror ? 0 : -iconW) + inset
+    width: label.width + iconW - inset * 2
+    height: label.iconBox ? label.iconBox.height - Style.space(4) : 0
+    anchors.verticalCenter: parent.verticalCenter
+    radius: Math.min(height / 2, label.root ? label.root.effectiveCardRadius : Style.cornerRadius)
+    color: Util.alpha(label.style ? label.style.ink : Color.bar.text, 0.16 + 0.10 * label.hoverLevel)
+    opacity: label.progress
   }
 
-  Text {
+  Item {
     anchors.fill: parent
-    anchors.leftMargin: Style.space(4)
-    anchors.rightMargin: Style.space(4)
-    text: label.name
-    textFormat: Text.PlainText
-    color: label.style ? label.style.ink : Color.bar.text
-    font.family: Style.font.family
-    font.pixelSize: label.style ? label.style.fontPx : Style.font.caption
-    horizontalAlignment: Text.AlignHCenter
-    verticalAlignment: Text.AlignVCenter
-    elide: Text.ElideRight
-    maximumLineCount: 1
+    clip: label.progress < 0.999
+
+    Item {
+      id: content
+      x: label.mirror ? label.trail : label.gap
+      width: Math.max(0, label.naturalWidth - label.gap - label.trail)
+      height: textItem.implicitHeight + Style.space(2)
+      // Centred on the icon art, which sits on the dock floor.
+      y: label.root ? Math.round(label.height - label.root.iconArtBottom - label.root.baseIconArt / 2 - height / 2) : 0
+      opacity: label.progress
+      transform: Translate { y: label.liftY }
+
+      Rectangle {
+        visible: !!label.style && label.style.background === "pill"
+        anchors.fill: parent
+        radius: height / 2
+        color: Util.alpha(Color.bar.background, 0.85)
+      }
+
+      Text {
+        id: textItem
+        anchors.fill: parent
+        anchors.leftMargin: label.pad
+        anchors.rightMargin: label.pad
+        text: label.drawnText
+        textFormat: Text.PlainText
+        color: label.style ? label.style.ink : Color.bar.text
+        font.family: label.style ? label.style.family : Style.font.family
+        font.pixelSize: label.style ? label.style.fontPx : Style.font.caption
+        horizontalAlignment: label.mirror ? Text.AlignRight : Text.AlignLeft
+        verticalAlignment: Text.AlignVCenter
+        maximumLineCount: 1
+        style: (label.style && label.style.effect === "shadow") ? Text.Outline : Text.Normal
+        styleColor: Util.alpha("#000000", 0.55)
+        layer.enabled: label.glowLevel > 0.01
+        layer.effect: MultiEffect {
+          shadowEnabled: true
+          shadowColor: Color.accent
+          shadowBlur: 0.6
+          shadowHorizontalOffset: 0
+          shadowVerticalOffset: 0
+          shadowOpacity: label.glowLevel
+          autoPaddingEnabled: true
+        }
+      }
+    }
   }
 }

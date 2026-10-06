@@ -650,6 +650,8 @@ qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 Distributed under the **MIT License**.  
 Copyright © 2026 **[thepathless](https://github.com/thepathless)**.
 
+The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscreen) by Jason Kottke (The Silkscreen Project Authors), SIL Open Font License 1.1 — see `fonts/OFL.txt`.
+
 ---
 
 ## 📋 Releases & Changelog

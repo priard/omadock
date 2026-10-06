@@ -40,7 +40,7 @@ Item {
 
   // Only the wave lets a slot grow; zoom keeps the layout still and simply
   // draws its icon larger.
-  width: root ? (root.iconSlot * (root.waveHover ? item.magnifyScale : 1)) : 0
+  width: (root ? (root.iconSlot * (root.waveHover ? item.magnifyScale : 1)) : 0) + item.labelExtra
   height: root ? root.iconSlot : 0
   z: Math.round(item.magnifyScale * 100)
 
@@ -51,6 +51,8 @@ Item {
   property real bounceY: 0
   property real homeCenter: 0
   property int labelSlot: -1
+  readonly property real labelExtra: label.extra
+  readonly property real iconCenterX: iconBox.x + iconBox.width / 2
 
   Connections {
     target: root
@@ -207,7 +209,9 @@ Item {
   // the slot is the running indicator underneath.
   Item {
     id: iconBox
-    anchors.fill: parent
+    x: label.mirror ? item.labelExtra : 0
+    width: item.width - item.labelExtra
+    height: parent.height
 
     scale: area.pressed ? 0.92 : 1.0
     transformOrigin: Item.Bottom
@@ -306,7 +310,7 @@ Item {
   DockIndicator {
     rootRef: item.rootRef
     visible: item.backgroundMedia
-    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1)
     kind: "background"
@@ -316,7 +320,7 @@ Item {
   DockIndicatorRow {
     id: indicatorRow
     rootRef: item.rootRef
-    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1)
     z: 2
@@ -331,12 +335,17 @@ Item {
   // Files dragged in from outside: opened with this app when it declares
   // their types (see Dock.beginAppDrop). Refusing the drag lets a folder
   // fall through to the dock's own drop area, which pins it.
-  // Name label (visibility/size/contrast decided in DockLabelLogic).
+  // Name beside the icon (DockLabel, policy in DockLabelLogic).
   DockLabel {
+    id: label
+    z: -1
     rootRef: item.rootRef
-    name: item.name
     kind: "app"
-    tile: item
+    appId: item.appId
+    name: item.name
+    hovered: area.containsMouse && !item.isDragging
+    iconBox: iconBox
+    slot: item.visible ? item.labelSlot : -1
   }
 
   DropArea {
