@@ -58,7 +58,7 @@ Item {
   // or the name.
   readonly property real markEdge: label.pad + Style.space(1)
   // As wide as the column's marks (DockIndicatorRow.cross).
-  readonly property real markWidth: label.root ? Math.max(1, Math.round(Style.space(5) * label.root.outputScale)) / label.root.outputScale : Style.space(5)
+  readonly property real markWidth: label.root ? Math.max(1, Math.round(Style.space(4) * label.root.outputScale)) / label.root.outputScale : Style.space(4)
   readonly property real markGap: Style.space(5)
   readonly property real markSpan: label.markEdge + label.markWidth + label.markGap
   // Before the icon, the room sits ahead of the art (less the margin the

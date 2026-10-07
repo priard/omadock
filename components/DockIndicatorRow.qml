@@ -42,7 +42,7 @@ Item {
   // against one side of the dots.
   readonly property real dpr: marks.root ? marks.root.outputScale : 1
   function snap(v) { return Math.max(1, Math.round(v * marks.dpr)) / marks.dpr }
-  readonly property real cross: Math.max(marks.snap(Style.space(marks.dense ? 4 : 5)), marks.snap(Style.space(4)))
+  readonly property real cross: Math.max(marks.snap(Style.space((marks.dense || marks.vertical) ? 4 : 5)), marks.snap(Style.space(4)))
   readonly property real dynamicSpacing: marks.snap(marks.dense ? Style.space(2) : Style.space(3))
 
   visible: marks.running
