@@ -120,7 +120,11 @@ Item {
   // Hover labels slide out over the neighbours instead of widening the
   // tile, so the dock never moves under the pointer.
   readonly property bool overlay: !!label.style && label.style.hover
-  readonly property real extra: label.overlay ? 0 : Math.round(label.progress * label.naturalWidth) + label.lead
+  readonly property real rawExtra: label.overlay ? 0 : Math.round(label.progress * label.naturalWidth) + label.lead
+  // In a plate row the tile's width lands on the device-pixel grid.
+  readonly property real extra: (label.rawExtra > 0 && label.root && label.root.labelPlates)
+    ? DockLabels.gridCeil(label.root.iconSlot + label.rawExtra, label.root.outputScale) - label.root.iconSlot
+    : label.rawExtra
 
   // ---- width registry
   readonly property string owner: String(label)
@@ -211,13 +215,23 @@ Item {
     // Side margin: matches the name's padding plus trail (a glyph's own
     // trailing bearing makes that side read wider), up to the slot's edge.
     readonly property real hMargin: Math.min(label.pad + label.trail, label.artMargin)
-    y: artTop - vMargin
-    // Indicators end Style.space(1) plus the lift above the slot floor.
-    // With indicators beside the art (or none), the art gets the same
-    // margin below as above.
-    height: ((label.sideMarks || label.overlay) ? artTop + artSize : label.height - Style.space(1) - (label.root ? label.root.indicatorLift : 0)) + vMargin - y
-    x: label.mirror ? edge : -iconW - label.lead + label.artMargin - hMargin
-    width: label.mirror
+    // In a plate row (Dock.labelPlates) a plate fills its tile less the
+    // shared inset, so plate-plate, plate-edge and plate-divider gaps match;
+    // at "dock" height it also reaches the card's top and bottom, the same
+    // gap away.
+    readonly property var spacing: (label.root && label.root.labelPlates) ? label.root.plateSpacing : null
+    readonly property real tileW: label.parent ? label.parent.width : 0
+    // In a plate row the vertical box is shared with the unlabelled tiles'
+    // plates (DockLabelLogic.plateBox); otherwise around the art (and the
+    // indicators under it).
+    readonly property var box: spacing ? label.root.labelPlateBox(label.height) : null
+    y: box ? box.y : artTop - vMargin
+    height: box ? box.h
+      : ((label.sideMarks || label.overlay) ? artTop + artSize : label.height - Style.space(1) - (label.root ? label.root.indicatorLift : 0)) + vMargin - y
+    x: spacing ? spacing.inset - label.x
+      : label.mirror ? edge : -iconW - label.lead + label.artMargin - hMargin
+    width: spacing ? tileW - 2 * spacing.inset
+      : label.mirror
       ? label.width + label.artMargin + artSize + hMargin + label.lead - edge
       : label.width - edge - x
     radius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0

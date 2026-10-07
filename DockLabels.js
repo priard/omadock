@@ -11,6 +11,7 @@ var LABEL_COLORS = ["auto", "theme", "accent"]
 var LABEL_BACKGROUNDS = ["none", "pill", "plate"]
 var LABEL_SHAPES = ["dock", "pill", "rounded", "square"]
 var LABEL_INDICATORS = ["before", "after", "under"]
+var LABEL_PLATE_HEIGHTS = ["icon", "dock"]
 var LABEL_REVEALS = ["slide", "typewriter", "scramble"]
 var LABEL_EFFECTS = ["none", "glow", "outline"]
 var LABEL_MAX_WIDTH_MIN = 80
@@ -20,7 +21,7 @@ var MAX_LABEL_NAMES = 200
 var MAX_LABEL_NAME = 40
 var MAX_LABEL_APP_ID = 128
 var LABEL_CONFIG_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "labelWeight",
-  "labelColor", "labelBackground", "labelShape", "labelIndicators", "labelReveal", "labelEffect", "labelMaxWidth", "labelNames"]
+  "labelColor", "labelBackground", "labelShape", "labelIndicators", "labelPlateHeight", "labelReveal", "labelEffect", "labelMaxWidth", "labelNames"]
 // The first label release spelled these; read once, dropped on save.
 var LEGACY_LABEL_KEYS = ["showLabels", "labelPlacement", "labelContrast"]
 var SYMBOL_WORD = /^[&+\-–—|\/·:,.]+$/
@@ -216,6 +217,7 @@ function readLabelConfig(parsed) {
     labelBackground: background,
     labelShape: _pick(p.labelShape, LABEL_SHAPES, "dock"),
     labelIndicators: _pick(p.labelIndicators, LABEL_INDICATORS, "before"),
+    labelPlateHeight: _pick(p.labelPlateHeight, LABEL_PLATE_HEIGHTS, "icon"),
     labelReveal: _pick(p.labelReveal, LABEL_REVEALS, "slide"),
     labelEffect: p.labelEffect === "shadow" ? "outline" : _pick(p.labelEffect, LABEL_EFFECTS, "none"),
     labelMaxWidth: w,
@@ -241,7 +243,7 @@ function labelRadius(shape, h, dockRatio) {
 }
 
 var LABEL_LOOK_KEYS = ["labelFont", "labelSize", "labelWeight", "labelColor",
-  "labelBackground", "labelShape", "labelIndicators", "labelReveal", "labelEffect", "labelMaxWidth"]
+  "labelBackground", "labelShape", "labelIndicators", "labelPlateHeight", "labelReveal", "labelEffect", "labelMaxWidth"]
 
 // A preset's label look over the current one: known keys with valid
 // values win, anything else keeps its current value. (readLabelConfig
@@ -251,7 +253,7 @@ function pickLabelLook(look, current) {
   var c = current || {}
   var out = {}
   var lists = { labelFont: LABEL_FONTS, labelSize: LABEL_SIZES, labelWeight: LABEL_WEIGHTS,
-    labelColor: LABEL_COLORS, labelBackground: LABEL_BACKGROUNDS, labelShape: LABEL_SHAPES, labelIndicators: LABEL_INDICATORS,
+    labelColor: LABEL_COLORS, labelBackground: LABEL_BACKGROUNDS, labelShape: LABEL_SHAPES, labelIndicators: LABEL_INDICATORS, labelPlateHeight: LABEL_PLATE_HEIGHTS,
     labelReveal: LABEL_REVEALS, labelEffect: LABEL_EFFECTS }
   for (var i = 0; i < LABEL_LOOK_KEYS.length; i++) {
     var k = LABEL_LOOK_KEYS[i]
@@ -354,6 +356,35 @@ function steadyInk(backdrops, dark, light) {
     worstLight = Math.min(worstLight, contrast(light, list[i]))
   }
   return worstDark >= worstLight ? dark : light
+}
+
+// Device-pixel grid helpers for a plate row at output scale dpr: values
+// that are whole device pixels keep both sides of every gap identical.
+function gridRound(v, dpr) { var d = dpr > 0 ? dpr : 1; return Math.round(v * d) / d }
+function gridCeil(v, dpr) { var d = dpr > 0 ? dpr : 1; return Math.ceil(v * d - 1e-9) / d }
+// The smallest whole logical size from n up that is also whole device
+// pixels (an even number at 1.5), for sizes held in int properties.
+function gridInt(n, dpr) {
+  var d = dpr > 0 ? dpr : 1
+  for (var k = 0; k < 8; k++) {
+    var m = Math.round(n) + k
+    if (Math.abs(m * d - Math.round(m * d)) < 1e-9) return m
+  }
+  return Math.round(n)
+}
+
+// Spacing for a row of label plates: one gap between plates, between a
+// plate and the dock's edge, and between a plate and a divider line.
+// spacing is the row's item spacing, line the divider's line width, dpr
+// the output scale, minGap the least gap plates get. Each plate is inset
+// by inset on both sides of its tile; edge is the card's side padding;
+// separator the divider slot's width (line centred).
+function plateSpacing(spacing, line, dpr, minGap) {
+  var d = dpr > 0 ? dpr : 1
+  spacing = gridRound(spacing, d)
+  var inset = Math.max(0, Math.ceil(Math.max(0, minGap - spacing) / 2 * d) / d)
+  var gap = spacing + 2 * inset
+  return { spacing: spacing, line: line, inset: inset, gap: gap, edge: gap - inset, separator: line + 2 * inset }
 }
 
 function writeLabelConfig(conf, state) {

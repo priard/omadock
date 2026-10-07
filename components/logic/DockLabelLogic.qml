@@ -79,6 +79,40 @@ QtObject {
     return pick.r < 0.5 ? dark : light
   }
 
+  // Plate row spacing (DockLabels.plateSpacing) on the output's pixel grid.
+  function plateSpacing(root) {
+    var s = root.outputScale > 0 ? root.outputScale : 1
+    var line = Math.max(1, Math.round(root.dividerLineWidth * s)) / s
+    return DockLabels.plateSpacing(root.gapWidth, line, s, Style.space(3))
+  }
+
+  // A plate's vertical box in its tile (tile height tileH), the same for
+  // label plates and the unlabelled tiles' plates. "dock" height: one plate
+  // gap from the card's inner top and bottom. With indicators beside the
+  // art (or on an unlabelled tile in that mode): centred in the card, an
+  // even margin above and below on the device-pixel grid. With indicators
+  // under the art: from just above the art to just below the indicators.
+  function plateBox(root, tileH) {
+    var s = root.outputScale > 0 ? root.outputScale : 1
+    var card = root.dockCard
+    var top = card ? card.topPadding : 0
+    var inner = tileH + top + (card ? card.bottomPadding : 0)
+    var art = root.baseIconArt
+    var artTop = tileH - root.iconArtBottom - art
+    var v = Style.space(4)
+    if (root.labelPlates && root.labelPlateHeight === "dock") {
+      var g = root.plateSpacing.gap
+      return { y: g - top, h: inner - 2 * g }
+    }
+    if (root.labelIndicators !== "under") {
+      var m = DockLabels.gridRound((inner - art - 2 * v) / 2, s)
+      return { y: m - top, h: inner - 2 * m }
+    }
+    var y = DockLabels.gridRound(artTop - v, s)
+    var bottom = DockLabels.gridRound(tileH - Style.space(1) - root.indicatorLift + v, s)
+    return { y: y, h: bottom - y }
+  }
+
   // A dock colour as seen: over the theme background at the dock's opacity.
   function seen(root, c) {
     var a = root.showBackground ? root.effectiveDockOpacity : 0

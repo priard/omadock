@@ -251,7 +251,7 @@ Item {
   // those numbers, so the wave cannot chase itself.
   readonly property real magnifyPeak: 1.4
   // On always-on label plates the zoom stays inside the plate's margin.
-  readonly property real zoomPeak: (root.labelMode === "always" && root.labelBackground === "plate") ? 1.1 : 1.22
+  readonly property real zoomPeak: root.labelPlates ? 1.1 : 1.22
   readonly property real magnifyRange: root.iconSlot * 2.2
   readonly property real baseIconArt: root.iconSize - Style.space(4)
   // Largest size an icon reaches under either hover effect; icons decode at
@@ -309,7 +309,7 @@ Item {
   // stood too far apart. Half sits between the two.
   readonly property real separatorWidth: root.splitSections
     ? Math.max(Style.space(1), root.sectionGap + 2 * root.baseRowLeft - 2 * root.gapWidth)
-    : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
+    : root.labelPlates ? root.plateSpacing.separator : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
   readonly property int groupSlots: (root.appGroups && DockModel.isList(root.appGroups)) ? root.appGroups.length : 0
   readonly property int folderSlots: root.pinnedFolders ? root.pinnedFolders.length : 0
   readonly property int driveSlots: (root.showRemovableDrives && root.mountedDrives) ? root.mountedDrives.length : 0
@@ -443,7 +443,7 @@ Item {
   readonly property int iconSize: root.configuredIconSize > 0
     ? root.configuredIconSize
     : Math.max(28, Math.round(Style.bar.sizeHorizontal * 0.9))
-  readonly property int iconSlot: root.iconSize + Style.space(10)
+  readonly property int iconSlot: root.labelPlates ? DockLabels.gridInt(root.iconSize + Style.space(10), root.outputScale) : root.iconSize + Style.space(10)
 
   // ------------------------------------------------- model
 
@@ -891,6 +891,9 @@ Item {
   property string labelBackground: "none" // none | pill | plate
   property string labelShape: "dock"      // dock | pill | rounded | square
   property string labelIndicators: "before" // before | after | under (always-on plates)
+  property string labelPlateHeight: "icon"  // icon | dock (always-on plates)
+  readonly property bool labelPlates: root.labelMode === "always" && root.labelBackground === "plate" && !root.splitSections
+  readonly property var plateSpacing: labelLogic.plateSpacing(root)
   readonly property bool labelSideMarks: DockLabels.sideMarks(root.labelMode, root.labelBackground, root.labelIndicators)
   property string labelReveal: "slide"    // slide | typewriter | scramble
   property string labelEffect: "none"     // none | glow | outline
@@ -1192,13 +1195,9 @@ Item {
 
   function pickCustomFolder() { return folderLogic.pickCustomFolder(root) }
   function scanRemovableDrives() { return folderLogic.scanRemovableDrives(root) }
-
   function openDriveContext(dev, mp, name, space, cx, cy) { return folderLogic.openDriveContext(root, dev, mp, name, space, cx, cy) }
-
   function ejectDrive(dev, mountpoint, name) { return folderLogic.ejectDrive(root, dev, mountpoint, name) }
-
   function setDockAlignment(align) { return stateLogic.setDockAlignment(root, align) }
-
   function setDockPosition(pos) { return stateLogic.setDockPosition(root, pos) }
 
   function openAppGroup(gdata, cx, cy) { return groupsLogic.openAppGroup(root, gdata, cx, cy) }
@@ -1875,6 +1874,7 @@ Item {
   // Name labels: rendering policy and the per-slot width registry
   function labelStyle(kind) { return labelLogic.style(root, kind) }
   function labelFillFor(ink, hover) { return labelLogic.fillFor(root, ink, hover) }
+  function labelPlateBox(tileH) { return labelLogic.plateBox(root, tileH) }
   function labelName(appId, name) { return labelLogic.displayName(root, appId, name) }
   function labelTooltipNeeded(kind, wins, hint, shortened) { return labelLogic.tooltipNeeded(root, kind, wins, hint, shortened) }
   function labelExtraBefore(slot, ownLabel) { return labelLogic.extraBefore(root, slot, ownLabel) }
