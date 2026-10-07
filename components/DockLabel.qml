@@ -57,8 +57,27 @@ Item {
   onFullTextChanged: Qt.callLater(label.reshorten)
   onStyleChanged: Qt.callLater(label.reshorten)
 
-  // ---- open state (hover mode arrives in Task 5; always mode is open)
-  readonly property bool wantOpen: label.shown && !label.style.hover
+  // ---- open state. Hover mode opens after a short dwell so a sweep across
+  // the dock does not ripple; with another label still open or closing it
+  // switches at once. Never during a drag.
+  property bool dwelled: false
+  readonly property bool dragFree: label.root ? label.root.dragAppId === "" : true
+  readonly property bool wantOpen: label.shown
+    && (!label.style.hover || (label.hovered && label.dwelled && label.dragFree))
+  Timer {
+    id: dwell
+    interval: (label.root && label.root.labelsOpen > 0) ? 1 : 150
+    onTriggered: label.dwelled = true
+  }
+
+  // Counted while open or closing, so the next icon skips the dwell.
+  readonly property bool counts: !!label.style && label.style.hover && label.progress > 0.02
+  property bool counted: false
+  onCountsChanged: {
+    if (!label.root || label.counts === label.counted) return
+    label.root.labelsOpen += label.counts ? 1 : -1
+    label.counted = label.counts
+  }
   property real progress: label.wantOpen ? 1 : 0
   Behavior on progress { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
   readonly property real extra: Math.round(label.progress * label.naturalWidth)
@@ -75,7 +94,10 @@ Item {
   onExtraChanged: label.syncExtra()
   onSlotChanged: label.syncExtra()
   Component.onCompleted: { label.reshorten(); label.syncExtra() }
-  Component.onDestruction: if (label.root && label._slot >= 0) label.root.setLabelExtra(label._slot, label.owner, 0)
+  Component.onDestruction: {
+    if (label.root && label._slot >= 0) label.root.setLabelExtra(label._slot, label.owner, 0)
+    if (label.root && label.counted) label.root.labelsOpen -= 1
+  }
 
   // ---- reveal (typewriter / scramble swap the text; slide just grows)
   property real revealT: 1
@@ -90,9 +112,16 @@ Item {
   function reveal(styleName) {
     label.revealStyle = styleName
     label.seed = Math.random() * 100
+    eraseAnim.stop()
     revealAnim.restart()
   }
-  onWantOpenChanged: if (label.wantOpen && label.style) label.reveal(label.style.reveal)
+  // Typewriter labels erase as they close.
+  NumberAnimation { id: eraseAnim; target: label; property: "revealT"; to: 0; duration: 160 }
+  onWantOpenChanged: {
+    if (!label.style) return
+    if (label.wantOpen) label.reveal(label.style.reveal)
+    else if (label.style.reveal === "typewriter") { revealAnim.stop(); label.revealStyle = "typewriter"; eraseAnim.restart() }
+  }
   onShortTextChanged: if (label.wantOpen && label.style && label.revealT >= 1 && !revealAnim.running) label.reveal(label.style.reveal)
 
   // ---- hover sync with the icon's HoverFx
@@ -100,7 +129,11 @@ Item {
   Behavior on hoverLevel { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
   readonly property string hoverEffect: label.root ? label.root.hoverEffect : ""
   readonly property real liftY: label.hoverEffect === "lift" && label.root ? -label.root.baseIconArt * 0.16 * label.hoverLevel : 0
-  onHoveredChanged: if (label.hovered && label.hoverEffect === "glitch" && label.progress > 0.5) label.reveal("scramble")
+  onHoveredChanged: {
+    if (label.hovered) dwell.restart()
+    else { dwell.stop(); label.dwelled = false }
+    if (label.hovered && label.hoverEffect === "glitch" && label.progress > 0.5) label.reveal("scramble")
+  }
   readonly property real glowLevel: !label.style ? 0
     : Math.max(label.style.effect === "glow" ? 0.55 + 0.45 * label.hoverLevel : 0,
                label.hoverEffect === "glow" ? label.hoverLevel : 0)
