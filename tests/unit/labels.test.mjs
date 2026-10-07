@@ -184,3 +184,8 @@ test("writeLabelConfig writes new keys and drops old ones", () => {
   assert.deepEqual(plain(conf.labelNames), { a: "A" })
   assert.equal(conf.other, 1)
 })
+
+test("shortenName never ends a cut on a lone symbol word", () => {
+  assert.deepEqual(plain(L.shortenName("Spotifast & more", fitsChars(11))), { text: "Spotifast", shortened: true })
+  assert.deepEqual(plain(L.shortenName("Tools + Extras Pack", fitsChars(8))), { text: "Tools", shortened: true })
+})

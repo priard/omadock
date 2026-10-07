@@ -20,6 +20,7 @@ var LABEL_CONFIG_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "la
   "labelBackground", "labelReveal", "labelEffect", "labelMaxWidth", "labelNames"]
 // The first label release spelled these; read once, dropped on save.
 var LEGACY_LABEL_KEYS = ["showLabels", "labelPlacement", "labelContrast"]
+var SYMBOL_WORD = /^[&+\-–—|\/·:,.]+$/
 var SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*+=?"
 
 function _pick(value, allowed, fallback) {
@@ -63,6 +64,8 @@ function shortenName(name, fits) {
   if (fits(clean)) return { text: clean, shortened: true }
   var words = clean.split(" ")
   for (var n = words.length - 1; n >= 1; n--) {
+    // A cut never ends on a connector like "&" or "-".
+    if (SYMBOL_WORD.test(words[n - 1])) continue
     var head = words.slice(0, n).join(" ")
     if (fits(head)) return { text: head, shortened: true }
   }
