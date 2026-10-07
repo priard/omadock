@@ -140,7 +140,7 @@ test("readLabelConfig defaults", () => {
   assert.deepEqual(plain(L.readLabelConfig(null)), {
     labelMode: "off", labelKind: "all", labelFont: "theme", labelSize: "medium",
     labelWeight: "medium", labelColor: "auto", labelBackground: "none", labelShape: "dock",
-    labelIndicators: "before", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelNames: {}
+    labelIndicators: "before", labelPlateHeight: "icon", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelNames: {}
   })
 })
 
@@ -167,6 +167,8 @@ test("readLabelConfig validates values", () => {
   assert.equal(L.readLabelConfig({ labelShape: "square" }).labelShape, "square")
   assert.equal(L.readLabelConfig({ labelIndicators: "after" }).labelIndicators, "after")
   assert.equal(L.readLabelConfig({ labelIndicators: "sideways" }).labelIndicators, "before")
+  assert.equal(L.readLabelConfig({ labelPlateHeight: "dock" }).labelPlateHeight, "dock")
+  assert.equal(L.readLabelConfig({ labelPlateHeight: "tall" }).labelPlateHeight, "icon")
   assert.equal(L.readLabelConfig({ labelShape: "blob", labelWeight: "heavy" }).labelShape, "dock")
   const c = L.readLabelConfig({ labelMode: "sideways", labelFont: "comic", labelMaxWidth: 9999, labelEffect: "glow" })
   assert.equal(c.labelMode, "off")
@@ -222,7 +224,7 @@ test("homeExtra counts the part of a slot's own extra that sits before its icon"
 
 test("pickLabelLook applies a preset's label look and keeps the rest", () => {
   const cur = { labelFont: "theme", labelSize: "small", labelWeight: "medium", labelColor: "auto",
-    labelBackground: "none", labelShape: "dock", labelIndicators: "before", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140 }
+    labelBackground: "none", labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140 }
   const out = plain(L.pickLabelLook({ labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 999, labelShape: "blob", iconSize: 40 }, cur))
   assert.deepEqual(out, Object.assign({}, cur, { labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 240 }))
   // A preset saved before label looks existed changes nothing.
@@ -289,4 +291,43 @@ test("steadyInk picks one ink whose weakest contrast along the dock is best", ()
   const worst = (ink) => Math.min(...mixed.map((c) => L.contrast(ink, c)))
   assert.equal(worst(pick), Math.max(worst(dark), worst(light)))
   assert.ok(L.contrast(dark, light) > 15)
+})
+
+test("plateSpacing gives one gap for plate-plate, plate-edge and plate-divider", () => {
+  // spacing 4, line 1, dpr 1.5: inset 0, gap 4, side padding 4, divider slot = line.
+  const a = plain(L.plateSpacing(4, 1, 1.5, 3))
+  assert.equal(a.gap, 4)
+  assert.equal(a.inset, 0)
+  assert.equal(a.edge, 4)
+  assert.equal(a.separator, 1)
+  // Tight spacing gets the minimum gap, split between the plates' insets.
+  const b = plain(L.plateSpacing(0, 1, 1.5, 4))
+  assert.equal(b.gap, 4)
+  assert.equal(b.inset, 2)
+  assert.equal(b.edge, 2)
+  assert.equal(b.separator, 5)
+  // Insets are whole device pixels, so both sides of a gap match.
+  const c = plain(L.plateSpacing(1, 1.5, 1.5, 4))
+  assert.ok(Math.abs(c.inset * 1.5 - Math.round(c.inset * 1.5)) < 1e-9)
+  // The identities that make the three gaps equal.
+  for (const v of [a, b, c]) {
+    assert.ok(Math.abs(v.edge + v.inset - v.gap) < 1e-9, "edge")
+    assert.ok(Math.abs(v.spacing + 2 * v.inset - v.gap) < 1e-9, "between plates")
+    assert.ok(Math.abs((v.separator - v.line) / 2 + v.inset + v.spacing - v.gap) < 1e-9, "divider")
+  }
+})
+
+test("grid helpers land on whole device pixels", () => {
+  const on = (v, d) => Math.abs(v * d - Math.round(v * d)) < 1e-9
+  for (const d of [1, 1.25, 1.5, 2]) {
+    for (const v of [44, 45, 46.3, 57]) {
+      assert.ok(on(L.gridCeil(v, d), d) && L.gridCeil(v, d) >= v - 1e-9, `ceil ${v}@${d}`)
+      assert.ok(on(L.gridRound(v, d), d) && Math.abs(L.gridRound(v, d) - v) <= 0.5 / d + 1e-9, `round ${v}@${d}`)
+      const n = L.gridInt(Math.floor(v), d)
+      assert.ok(Number.isInteger(n) && n >= Math.floor(v) && on(n, d), `int ${v}@${d}`)
+    }
+  }
+  assert.equal(L.gridInt(45, 1.5), 46)
+  assert.equal(L.gridInt(46, 1.5), 46)
+  assert.equal(L.plateSpacing(5, 1, 1.5, 3).spacing * 1.5 % 1, 0)
 })

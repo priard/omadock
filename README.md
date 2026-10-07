@@ -327,7 +327,7 @@ The settings at a glance:
 - **Labels**: `Off`, `Always` or `On hover`; **Show on**: `All`, `Apps`, `App groups` or `Folders`.
 - **Font**: the theme font, `Sans`, or `Pixel` (bundled Silkscreen); **Size** and **Weight**.
 - **Color**: `Auto` (black or white for whatever is behind the icons, gradients included), `Theme` or `Accent`. A name without a background gets a faint outline so it reads on any fill.
-- **Background** (always-on labels): none, a `Pill` behind the name, or a `Plate` that joins icon and name like a button; **Corners**: `Dock` (follows the dock's own corners), `Pill`, `Rounded` or `Square`. With always-on plates, **Indicators** move the window marks into an upright column `Before icon` or `After name`, so every plate is the same height whatever runs (`Under icon` keeps them below).
+- **Background** (always-on labels): none, a `Pill` behind the name, or a `Plate` that joins icon and name like a button; **Corners**: `Dock` (follows the dock's own corners), `Pill`, `Rounded` or `Square`. With always-on plates, **Indicators** move the window marks into an upright column `Before icon` or `After name`, so every plate is the same height whatever runs (`Under icon` keeps them below). **Plate height** `Dock` stretches plates to the dock's top and bottom; with plates on, the gap between plates, to the dock's edges and to a divider is one and the same.
 - **Reveal**: `Slide`, `Typewriter` or `Scramble`; **Effect**: `Glow` or `Outline`. Lift, glow and glitch hover effects carry the name along with the icon.
 - **Max width**: long names drop a subtitle ("Signal - Private Messenger" → "Signal"), then trailing words, and only then end in an ellipsis. Apps without a desktop entry get a readable name instead of their class id.
 - **Rename…** in the right-click menu of an app, an app group or a pinned folder edits its name in place (Enter saves, Escape cancels, blank restores the default). An app's name is its label text, also listed under **Names**; a folder's name replaces the directory name on the dock.
@@ -440,6 +440,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "labelBackground": "none",
   "labelShape": "dock",
   "labelIndicators": "before",
+  "labelPlateHeight": "icon",
   "labelReveal": "slide",
   "labelEffect": "none",
   "labelMaxWidth": 140,
@@ -520,6 +521,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `labelBackground` | `string` | `"none"` | `"none"`, `"pill"` (behind the name) or `"plate"` (behind icon and name). |
 | `labelShape` | `string` | `"dock"` | Background corners: `"dock"` (the dock's own corner ratio), `"pill"`, `"rounded"` or `"square"`. |
 | `labelIndicators` | `string` | `"before"` | Window marks on always-on plates: `"before"` the icon, `"after"` the name (an upright column), or `"under"` the icon. |
+| `labelPlateHeight` | `string` | `"icon"` | Always-on plates: `"icon"` (around the icon) or `"dock"` (the dock's full height, one gap from its edges). |
 | `labelReveal` | `string` | `"slide"` | How a name appears: `"slide"`, `"typewriter"` or `"scramble"`. |
 | `labelEffect` | `string` | `"none"` | `"none"`, `"glow"` or `"outline"`. |
 | `labelMaxWidth` | `int` | `140` | Longest label in px (80–240) before the name is shortened. |

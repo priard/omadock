@@ -88,7 +88,12 @@ Item {
   anchors.bottom: parent ? parent.bottom : undefined
   anchors.bottomMargin: (root && root.dockVisible) ? Style.gapsOut + cardWrapper.shadowRoom : -(dockCard.height + Style.gapsOut + cardWrapper.shadowRoom + 10)
 
-  x: parent ? DockLabels.anchoredX(parent.width, width, Style.gapsOut * 2, root ? root.alignment : "center", 0) : 0
+  x: {
+    if (!parent) return 0
+    var ax = DockLabels.anchoredX(parent.width, width, Style.gapsOut * 2, root ? root.alignment : "center", 0)
+    // Plate rows start on a whole device pixel, so every plate edge does.
+    return (root && root.labelPlates) ? DockLabels.gridRound(ax, root.outputScale) : ax
+  }
 
   Behavior on anchors.bottomMargin {
     NumberAnimation {
@@ -285,6 +290,9 @@ Item {
       : Border.flat("transparent", dockCard.effectiveBorderWidth)
     radius: root ? root.cardRadius(height) : Style.cornerRadius
     padding: dockCard.devSnap(Style.space(5))
+    // With label plates the sides match the gap between plates.
+    leftPadding: (root && root.labelPlates) ? root.plateSpacing.edge : padding
+    rightPadding: (root && root.labelPlates) ? root.plateSpacing.edge : padding
     z: 1
 
     Repeater {
@@ -339,7 +347,8 @@ Item {
     Row {
       id: row
       z: 1
-      spacing: Style.space(root ? root.itemSpacing : 4)
+      // Plate rows keep the spacing on the device-pixel grid.
+      spacing: (root && root.labelPlates) ? root.plateSpacing.spacing : Style.space(root ? root.itemSpacing : 4)
 
       x: dockCard.contentLeftInset
       y: dockCard.contentTopInset

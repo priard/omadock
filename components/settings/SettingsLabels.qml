@@ -136,6 +136,18 @@ Column {
       onPicked: function(v) { root.setOption("labelShape", v) }
     }
     ChoiceRow {
+      key: "labelPlateHeight"
+      label: "Plate height"
+      hint: "Dock stretches plates to the dock's top and bottom, the same gap away as from each other."
+      visible: root ? (root.labelBackground === "plate" && root.labelMode === "always") : false
+      options: [
+        { value: "icon", label: "Icon" },
+        { value: "dock", label: "Dock" }
+      ]
+      value: root ? root.labelPlateHeight : "icon"
+      onPicked: function(v) { root.setOption("labelPlateHeight", v) }
+    }
+    ChoiceRow {
       key: "labelIndicators"
       label: "Indicators"
       hint: "Window marks as a column at the plate's edge, so every plate lines up."

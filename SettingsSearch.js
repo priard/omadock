@@ -96,6 +96,7 @@ var SETTINGS_SEARCH = [
   { key: "labelBackground", page: "labels", label: "Background", terms: ["labels", "pill", "plate", "button"] },
   { key: "labelShape", page: "labels", label: "Corners", terms: ["labels", "shape", "square", "sharp", "pill", "rounded", "radius"] },
   { key: "labelIndicators", page: "labels", label: "Indicators", terms: ["labels", "dots", "windows", "running", "plate", "column", "side"] },
+  { key: "labelPlateHeight", page: "labels", label: "Plate height", terms: ["labels", "plate", "tall", "full", "stretch", "dock"] },
   { key: "labelReveal", page: "labels", label: "Reveal", terms: ["labels", "animation", "typewriter", "scramble", "slide"] },
   { key: "labelEffect", page: "labels", label: "Effect", terms: ["labels", "glow", "shadow", "outline", "stroke"] },
   { key: "labelMaxWidth", page: "labels", label: "Max width", terms: ["labels", "truncate", "shorten", "long names"] },
