@@ -571,20 +571,6 @@ Item {
   // Pointer of the drag in progress, in dock card coordinates.
   property real dragPointerX: 0
   property real dragPointerY: 0
-  // Where the accent line of a drag inside the dock stands (DropGap): the
-  // insert index in the pinned run or among the folders, -1 for none.
-  readonly property int dropLineRow: !root.dragRemoveArmed && root.dropRowIndex >= 0
-    && ((root.dragAppId !== "" && root.dropTargetAppId === "" && root.dropTargetGroupId === "") || root.dragGroupId !== "")
-    ? root.dropRowIndex : -1
-  readonly property int dropLineFolder: !root.dragRemoveArmed && root.dragFolderPath !== "" ? root.dropFolderIndex : -1
-  // Room the drag opens there: enough that the line reads between tiles
-  // packed close together (plates one small gap apart), and a little
-  // anywhere so the dock answers the drag.
-  readonly property real dropGapWidth: {
-    var seen = root.labelPlates ? root.plateSpacing.gap
-      : root.gapWidth + (root.iconSlot - root.baseIconArt) / (root.labelMode === "always" ? 2 : 1)
-    return DockLabels.gridRound(Math.max(Style.space(6), Style.space(18) - seen), root.outputScale)
-  }
   readonly property bool dockDragActive: root.dragAppId !== "" || root.dragFolderPath !== "" || root.dragGroupId !== ""
 
   // ------------------------------------------------- context menu
@@ -776,12 +762,9 @@ Item {
   property bool iconHoverReveal: false
   // The mono / dots ink, kept readable against what sits behind the icons
   // (see readableOn): an accent tint over a theme gradient built from that
-  // same accent would otherwise vanish into it.
+  // same accent would otherwise vanish into it. On a label plate: the same against the plate.
   readonly property color iconTintColor: root.tintFor(root.iconTint, root.dockForeground, root.iconBackdropColor)
-  // The same choice on a label plate, kept readable against the plate
-  // rather than the dock: B/W comes out as the plate's own ink.
-  readonly property color plateIconTintColor: root.labelPlateTint ? root.tintFor(root.iconTint, root.dockForeground, labelLogic.plateBackdrop(root)) : root.iconTintColor
-  readonly property bool labelPlateTint: root.labelMode === "always" && root.labelBackground === "plate"
+  readonly property color plateIconTintColor: labelLogic.plateIconTint(root)
 
   function tintFor(mode, textColor, backdrop) { return styleLogic.tintFor(root, mode, textColor, backdrop) }
   function blackOrWhiteOn(backdrop) { return styleLogic.blackOrWhiteOn(root, backdrop) }

@@ -125,6 +125,14 @@ QtObject {
     return root.isLight(Qt.color(ink)) ? Util.alpha("#141414", hover ? 0.9 : 0.62) : Util.alpha("#f2f2f2", hover ? 0.94 : 0.72)
   }
 
+  // The mono / dots icon colour on a label plate: the user's choice kept
+  // readable against the plate rather than the dock (B/W gives the plate's
+  // own ink).
+  function plateIconTint(root) {
+    if (root.labelMode !== "always" || root.labelBackground !== "plate") return root.iconTintColor
+    return root.tintFor(root.iconTint, root.dockForeground, plateBackdrop(root))
+  }
+
   // A plate at rest as seen: its fill (fillFor the label ink, at the
   // plate's resting opacity) laid over the dock behind the icons.
   function plateBackdrop(root) {

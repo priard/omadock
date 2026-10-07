@@ -1,9 +1,9 @@
 import QtQuick
 import qs.Commons
+import "../DockLabels.js" as DockLabels
 
-// Where a drag inside the dock will land: the room it opens there
-// (Dock.dropGapWidth, so tiles packed close together, as plates are, part
-// to make it readable) and the accent line in the middle of it.
+// Where a drag inside the dock will land: the room it opens there and the
+// accent line in the middle of it.
 // An item puts one at its leading edge and adds its width to its own,
 // so the line also takes the row spacing before the item into account;
 // a run puts a spacer one (spacer: true) after its last item for a drop at
@@ -16,7 +16,16 @@ Item {
   property bool open: false
   property bool spacer: false
 
-  width: gap.open && root ? root.dropGapWidth : 0
+  // Enough that the line reads between tiles packed close together
+  // (plates one small gap apart), and a little anywhere so the dock
+  // answers the drag.
+  readonly property real room: {
+    if (!root) return 0
+    var seen = root.labelPlates ? root.plateSpacing.gap
+      : root.gapWidth + (root.iconSlot - root.baseIconArt) / (root.labelMode === "always" ? 2 : 1)
+    return DockLabels.gridRound(Math.max(Style.space(6), Style.space(18) - seen), root.outputScale)
+  }
+  width: gap.open ? gap.room : 0
   height: parent ? parent.height : 0
   Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
   // A spacer leaves the Row's layout while closed.

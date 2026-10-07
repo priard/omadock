@@ -26,6 +26,12 @@ Item {
   property alias drivesRepeater: drivesRepeater
   property alias runningRepeater: runningRepeater
   readonly property bool folderDropActive: folderDrop.containsDrag
+  // Where the accent line of a drag inside the dock stands (DropGap): the
+  // insert index in the pinned run or among the folders, -1 for none.
+  readonly property int dropLineRow: (root && !root.dragRemoveArmed && root.dropRowIndex >= 0
+    && ((root.dragAppId !== "" && root.dropTargetAppId === "" && root.dropTargetGroupId === "") || root.dragGroupId !== ""))
+    ? root.dropRowIndex : -1
+  readonly property int dropLineFolder: (root && !root.dragRemoveArmed && root.dragFolderPath !== "") ? root.dropFolderIndex : -1
 
   DockDragLogic { id: dragLogic }
 
@@ -403,7 +409,7 @@ Item {
               windowList: entry.windowList || []
               homeCenter: rowSlot.home
               labelSlot: root ? root.appsSlots + rowSlot.index : -1
-              dropLineHere: root ? root.dropLineRow === rowSlot.index : false
+              dropLineHere: cardWrapper.dropLineRow === rowSlot.index
               pinned: true
               active: root ? (entry.appId === root.activeId) : false
               onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -430,7 +436,7 @@ Item {
               groupData: rowSlot.modelData.group || ({})
               homeCenter: rowSlot.home
               labelSlot: root ? root.appsSlots + rowSlot.index : -1
-              dropLineHere: root ? root.dropLineRow === rowSlot.index : false
+              dropLineHere: cardWrapper.dropLineRow === rowSlot.index
               onOpenGroupRequested: function(gdata, cx, cy) {
                 if (root) root.openAppGroup(gdata, cx, cy)
               }
@@ -449,7 +455,7 @@ Item {
       DropGap {
         rootRef: cardWrapper.rootRef
         spacer: true
-        open: root ? (root.dropLineRow >= 0 && root.dropLineRow === pinnedRowRepeater.count) : false
+        open: cardWrapper.dropLineRow >= 0 && cardWrapper.dropLineRow === pinnedRowRepeater.count
       }
 
       // Divider between pinned apps and the minimized-tile section.
@@ -599,7 +605,7 @@ Item {
           name: modelData.name || "Folder"
           icon: modelData.icon || DockModel.folderIconFor(modelData.path, "")
           slotIndex: index
-          dropLineHere: root ? root.dropLineFolder === index : false
+          dropLineHere: cardWrapper.dropLineFolder === index
           homeCenter: root ? root.slotHomeCenter(
             root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + index,
             root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index,
@@ -622,7 +628,7 @@ Item {
       DropGap {
         rootRef: cardWrapper.rootRef
         spacer: true
-        open: root ? (root.dropLineFolder >= 0 && root.dropLineFolder === foldersRepeater.count) : false
+        open: cardWrapper.dropLineFolder >= 0 && cardWrapper.dropLineFolder === foldersRepeater.count
       }
 
       // Drop gap after the last pinned folder (see DockFolderItem.gapWidth).
