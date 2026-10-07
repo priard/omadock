@@ -16,17 +16,31 @@ QtObject {
     var base = Style.font.caption
     // Silkscreen is drawn on an 8 px grid; other fonts follow the theme scale.
     var sizes = pixel ? { small: 8, medium: 12, large: 16 } : { small: base - 2, medium: base, large: base + 2 }
-    var ink = root ? root.dockForeground : Color.bar.text
-    if (root && root.labelColor === "high") ink = root.blackOrWhiteOn(Color.bar.background)
+    // Auto: black or white, whichever reads on what is actually behind the
+    // icons (a gradient's palette, a custom colour, the theme's bar).
+    var ink = root ? root.blackOrWhiteOn(root.iconBackdropColor) : Color.bar.text
+    if (root && root.labelColor === "theme") ink = root.dockForeground
     else if (root && root.labelColor === "accent") ink = Color.accent
+    var inkLight = root ? root.isLight(Qt.color(ink)) : true
+    var weights = { regular: Font.Normal, medium: Font.Medium, bold: Font.Bold }
+    var dockH = (root && root.dockCard) ? root.dockCard.height : 0
     return {
       show: show,
       hover: !!root && root.labelMode === "hover",
       mirror: !!root && root.alignment === "right",
-      fontPx: sizes[root ? root.labelSize : "small"] || sizes.small,
+      fontPx: sizes[root ? root.labelSize : "medium"] || sizes.medium,
+      weight: pixel ? Font.Normal : (weights[root ? root.labelWeight : "medium"] || Font.Medium),
       family: pixel ? "Silkscreen" : ((root && root.labelFont === "sans") ? "sans-serif" : Style.font.family),
       ink: ink,
+      // Backgrounds and outlines take the side of the scale opposite the ink.
+      fill: inkLight ? Util.alpha("#141414", 0.62) : Util.alpha("#f2f2f2", 0.72),
+      halo: inkLight ? "#000000" : "#ffffff",
+      // A lighter accent: themes often fill the dock from the same palette,
+      // and a plain accent glow vanishes into it.
+      glow: Qt.lighter(Color.accent, 1.6),
       background: root ? root.labelBackground : "none",
+      shape: root ? root.labelShape : "dock",
+      dockRatio: (root && dockH > 0) ? root.effectiveCardRadius / dockH : 0.25,
       reveal: root ? root.labelReveal : "slide",
       effect: root ? root.labelEffect : "none",
       maxWidth: root ? root.labelMaxWidth : 140

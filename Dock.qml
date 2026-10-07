@@ -84,7 +84,6 @@ Item {
   onDockScreenChanged: root.recheckOutputScale()
 
   function lookupOutputScale(_rev) { return screenLogic.lookupOutputScale(root, _rev) }
-
   function recheckOutputScale() { return screenLogic.recheckOutputScale(root) }
 
   // Bounded burst, not a poll: stops on its own after two seconds.
@@ -127,7 +126,6 @@ Item {
   readonly property bool filterByMonitor: root.perMonitorApps && root.forcedScreenName !== ""
 
   function monitorNameForWorkspace(target) { return screenLogic.monitorNameForWorkspace(root, target) }
-
   function monitorNameForHypr(h) { return screenLogic.monitorNameForHypr(root, h) }
 
   function isHyprOnThisMonitor(h) { return screenLogic.isHyprOnThisMonitor(root, h) }
@@ -887,11 +885,13 @@ Item {
   property string labelMode: "off"        // off | always | hover
   property string labelKind: "all"        // all | apps | groups | folders
   property string labelFont: "theme"      // theme | sans | pixel
-  property string labelSize: "small"      // small | medium | large
-  property string labelColor: "theme"     // theme | high | accent
+  property string labelSize: "medium"     // small | medium | large
+  property string labelWeight: "medium"   // regular | medium | bold
+  property string labelColor: "auto"      // auto | theme | accent
   property string labelBackground: "none" // none | pill | plate
+  property string labelShape: "dock"      // dock | pill | rounded | square
   property string labelReveal: "slide"    // slide | typewriter | scramble
-  property string labelEffect: "none"     // none | glow | shadow
+  property string labelEffect: "none"     // none | glow | outline
   property int labelMaxWidth: 140
   property var labelNames: ({})           // appId -> the user's label text
   property var labelExtras: ({})          // slot -> { owner, width } (DockLabels.withExtra)

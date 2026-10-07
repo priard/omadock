@@ -144,25 +144,34 @@ test("withLabelName sets, trims and clears", () => {
 
 test("readLabelConfig defaults", () => {
   assert.deepEqual(plain(L.readLabelConfig(null)), {
-    labelMode: "off", labelKind: "all", labelFont: "theme", labelSize: "small",
-    labelColor: "theme", labelBackground: "none", labelReveal: "slide",
-    labelEffect: "none", labelMaxWidth: 140, labelNames: {}
+    labelMode: "off", labelKind: "all", labelFont: "theme", labelSize: "medium",
+    labelWeight: "medium", labelColor: "auto", labelBackground: "none", labelShape: "dock",
+    labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelNames: {}
   })
 })
 
 test("readLabelConfig migrates upstream's first label keys", () => {
-  const c = L.readLabelConfig({ showLabels: true, labelPlacement: "above", labelContrast: "pill", labelSize: "large" })
+  const c = L.readLabelConfig({ showLabels: true, labelPlacement: "above", labelContrast: "pill", labelSize: "small" })
   assert.equal(c.labelMode, "always")
   assert.equal(c.labelBackground, "pill")
-  assert.equal(c.labelColor, "theme")
-  assert.equal(c.labelSize, "large")
-  assert.equal(L.readLabelConfig({ showLabels: true, labelContrast: "high" }).labelColor, "high")
+  assert.equal(c.labelColor, "auto")
+  // The band's sizes were tuned for a strip under the icons; side labels
+  // start from the readable default.
+  assert.equal(c.labelSize, "medium")
+  assert.equal(L.readLabelConfig({ showLabels: true, labelContrast: "high" }).labelColor, "auto")
+  assert.equal(L.readLabelConfig({ showLabels: true, labelContrast: "theme" }).labelColor, "theme")
   assert.equal(L.readLabelConfig({ showLabels: false }).labelMode, "off")
   // New keys win over old ones.
   assert.equal(L.readLabelConfig({ showLabels: true, labelMode: "hover" }).labelMode, "hover")
 })
 
 test("readLabelConfig validates values", () => {
+  assert.equal(L.readLabelConfig({ labelMode: "always", labelSize: "small" }).labelSize, "small")
+  assert.equal(L.readLabelConfig({ labelMode: "always", labelColor: "high" }).labelColor, "auto")
+  assert.equal(L.readLabelConfig({ labelMode: "always", labelEffect: "shadow" }).labelEffect, "outline")
+  assert.equal(L.readLabelConfig({ labelWeight: "bold", labelShape: "square" }).labelWeight, "bold")
+  assert.equal(L.readLabelConfig({ labelShape: "square" }).labelShape, "square")
+  assert.equal(L.readLabelConfig({ labelShape: "blob", labelWeight: "heavy" }).labelShape, "dock")
   const c = L.readLabelConfig({ labelMode: "sideways", labelFont: "comic", labelMaxWidth: 9999, labelEffect: "glow" })
   assert.equal(c.labelMode, "off")
   assert.equal(c.labelFont, "theme")
@@ -188,4 +197,15 @@ test("writeLabelConfig writes new keys and drops old ones", () => {
 test("shortenName never ends a cut on a lone symbol word", () => {
   assert.deepEqual(plain(L.shortenName("Spotifast & more", fitsChars(11))), { text: "Spotifast", shortened: true })
   assert.deepEqual(plain(L.shortenName("Tools + Extras Pack", fitsChars(8))), { text: "Tools", shortened: true })
+})
+
+test("labelRadius follows the shape, or the dock's own corner ratio", () => {
+  assert.equal(L.labelRadius("pill", 20, 0), 10)
+  assert.equal(L.labelRadius("rounded", 20, 0.5), 5)
+  assert.equal(L.labelRadius("square", 20, 0.5), 0)
+  // A square dock gives square labels, a pill dock pill labels.
+  assert.equal(L.labelRadius("dock", 20, 0), 0)
+  assert.equal(L.labelRadius("dock", 20, 0.5), 10)
+  assert.equal(L.labelRadius("dock", 20, 0.2), 4)
+  assert.equal(L.labelRadius("dock", 20, 3), 10)
 })

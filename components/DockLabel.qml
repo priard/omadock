@@ -154,8 +154,8 @@ Item {
     width: label.width + iconW - inset * 2
     height: label.iconBox ? label.iconBox.height - Style.space(4) : 0
     anchors.verticalCenter: parent.verticalCenter
-    radius: Math.min(height / 2, label.root ? label.root.effectiveCardRadius : Style.cornerRadius)
-    color: Util.alpha(label.style ? label.style.ink : Color.bar.text, 0.16 + 0.10 * label.hoverLevel)
+    radius: label.style ? DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio) : 0
+    color: label.style ? Util.alpha(label.style.fill, 0.55 + 0.25 * label.hoverLevel) : "transparent"
     opacity: label.progress
   }
 
@@ -176,8 +176,30 @@ Item {
       Rectangle {
         visible: !!label.style && label.style.background === "pill"
         anchors.fill: parent
-        radius: height / 2
-        color: Util.alpha(Color.bar.background, 0.85)
+        radius: label.style ? DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio) : 0
+        color: label.style ? label.style.fill : "transparent"
+      }
+
+      // Glow: a lightly blurred copy of the name behind it, under an outline
+      // in the same light accent. A wide blur would thin a caption-sized
+      // stroke to nothing.
+      Text {
+        anchors.fill: textItem
+        visible: label.glowLevel > 0.01
+        text: textItem.text
+        textFormat: Text.PlainText
+        font: textItem.font
+        color: label.style ? label.style.glow : Color.accent
+        horizontalAlignment: textItem.horizontalAlignment
+        verticalAlignment: Text.AlignVCenter
+        opacity: Math.min(1, label.glowLevel * 1.8)
+        layer.enabled: visible
+        layer.effect: MultiEffect {
+          blurEnabled: true
+          blur: 0.25
+          blurMax: 8
+          autoPaddingEnabled: true
+        }
       }
 
       Text {
@@ -190,21 +212,18 @@ Item {
         color: label.style ? label.style.ink : Color.bar.text
         font.family: label.style ? label.style.family : Style.font.family
         font.pixelSize: label.style ? label.style.fontPx : Style.font.caption
+        font.weight: label.style ? label.style.weight : Font.Medium
         horizontalAlignment: label.mirror ? Text.AlignRight : Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
         maximumLineCount: 1
-        style: (label.style && label.style.effect === "shadow") ? Text.Outline : Text.Normal
-        styleColor: Util.alpha("#000000", 0.55)
-        layer.enabled: label.glowLevel > 0.01
-        layer.effect: MultiEffect {
-          shadowEnabled: true
-          shadowColor: Color.accent
-          shadowBlur: 0.6
-          shadowHorizontalOffset: 0
-          shadowVerticalOffset: 0
-          shadowOpacity: label.glowLevel
-          autoPaddingEnabled: true
-        }
+        // A name with no background always gets a faint outline so it reads
+        // on any dock fill; Outline makes it strong, Glow tints it.
+        readonly property bool bare: !!label.style && label.style.background === "none"
+        style: (label.style && (bare || label.style.effect !== "none")) ? Text.Outline : Text.Normal
+        styleColor: !label.style ? "transparent"
+          : label.style.effect === "glow" ? Util.alpha(label.style.glow, 0.5 + 0.4 * label.glowLevel)
+          : label.style.effect === "outline" ? Util.alpha(label.style.halo, 0.85)
+          : Util.alpha(label.style.halo, 0.35)
       }
     }
   }

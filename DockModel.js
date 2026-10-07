@@ -816,7 +816,7 @@ var LOOK_KEYS = [
   "dividerGeometry", "dividerHeight", "dividerStyle", "dividerWidth", "dividerOpacity",
   "iconStyle", "iconTint", "iconHoverOriginal", "iconHoverReveal", "iconContrast", "iconStrength",
   "iconGrid", "indicatorShape", "hoverEffect", "launchBounce", "groupStyle",
-  "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing", "labelFont", "labelSize", "labelColor", "labelBackground", "labelReveal", "labelEffect", "labelMaxWidth"
+  "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing", "labelFont", "labelSize", "labelColor", "labelBackground", "labelReveal", "labelEffect", "labelMaxWidth", "labelWeight", "labelShape"
 ]
 var MAX_PRESETS = 6
 var MAX_PRESET_NAME = 40

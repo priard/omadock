@@ -66,19 +66,31 @@ Column {
         { value: "medium", label: "Medium" },
         { value: "large", label: "Large" }
       ]
-      value: root ? root.labelSize : "small"
+      value: root ? root.labelSize : "medium"
       onPicked: function(v) { root.setOption("labelSize", v) }
+    }
+    ChoiceRow {
+      key: "labelWeight"
+      label: "Weight"
+      visible: root ? root.labelFont !== "pixel" : true
+      options: [
+        { value: "regular", label: "Regular" },
+        { value: "medium", label: "Medium" },
+        { value: "bold", label: "Bold" }
+      ]
+      value: root ? root.labelWeight : "medium"
+      onPicked: function(v) { root.setOption("labelWeight", v) }
     }
     ChoiceRow {
       key: "labelColor"
       label: "Color"
-      hint: "High picks black or white for the dock background."
+      hint: "Auto picks black or white for what is behind the icons; Theme uses the bar's text colour."
       options: [
+        { value: "auto", label: "Auto" },
         { value: "theme", label: "Theme" },
-        { value: "high", label: "High contrast" },
         { value: "accent", label: "Accent" }
       ]
-      value: root ? root.labelColor : "theme"
+      value: root ? root.labelColor : "auto"
       onPicked: function(v) { root.setOption("labelColor", v) }
     }
     ChoiceRow {
@@ -92,6 +104,20 @@ Column {
       ]
       value: root ? root.labelBackground : "none"
       onPicked: function(v) { root.setOption("labelBackground", v) }
+    }
+    ChoiceRow {
+      key: "labelShape"
+      label: "Corners"
+      hint: "Dock follows the dock's own corners: square docks get square labels."
+      visible: root ? root.labelBackground !== "none" : true
+      options: [
+        { value: "dock", label: "Dock" },
+        { value: "pill", label: "Pill" },
+        { value: "rounded", label: "Rounded" },
+        { value: "square", label: "Square" }
+      ]
+      value: root ? root.labelShape : "dock"
+      onPicked: function(v) { root.setOption("labelShape", v) }
     }
     ChoiceRow {
       key: "labelReveal"
@@ -109,8 +135,8 @@ Column {
       label: "Effect"
       options: [
         { value: "none", label: "None" },
-        { value: "glow", label: "Accent glow" },
-        { value: "shadow", label: "Outline" }
+        { value: "glow", label: "Glow" },
+        { value: "outline", label: "Outline" }
       ]
       value: root ? root.labelEffect : "none"
       onPicked: function(v) { root.setOption("labelEffect", v) }

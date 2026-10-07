@@ -6,18 +6,20 @@ var LABEL_MODES = ["off", "always", "hover"]
 var LABEL_KINDS = ["all", "apps", "groups", "folders"]
 var LABEL_FONTS = ["theme", "sans", "pixel"]
 var LABEL_SIZES = ["small", "medium", "large"]
-var LABEL_COLORS = ["theme", "high", "accent"]
+var LABEL_WEIGHTS = ["regular", "medium", "bold"]
+var LABEL_COLORS = ["auto", "theme", "accent"]
 var LABEL_BACKGROUNDS = ["none", "pill", "plate"]
+var LABEL_SHAPES = ["dock", "pill", "rounded", "square"]
 var LABEL_REVEALS = ["slide", "typewriter", "scramble"]
-var LABEL_EFFECTS = ["none", "glow", "shadow"]
+var LABEL_EFFECTS = ["none", "glow", "outline"]
 var LABEL_MAX_WIDTH_MIN = 80
 var LABEL_MAX_WIDTH_MAX = 240
 var LABEL_MAX_WIDTH_DEFAULT = 140
 var MAX_LABEL_NAMES = 200
 var MAX_LABEL_NAME = 40
 var MAX_LABEL_APP_ID = 128
-var LABEL_CONFIG_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "labelColor",
-  "labelBackground", "labelReveal", "labelEffect", "labelMaxWidth", "labelNames"]
+var LABEL_CONFIG_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "labelWeight",
+  "labelColor", "labelBackground", "labelShape", "labelReveal", "labelEffect", "labelMaxWidth", "labelNames"]
 // The first label release spelled these; read once, dropped on save.
 var LEGACY_LABEL_KEYS = ["showLabels", "labelPlacement", "labelContrast"]
 var SYMBOL_WORD = /^[&+\-–—|\/·:,.]+$/
@@ -188,10 +190,13 @@ function withLabelName(names, appId, name) {
 
 function readLabelConfig(parsed) {
   var p = (parsed && typeof parsed === "object") ? parsed : {}
-  var mode = _pick(p.labelMode, LABEL_MODES, "")
-  if (mode === "") mode = p.showLabels === true ? "always" : "off"
-  var color = _pick(p.labelColor, LABEL_COLORS, "")
-  if (color === "") color = p.labelContrast === "high" ? "high" : "theme"
+  // A config without labelMode comes from the first label release (or has
+  // no labels): its band-sized labelSize does not carry over.
+  var legacy = _pick(p.labelMode, LABEL_MODES, "") === ""
+  var mode = legacy ? (p.showLabels === true ? "always" : "off") : p.labelMode
+  // "high" was this release's own early spelling of auto.
+  var color = p.labelColor === "high" ? "auto" : _pick(p.labelColor, LABEL_COLORS, "")
+  if (color === "") color = p.labelContrast === "theme" ? "theme" : "auto"
   var background = _pick(p.labelBackground, LABEL_BACKGROUNDS, "")
   if (background === "") background = p.labelContrast === "pill" ? "pill" : "none"
   var w = (typeof p.labelMaxWidth === "number" && isFinite(p.labelMaxWidth))
@@ -201,14 +206,26 @@ function readLabelConfig(parsed) {
     labelMode: mode,
     labelKind: _pick(p.labelKind, LABEL_KINDS, "all"),
     labelFont: _pick(p.labelFont, LABEL_FONTS, "theme"),
-    labelSize: _pick(p.labelSize, LABEL_SIZES, "small"),
+    labelSize: legacy ? "medium" : _pick(p.labelSize, LABEL_SIZES, "medium"),
+    labelWeight: _pick(p.labelWeight, LABEL_WEIGHTS, "medium"),
     labelColor: color,
     labelBackground: background,
+    labelShape: _pick(p.labelShape, LABEL_SHAPES, "dock"),
     labelReveal: _pick(p.labelReveal, LABEL_REVEALS, "slide"),
-    labelEffect: _pick(p.labelEffect, LABEL_EFFECTS, "none"),
+    labelEffect: p.labelEffect === "shadow" ? "outline" : _pick(p.labelEffect, LABEL_EFFECTS, "none"),
     labelMaxWidth: w,
     labelNames: boundLabelNames(p.labelNames)
   }
+}
+
+// Corner radius of a label background of height h. "dock" keeps the
+// dock's own corner-to-height ratio, so a square dock gets square labels
+// and a pill dock pill ones.
+function labelRadius(shape, h, dockRatio) {
+  if (shape === "pill") return h / 2
+  if (shape === "rounded") return h / 4
+  if (shape === "square") return 0
+  return Math.min(h / 2, h * Math.max(0, Number(dockRatio) || 0))
 }
 
 function writeLabelConfig(conf, state) {
