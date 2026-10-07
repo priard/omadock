@@ -62,21 +62,28 @@ QtObject {
   // Auto ink: of near-black and near-white (as blackOrWhiteOn), the one
   // whose weakest contrast along the label row is highest. A gradient is
   // sampled at nine points across the card; a flat fill is one backdrop.
+  // A translucent dock lets what is under it through, so each sample is
+  // laid over the theme's background at the dock's opacity.
   function steadyInk(root) {
     var dark = Qt.color("#141414"), light = Qt.color("#f2f2f2")
     var samples = []
     var card = root.dockCard
     if (root.showBackground && root.bgFill === "gradient" && card && card.width > 0) {
       for (var i = 0; i < 9; i++) {
-        var c = backdropAt(root, card.width * (i + 0.5) / 9, card.height / 2)
-        samples.push({ r: c.r, g: c.g, b: c.b })
+        samples.push(seen(root, backdropAt(root, card.width * (i + 0.5) / 9, card.height / 2)))
       }
     } else {
-      var f = Qt.color(root.iconBackdropColor)
-      samples.push({ r: f.r, g: f.g, b: f.b })
+      samples.push(seen(root, Qt.color(root.iconBackdropColor)))
     }
     var pick = DockLabels.steadyInk(samples, { r: dark.r, g: dark.g, b: dark.b }, { r: light.r, g: light.g, b: light.b })
     return pick.r < 0.5 ? dark : light
+  }
+
+  // A dock colour as seen: over the theme background at the dock's opacity.
+  function seen(root, c) {
+    var a = root.showBackground ? root.effectiveDockOpacity : 0
+    var u = Color.background
+    return { r: u.r + (c.r - u.r) * a, g: u.g + (c.g - u.g) * a, b: u.b + (c.b - u.b) * a }
   }
 
   // Background for a name or plate in that ink: the other end of the scale.
