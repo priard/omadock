@@ -45,6 +45,8 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 ## Open
 
 - #47 side labels (`feat/side-labels`), opened 2026-10-07.
+- #49 panel layout and Both sides alignment (`feat/panel-layout`, cut
+  from `feat/side-labels`, depends on #47), opened 2026-10-07.
 
 ## Not upstream yet
 
@@ -53,6 +55,9 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   corner options, indicator column on plates, tooltips only when they add
   something, Labels settings page, in-place Rename in the right-click
   menu for apps, groups and folders, icon block centred vertically.
+- `feat/panel-layout`: Dock / Panel layout (full-width bar on the bottom
+  edge) and the Both sides alignment (apps left, folders and drives
+  right), `setLayout` IPC.
 
 ## Fork only
 
