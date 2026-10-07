@@ -32,7 +32,10 @@ Item {
   // while it hugs its icons. innerWidth is the room for the row inside it.
   readonly property var stretch: (root && parent) ? DockLayout.stretchedBox(root.placement, parent.width, Style.gapsOut * 2) : null
   readonly property real innerWidth: dockCard.width - dockCard.contentLeftInset - dockCard.contentRightInset
-  readonly property real rowOffset: (root && stretch) ? DockLayout.rowOffset(root.placement.align, innerWidth, row.implicitWidth) : 0
+  // Label plates keep their edges on whole device pixels (the floating card
+  // snaps its x for them).
+  readonly property real plateDpr: (root && root.labelPlates) ? root.outputScale : 0
+  readonly property real rowOffset: (root && stretch) ? DockLayout.rowOffset(root.placement.align, innerWidth, row.implicitWidth, plateDpr) : 0
   // Both sides: how far the right group rests past a packed row, from the
   // resting widths, so the magnification wave never measures itself. The
   // trailing drop ghost is a zero-width item the row still spaces.
@@ -597,7 +600,7 @@ Item {
       Item {
         id: spreadGap
         visible: root ? root.placement.align === "spread" : false
-        width: visible ? DockLayout.spreadGap(cardWrapper.innerWidth, spreadGap.x, rightRow.implicitWidth, row.spacing) : 0
+        width: visible ? DockLayout.spreadGap(cardWrapper.innerWidth, spreadGap.x, rightRow.implicitWidth, row.spacing, cardWrapper.plateDpr) : 0
         height: 1
       }
 

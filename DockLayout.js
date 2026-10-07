@@ -40,19 +40,26 @@ function stretchedBox(place, windowWidth, inset) {
   return null
 }
 
+// Rounds to whole device pixels when a scale is given (label plates keep
+// their edges on the grid); whole logical pixels otherwise.
+function snap(v, dpr) {
+  return dpr > 0 ? Math.round(v * dpr) / dpr : Math.round(v)
+}
+
 // Where the row starts inside a stretched card, past the content inset.
 // A row wider than the card starts at the left edge.
-function rowOffset(align, innerWidth, rowWidth) {
+function rowOffset(align, innerWidth, rowWidth, dpr) {
   var free = Math.max(0, innerWidth - rowWidth)
-  if (align === "right") return free
-  if (align === "center") return Math.round(free / 2)
+  if (align === "right") return dpr > 0 ? snap(free, dpr) : free
+  if (align === "center") return snap(free / 2, dpr)
   return 0
 }
 
 // Width of the gap between the left group and the right one; the gap item
 // has the row spacing on both sides.
-function spreadGap(innerWidth, leftWidth, rightWidth, spacing) {
-  return Math.max(0, innerWidth - leftWidth - rightWidth - 2 * spacing)
+function spreadGap(innerWidth, leftWidth, rightWidth, spacing, dpr) {
+  var w = Math.max(0, innerWidth - leftWidth - rightWidth - 2 * spacing)
+  return dpr > 0 ? Math.max(0, Math.floor(w * dpr) / dpr) : w
 }
 
 // How far the right group's resting centres sit past where a packed row

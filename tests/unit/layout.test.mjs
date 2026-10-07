@@ -70,3 +70,11 @@ test("spreadHomeShift moves resting right-group centres by the free width", () =
   assert.equal(L.spreadHomeShift(1000, 600), 400)
   assert.equal(L.spreadHomeShift(500, 600), 0)
 })
+
+test("rowOffset and spreadGap land on whole device pixels when given a scale", () => {
+  const whole = (v, d) => Math.abs(v * d - Math.round(v * d)) < 1e-9
+  for (const align of ["center", "right"])
+    for (const row of [401, 402, 433.3]) assert.ok(whole(L.rowOffset(align, 1000, row, 1.5), 1.5), `${align} ${row}`)
+  assert.ok(whole(L.spreadGap(1000, 300.4, 200, 2.67, 1.5), 1.5))
+  assert.equal(L.rowOffset("center", 1000, 401), 300)
+})
