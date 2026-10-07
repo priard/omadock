@@ -59,7 +59,8 @@ Item {
     return DockModel.resolveThemedFolderIcon(fitem.icon, root ? root.currentIconThemeName : "Yaru", root ? root.folderColor : "theme", root ? root.appLibrary : null)
   }
   readonly property bool isSymbolic: resolvedSource.indexOf("-symbolic.svg") >= 0 || resolvedSource.indexOf("symbolic") >= 0
-  readonly property color symbolicColor: root ? root.symbolicIconColor : "#ffffff"
+  // On a label plate a symbolic icon takes the label's ink, which reads on the plate.
+  readonly property color symbolicColor: (label.plate && label.shown) ? label.ink : (root ? root.symbolicIconColor : "#ffffff")
 
   Behavior on magnifyScale {
     NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
