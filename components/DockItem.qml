@@ -312,7 +312,7 @@ Item {
     visible: item.backgroundMedia
     anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     kind: "background"
   }
 
@@ -322,7 +322,7 @@ Item {
     rootRef: item.rootRef
     anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     z: 2
     windows: item.windowList
     running: item.running

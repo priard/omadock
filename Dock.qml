@@ -127,9 +127,7 @@ Item {
 
   function monitorNameForWorkspace(target) { return screenLogic.monitorNameForWorkspace(root, target) }
   function monitorNameForHypr(h) { return screenLogic.monitorNameForHypr(root, h) }
-
   function isHyprOnThisMonitor(h) { return screenLogic.isHyprOnThisMonitor(root, h) }
-
   function isToplevelOnThisMonitor(top) { return screenLogic.isToplevelOnThisMonitor(root, top) }
 
   onFilterByMonitorChanged: modelTimer.restart()
@@ -140,7 +138,6 @@ Item {
   onSharedStateChanged: root.pullSharedState()
 
   function pushSharedState() { return screenLogic.pushSharedState(root) }
-
   function pullSharedState() { return screenLogic.pullSharedState(root) }
 
   Connections {
@@ -264,8 +261,11 @@ Item {
   // the part of the slot above a fixed indicator band. The box never moves with
   // running state, so icons stay level whether or not they carry dots.
   readonly property real indicatorBand: Style.space(6)
+  // Art and indicators sit this much above the band's centring, so the
+  // art's top margin matches the room under the indicators.
+  readonly property real indicatorLift: Style.spaceReal(1.5)
   // Distance from the slot's bottom edge to the bottom of the artwork.
-  readonly property real iconArtBottom: Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2)
+  readonly property real iconArtBottom: Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2) + root.indicatorLift
   // Vertical offset of the artwork's centre from the slot's centre, for
   // things centred on the row (separators, preview tiles).
   readonly property real iconCenterOffset: -root.indicatorBand / 2

@@ -321,7 +321,7 @@ Item {
     id: indicatorBand
     anchors.horizontalCenter: iconSlot.horizontalCenter
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     width: indicatorRow.width
     height: indicatorRow.height
     visible: gitem.hasRunningApps || gitem.isOpen

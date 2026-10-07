@@ -141,7 +141,7 @@ Item {
     rootRef: fitem.rootRef
     visible: fitem.isOpen
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     anchors.horizontalCenter: iconSlot.horizontalCenter
     kind: "active"
   }

@@ -121,7 +121,7 @@ Item {
     rootRef: ditem.rootRef
     visible: ditem.isOpen
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     anchors.horizontalCenter: parent.horizontalCenter
     kind: "active"
   }
