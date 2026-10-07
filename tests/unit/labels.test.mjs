@@ -276,3 +276,17 @@ test("gradientAt follows the dock's gradient shader", () => {
   for (const c of [a, b]) for (const k of ["r", "g", "b"]) assert.ok(c[k] >= 0 && c[k] <= 1)
   assert.notDeepEqual(plain(a), plain(b))
 })
+
+test("steadyInk picks one ink whose weakest contrast along the dock is best", () => {
+  const dark = { r: 0.08, g: 0.08, b: 0.08 }, light = { r: 0.95, g: 0.95, b: 0.95 }
+  // All light behind: dark ink.
+  assert.equal(L.steadyInk([{ r: 0.9, g: 0.9, b: 0.9 }, { r: 0.8, g: 0.8, b: 0.8 }], dark, light), dark)
+  // All dark behind: light ink.
+  assert.equal(L.steadyInk([{ r: 0.1, g: 0.1, b: 0.15 }, { r: 0.2, g: 0.2, b: 0.2 }], dark, light), light)
+  // Mixed: one ink for all, the one whose worst spot still reads best.
+  const mixed = [{ r: 0.45, g: 0.45, b: 0.45 }, { r: 0.6, g: 0.6, b: 0.6 }, { r: 0.35, g: 0.35, b: 0.35 }]
+  const pick = L.steadyInk(mixed, dark, light)
+  const worst = (ink) => Math.min(...mixed.map((c) => L.contrast(ink, c)))
+  assert.equal(worst(pick), Math.max(worst(dark), worst(light)))
+  assert.ok(L.contrast(dark, light) > 15)
+})
