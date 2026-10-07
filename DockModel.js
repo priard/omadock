@@ -806,23 +806,10 @@ function boundPinnedFolders(arr) {
 
 // ---------------------------------------------------------------- presets
 // A preset is a named copy of the dock's look: the config keys below, as
-// saveConfig writes them. Values reach the dock only through
-// Dock.applyLook, the same parsing as the config file, so a preset can hold
-// nothing the file could not.
-var LOOK_KEYS = [
-  "showBackground", "bgColor", "bgFill", "gradientPreset", "gradientStrength",
-  "grain", "opacity", "blur", "showShadow", "shadowStrength", "showBorder",
-  "borderWidth", "borderOpacity", "shape", "cornerRadius", "splitSections",
-  "dividerGeometry", "dividerHeight", "dividerStyle", "dividerWidth", "dividerOpacity",
-  "iconStyle", "iconTint", "iconHoverOriginal", "iconHoverReveal", "iconContrast", "iconStrength",
-  "iconGrid", "indicatorShape", "hoverEffect", "launchBounce", "groupStyle",
-  "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing", "labelMode", "labelKind", "labelFont", "labelSize", "labelColor", "labelBackground", "labelReveal", "labelEffect", "labelMaxWidth", "labelWeight", "labelShape", "labelIndicators", "labelPlateHeight"
-]
-// The value a look key takes when the config lacks it (the fallbacks in
-// Dock.applyLook, spelled as saveConfig writes them). A preset saved before
-// a key existed gets it from here: the dock then looked as the default
-// does, so applying the preset brings that setting back instead of leaving
-// today's value in place.
+// saveConfig writes them, each with the value it takes when the config lacks
+// it (Dock.applyLook's fallbacks). Values reach the dock only through
+// applyLook, so a preset can hold nothing the file could not; a key added
+// after a preset was saved gets its default, as the dock then looked.
 var DEFAULT_LOOK = {
   showBackground: true, bgColor: "theme", bgFill: "solid", gradientPreset: "theme", gradientStrength: 0.6,
   grain: 0, opacity: 1, blur: "system", showShadow: true, shadowStrength: 0.4, showBorder: true,
@@ -830,35 +817,27 @@ var DEFAULT_LOOK = {
   dividerGeometry: "classic", dividerHeight: 70, dividerStyle: "simple", dividerWidth: 1.5, dividerOpacity: 0.4,
   iconStyle: "original", iconTint: "text", iconHoverOriginal: false, iconHoverReveal: false, iconContrast: 0, iconStrength: 1,
   iconGrid: 16, indicatorShape: "theme", hoverEffect: "zoom", launchBounce: true, groupStyle: "rounded",
-  groupIconEffects: "theme", folderColor: "theme", iconSize: 0, itemSpacing: 4, sectionSpacing: 18,
-  // Labels off: a preset from before them had none.
-  labelMode: "off", labelKind: "all", labelFont: "theme", labelSize: "medium", labelColor: "auto",
-  labelBackground: "none", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelWeight: "medium",
-  labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon"
+  groupIconEffects: "theme", folderColor: "theme", iconSize: 0, itemSpacing: 4, sectionSpacing: 18, labelMode: "off",
+  labelKind: "all", labelFont: "theme", labelSize: "medium", labelColor: "auto", labelBackground: "none", labelReveal: "slide",
+  labelEffect: "none", labelMaxWidth: 140, labelWeight: "medium", labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon"
 }
+var LOOK_KEYS = Object.keys(DEFAULT_LOOK)
 var MAX_PRESETS = 6
 var MAX_PRESET_NAME = 40
 var MAX_PRESET_ID = 64
 var MAX_LOOK_STRING = 64
 
-// Exactly the look keys of a config-shaped object, scalars only, strings
-// capped. A key that is missing or not a scalar gets its DEFAULT_LOOK value
-// (iconSize 0 is automatic, cornerRadius -1 follows the shape), so every
-// look holds every key.
+// Every look key of a config-shaped object, scalars only, strings capped;
+// a missing or non-scalar one gets its DEFAULT_LOOK value.
 function pickLook(conf) {
   var src = (conf && typeof conf === "object") ? conf : {}
   var out = {}
   for (var i = 0; i < LOOK_KEYS.length; i++) {
     var k = LOOK_KEYS[i]
-    if (!Object.prototype.hasOwnProperty.call(src, k)) continue
-    var v = src[k]
+    var v = Object.prototype.hasOwnProperty.call(src, k) ? src[k] : undefined
     if (typeof v === "string") out[k] = v.slice(0, MAX_LOOK_STRING)
-    else if (typeof v === "boolean") out[k] = v
-    else if (typeof v === "number" && isFinite(v)) out[k] = v
-  }
-  for (var j = 0; j < LOOK_KEYS.length; j++) {
-    var key = LOOK_KEYS[j]
-    if (!Object.prototype.hasOwnProperty.call(out, key)) out[key] = DEFAULT_LOOK[key]
+    else if (typeof v === "boolean" || (typeof v === "number" && isFinite(v))) out[k] = v
+    else out[k] = DEFAULT_LOOK[k]
   }
   return out
 }
