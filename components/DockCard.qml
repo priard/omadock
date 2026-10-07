@@ -348,7 +348,7 @@ Item {
       id: row
       z: 1
       // Plate rows keep the spacing on the device-pixel grid.
-      spacing: (root && root.labelPlates) ? root.plateSpacing.spacing : Style.space(root ? root.itemSpacing : 4)
+      spacing: root ? root.gapWidth : Style.space(4)
 
       x: dockCard.contentLeftInset
       y: dockCard.contentTopInset

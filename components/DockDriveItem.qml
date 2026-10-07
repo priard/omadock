@@ -51,13 +51,6 @@ Item {
     NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
   }
 
-  // A plate of its own with always-on plate labels (TilePlate).
-  TilePlate {
-    id: drivePlate
-    rootRef: ditem.rootRef
-    hovered: driveArea.containsMouse
-  }
-
   Item {
     id: iconSlot
     width: root ? root.iconSlot : 0
@@ -118,7 +111,7 @@ Item {
         // lightness, so lift it to white first or light colours come out grey.
         brightness: 1.0
         colorization: 1.0
-        colorizationColor: drivePlate.visible ? drivePlate.ink : (root ? root.symbolicIconColor : "#ffffff")
+        colorizationColor: root ? root.symbolicIconColor : "#ffffff"
       }
     }
   }

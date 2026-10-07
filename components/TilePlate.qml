@@ -3,7 +3,7 @@ import qs.Commons
 import qs.Ui
 import "../DockLabels.js" as DockLabels
 
-// The plate an unlabelled tile (the Omarchy button, a drive) wears when
+// The plate an unlabelled tile (the Omarchy button) wears when
 // always-on labels use plates, so the row reads as one set of buttons.
 // Same fill, corners, margins and height mode as the label plates
 // (DockLabel); it lifts with the tile's art. ink is what the tile should
