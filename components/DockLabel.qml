@@ -171,8 +171,8 @@ Item {
     // trailing bearing makes that side read wider), up to the slot's edge.
     readonly property real hMargin: Math.min(label.pad + label.trail, label.artMargin)
     y: artTop - vMargin
-    // Indicators end Style.space(1) above the slot floor.
-    height: label.height - Style.space(1) + vMargin - y
+    // Indicators end Style.space(1) plus the lift above the slot floor.
+    height: label.height - Style.space(1) - (label.root ? label.root.indicatorLift : 0) + vMargin - y
     x: label.mirror ? edge : -iconW + label.artMargin - hMargin
     width: label.mirror
       ? label.width + label.artMargin + artSize + hMargin - edge
