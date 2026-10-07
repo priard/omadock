@@ -83,7 +83,7 @@ QtObject {
   function plateSpacing(root) {
     var s = root.outputScale > 0 ? root.outputScale : 1
     var line = Math.max(1, Math.round(root.dividerLineWidth * s)) / s
-    return DockLabels.plateSpacing(root.gapWidth, line, s, Style.space(3))
+    return DockLabels.plateSpacing(Style.space(root.itemSpacing), line, s, Style.space(4), Style.space(12))
   }
 
   // A plate's vertical box in its tile (tile height tileH), the same for
@@ -128,7 +128,7 @@ QtObject {
   // The user's name wins; an app without a desktop entry (its name is its
   // class id) gets a readable one.
   function displayName(root, appId, name) {
-    var custom = (root && appId && root.labelNames) ? root.labelNames[appId] : undefined
+    var custom = (root && appId && root.labelNames && Object.prototype.hasOwnProperty.call(root.labelNames, appId)) ? root.labelNames[appId] : undefined
     if (typeof custom === "string" && custom !== "") return custom
     if (appId && (name === "" || name === appId)) return DockLabels.prettyAppId(appId)
     return name

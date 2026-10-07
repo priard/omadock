@@ -298,7 +298,7 @@ Item {
   // Pinned-group | running divider. Sits after the tile section when tiles
   // exist, so it doubles as the right tile divider.
   readonly property bool hasSeparator: (root.pinnedSection.length > 0 || root.hasTiles) && root.visibleRunningCount > 0
-  readonly property real gapWidth: Style.space(root.itemSpacing)
+  readonly property real gapWidth: root.labelPlates ? root.plateSpacing.gap : Style.space(root.itemSpacing)
   // Split sections turn each separator into the gap between two panels. Each
   // panel reaches the card padding past its outer icons, so the separator
   // slot is sized to leave the chosen visible gap between the panels.

@@ -375,16 +375,14 @@ function gridInt(n, dpr) {
 
 // Spacing for a row of label plates: one gap between plates, between a
 // plate and the dock's edge, and between a plate and a divider line.
-// spacing is the row's item spacing, line the divider's line width, dpr
-// the output scale, minGap the least gap plates get. Each plate is inset
-// by inset on both sides of its tile; edge is the card's side padding;
-// separator the divider slot's width (line centred).
-function plateSpacing(spacing, line, dpr, minGap) {
+// spacing is the user's item spacing, clamped to minGap..maxGap (plates
+// touch at 0 and drift apart at large values) and snapped to the
+// output's pixel grid. Plates fill their tiles (inset 0), the card's side
+// padding is the gap (edge) and a divider slot is just its line.
+function plateSpacing(spacing, line, dpr, minGap, maxGap) {
   var d = dpr > 0 ? dpr : 1
-  spacing = gridRound(spacing, d)
-  var inset = Math.max(0, Math.ceil(Math.max(0, minGap - spacing) / 2 * d) / d)
-  var gap = spacing + 2 * inset
-  return { spacing: spacing, line: line, inset: inset, gap: gap, edge: gap - inset, separator: line + 2 * inset }
+  var gap = gridRound(Math.max(minGap, Math.min(maxGap, spacing)), d)
+  return { spacing: gap, line: line, inset: 0, gap: gap, edge: gap, separator: line }
 }
 
 function writeLabelConfig(conf, state) {

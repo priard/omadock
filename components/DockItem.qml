@@ -117,12 +117,16 @@ Item {
 
   readonly property bool starting: (root && root.launchPending) ? (root.launchPending[item.appId] !== undefined) : false
 
+  // The one name the dock shows for this app, in the label, the tooltip and
+  // menus: the user's label name, else the desktop entry's, else a readable
+  // form of the class id (DockLabelLogic.displayName).
+  readonly property string displayName: root ? root.labelName(item.appId, item.name) : item.name
   readonly property string tooltipText: {
-    if (item.name === "") return ""
-    if (item.starting) return item.name + " [starting…]"
-    if (item.minimized) return item.name + " [minimized]"
-    if (item.workspaceHint !== "") return item.name + " [" + item.workspaceHint + "]"
-    return item.name
+    if (item.displayName === "") return ""
+    if (item.starting) return item.displayName + " [starting…]"
+    if (item.minimized) return item.displayName + " [minimized]"
+    if (item.workspaceHint !== "") return item.displayName + " [" + item.workspaceHint + "]"
+    return item.displayName
   }
 
   // The pulse carries both attention states: urgency, and a launch in
@@ -524,7 +528,7 @@ Item {
     property bool tipShown: false
     readonly property bool wanted: area.containsMouse && !item.isDragging
       && item.name !== "" && (root ? (root.showTooltips && root.contextAppId === "") : true)
-      && (root ? root.labelTooltipNeeded("app", item.tooltipWindows.length > 0, item.tooltipText !== item.name, label.shortened) : true)
+      && (root ? root.labelTooltipNeeded("app", item.tooltipWindows.length > 0, item.tooltipText !== item.displayName, label.shortened) : true)
     readonly property bool showing: itemTooltip.tipShown && itemTooltip.wanted
 
     TooltipLife {
@@ -579,7 +583,7 @@ Item {
             spacing: Style.space(3)
 
             Text {
-              text: item.tooltipText !== "" ? item.tooltipText : item.name
+              text: item.tooltipText !== "" ? item.tooltipText : item.displayName
               textFormat: Text.PlainText
               color: Color.tooltip.text
               font.family: Style.font.family

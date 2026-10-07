@@ -293,28 +293,18 @@ test("steadyInk picks one ink whose weakest contrast along the dock is best", ()
   assert.ok(L.contrast(dark, light) > 15)
 })
 
-test("plateSpacing gives one gap for plate-plate, plate-edge and plate-divider", () => {
-  // spacing 4, line 1, dpr 1.5: inset 0, gap 4, side padding 4, divider slot = line.
-  const a = plain(L.plateSpacing(4, 1, 1.5, 3))
-  assert.equal(a.gap, 4)
-  assert.equal(a.inset, 0)
-  assert.equal(a.edge, 4)
-  assert.equal(a.separator, 1)
-  // Tight spacing gets the minimum gap, split between the plates' insets.
-  const b = plain(L.plateSpacing(0, 1, 1.5, 4))
-  assert.equal(b.gap, 4)
-  assert.equal(b.inset, 2)
-  assert.equal(b.edge, 2)
-  assert.equal(b.separator, 5)
-  // Insets are whole device pixels, so both sides of a gap match.
-  const c = plain(L.plateSpacing(1, 1.5, 1.5, 4))
-  assert.ok(Math.abs(c.inset * 1.5 - Math.round(c.inset * 1.5)) < 1e-9)
-  // The identities that make the three gaps equal.
-  for (const v of [a, b, c]) {
-    assert.ok(Math.abs(v.edge + v.inset - v.gap) < 1e-9, "edge")
-    assert.ok(Math.abs(v.spacing + 2 * v.inset - v.gap) < 1e-9, "between plates")
-    assert.ok(Math.abs((v.separator - v.line) / 2 + v.inset + v.spacing - v.gap) < 1e-9, "divider")
-  }
+test("plateSpacing keeps one gap, clamped to what plates look right with", () => {
+  // In range: the spacing itself, snapped to the device-pixel grid.
+  const a = plain(L.plateSpacing(6, 1, 1.5, 4, 12))
+  assert.deepEqual([a.gap, a.edge, a.separator], [6, 6, 1])
+  // Zero and huge spacing clamp.
+  assert.equal(L.plateSpacing(0, 1, 1.5, 4, 12).gap, 4)
+  assert.equal(L.plateSpacing(40, 1, 1.5, 4, 12).gap, 12)
+  // Odd spacing lands on the grid at 1.5.
+  const c = plain(L.plateSpacing(5, 1.3333333333333333, 1.5, 4, 12))
+  assert.ok(Math.abs(c.gap * 1.5 - Math.round(c.gap * 1.5)) < 1e-9)
+  // The divider slot is just the line, so line-to-plate is the gap.
+  assert.equal(c.separator, c.line)
 })
 
 test("grid helpers land on whole device pixels", () => {
@@ -329,5 +319,4 @@ test("grid helpers land on whole device pixels", () => {
   }
   assert.equal(L.gridInt(45, 1.5), 46)
   assert.equal(L.gridInt(46, 1.5), 46)
-  assert.equal(L.plateSpacing(5, 1, 1.5, 3).spacing * 1.5 % 1, 0)
 })
