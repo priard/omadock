@@ -44,7 +44,7 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 
 ## Open
 
-- none.
+- #47 side labels (`feat/side-labels`), opened 2026-10-07.
 
 ## Not upstream yet
 
