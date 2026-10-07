@@ -49,7 +49,9 @@ Rectangle {
   // The dock's classic mark dimensions: 5px dots (4px dense) and a 12x4
   // accent bar (9x4 dense). A fix for fractional-scale borders once thinned
   // every mark a pixel with it; the sizes here are the look the dock ships.
-  readonly property real dotSize: Math.max(2 / mark.dpr, mark.snap(Style.space(dense ? 4 : 5)))
+  // A side column on a plate uses the dense dot: beside a name the full
+  // dot read heavy.
+  readonly property real dotSize: Math.max(2 / mark.dpr, mark.snap(Style.space((dense || vertical) ? 4 : 5)))
   readonly property real barHeight: Math.max(2 / mark.dpr, mark.snap(Style.space(4)))
 
   property real snapX: 0
