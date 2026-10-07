@@ -82,7 +82,7 @@ Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live wi
 - **🔔 Attention glow & chimes** — bouncing alerts and audio pings.
 - **🔴 Sticky notification badges** — counts matching notifications on pinned, running, and foldered apps; folder tiles sum their members. Counts stay until the app is focused — through dismissals, expiry, and shell restarts. These are not unread-message counts.
 - **🖥️ CLI app identity** — Antigravity and btop keep their own icons when launched in a terminal; the terminal icon is only a fallback.
-- **🏷️ Name labels** — apps, groups and folders can wear their names in a band under (or above) the icons, with per-kind targets and size/contrast controls.
+- **🏷️ Name labels** — names beside the icons, always on or slid out on hover, readable on any dock fill; tooltips that would only repeat the name stay away.
 - **⌨️ Keybindings & IPC** — wired for `~/.config/hypr/bindings.lua` out of the box.
 
 ---
@@ -318,20 +318,24 @@ The settings at a glance:
 
 ### 🏷️ Name labels
 
-*Settings → Appearance → Labels* puts every item's name in a band over the icon row — below the icons (at the dock's edge) or above them (keeping the indicator side clear). The fuzzy search jumps straight to any of them: type `pill`, pick *Label contrast*, and the panel scrolls to the row.
+*Settings → Labels* puts each item's name to the right of its icon (to the left on a right-aligned dock). **Always** keeps every name out; **On hover** slides a name out after a short rest on the icon, and the dock grows away from it so the icon stays under the pointer. Moving along the dock switches names at once.
 
 <div align="center">
-  <img src="assets/preview-labels.png" width="700" alt="Name labels in pill contrast: each name sits in its own dark pill under the icon" />
+  <img src="assets/preview-labels.png" width="760" alt="Name labels beside the icons on rounded plates that join icon and name into one button" />
 </div>
 
-- **Name labels**: master toggle for the label band.
-- **Label targets**: which items carry a name — `All`, `Apps`, `Groups` or `Folders`.
-- **Label placement**: `Below` the icons, or `Above` them.
-- **Label size**: `Small`, `Medium`, `Large`.
-- **Label contrast**: `Theme` ink, `High` contrast (black or white, whichever reads better), or `Pill` (each name in its own dark pill).
+- **Labels**: `Off`, `Always` or `On hover`; **Show on**: `All`, `Apps`, `App groups` or `Folders`.
+- **Font**: the theme font, `Sans`, or `Pixel` (bundled Silkscreen); **Size** and **Weight**.
+- **Color**: `Auto` (black or white for whatever is behind the icons, gradients included), `Theme` or `Accent`. A name without a background gets a faint outline so it reads on any fill.
+- **Background**: none, a `Pill` behind the name, or a `Plate` that joins icon and name like a button; **Corners**: `Dock` (follows the dock's own corners), `Pill`, `Rounded` or `Square`.
+- **Reveal**: `Slide`, `Typewriter` or `Scramble`; **Effect**: `Glow` or `Outline`. Lift, glow and glitch hover effects carry the name along with the icon.
+- **Max width**: long names drop a subtitle ("Signal - Private Messenger" → "Signal"), then trailing words, and only then end in an ellipsis. Apps without a desktop entry get a readable name instead of their class id.
+- **Names**: per-app label text; *Rename Label…* in an app's right-click menu opens it.
+
+With labels on, an item's tooltip shows only when it adds something: window previews, a starting/minimized/workspace hint, or the full name of a shortened label.
 
 <div align="center">
-  <img src="assets/preview-settings-labels.png" width="420" alt="The Labels section in Settings → Appearance, with the dock underneath previewing pill labels live" />
+  <img src="assets/preview-settings-labels.png" width="420" alt="The Labels settings page" />
 </div>
 
 ---
@@ -427,11 +431,18 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "keepPointer": true,
   "wheelStepDelay": 150,
   "iconHoverReveal": false,
-  "showLabels": false,
+  "labelMode": "off",
   "labelKind": "all",
-  "labelPlacement": "below",
-  "labelSize": "small",
-  "labelContrast": "theme",
+  "labelFont": "theme",
+  "labelSize": "medium",
+  "labelWeight": "medium",
+  "labelColor": "auto",
+  "labelBackground": "none",
+  "labelShape": "dock",
+  "labelReveal": "slide",
+  "labelEffect": "none",
+  "labelMaxWidth": 140,
+  "labelNames": {},
   "showAppsButton": true,
   "showTooltips": true,
   "advancedTooltips": true,
@@ -499,11 +510,18 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `iconStrength` | `number` | `1` | `mono` / `dots`: how much of the effect covers the original icon, `0`–`1`. |
 | `iconHoverOriginal` | `bool` | `false` | With an icon style on, the hovered icon (dock, group tiles, an opened group) shows as shipped. |
 | `iconHoverReveal` | `bool` | `false` | With `iconHoverOriginal`, hover dissolves the original icon back in as a dithered reveal instead of a hard switch. |
-| `showLabels` | `bool` | `false` | Shows item names in a band over the icon row. |
+| `labelMode` | `string` | `"off"` | Name labels beside the icons: `"off"`, `"always"` or `"hover"`. Older `showLabels` / `labelPlacement` / `labelContrast` keys are read once and replaced. |
 | `labelKind` | `string` | `"all"` | Which items carry a name label: `"all"`, `"apps"`, `"groups"` or `"folders"`. |
-| `labelPlacement` | `string` | `"below"` | `"below"` the icons (at the dock's edge) or `"above"` them (the indicator side stays clear). |
-| `labelSize` | `string` | `"small"` | Label text size: `"small"`, `"medium"` or `"large"`. |
-| `labelContrast` | `string` | `"theme"` | Label ink: `"theme"`, `"high"` (black or white, whichever contrasts more) or `"pill"` (each name in its own dark pill). |
+| `labelFont` | `string` | `"theme"` | `"theme"`, `"sans"` or `"pixel"` (bundled Silkscreen). |
+| `labelSize` | `string` | `"medium"` | `"small"`, `"medium"` or `"large"`. |
+| `labelWeight` | `string` | `"medium"` | `"regular"`, `"medium"` or `"bold"` (ignored by the pixel font). |
+| `labelColor` | `string` | `"auto"` | `"auto"` (black or white for what is behind the icons), `"theme"` or `"accent"`. |
+| `labelBackground` | `string` | `"none"` | `"none"`, `"pill"` (behind the name) or `"plate"` (behind icon and name). |
+| `labelShape` | `string` | `"dock"` | Background corners: `"dock"` (the dock's own corner ratio), `"pill"`, `"rounded"` or `"square"`. |
+| `labelReveal` | `string` | `"slide"` | How a name appears: `"slide"`, `"typewriter"` or `"scramble"`. |
+| `labelEffect` | `string` | `"none"` | `"none"`, `"glow"` or `"outline"`. |
+| `labelMaxWidth` | `int` | `140` | Longest label in px (80–240) before the name is shortened. |
+| `labelNames` | `object` | `{}` | Per-app label text, `{ "appId": "Name" }` (up to 200 entries, 40 characters each). |
 | `keepPointer` | `bool` | `true` | Focusing a window from the dock keeps the pointer where it is instead of warping it to the window centre. |
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
 | `hoverEffect` | `string` | `"zoom"` | Hover mode: magnification `"zoom"` or `"wave"`; effects `"lift"`, `"glow"`, `"glitch"` (shaders); or `"off"`. |
