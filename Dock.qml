@@ -9,6 +9,7 @@ import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
 import "DockLabels.js" as DockLabels
+import "DockLayout.js" as DockLayout
 import "components"
 import "components/logic"
 
@@ -603,7 +604,12 @@ Item {
 
   // ------------------------------------------------- configuration options
 
-  property string alignment: "center" // "center" | "left" | "right"
+  property string alignment: "center" // "center" | "left" | "right" | "spread"
+  property string layout: "dock"      // "dock" | "panel" (DockLayout.js)
+  // What the dock draws: { panel, split, align } (DockLayout.placement).
+  readonly property var placement: DockLayout.placement(root.layout, root.alignment, root.splitSections, root.folderSlots + root.driveSlots > 0)
+  // Margin between the card and the screen edge; the panel sits on it.
+  readonly property real edgeGap: root.placement.panel ? 0 : Style.gapsOut
 
   property bool autohide: true
   property bool intelligentAutohide: true
@@ -1169,6 +1175,7 @@ Item {
   function ejectDrive(dev, mountpoint, name) { return folderLogic.ejectDrive(root, dev, mountpoint, name) }
   function setDockAlignment(align) { return stateLogic.setDockAlignment(root, align) }
   function setDockPosition(pos) { return stateLogic.setDockPosition(root, pos) }
+  function setDockLayout(l) { return stateLogic.setDockLayout(root, l) }
 
   function openAppGroup(gdata, cx, cy) { return groupsLogic.openAppGroup(root, gdata, cx, cy) }
 
