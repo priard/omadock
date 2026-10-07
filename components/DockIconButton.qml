@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import qs.Commons
 import qs.Ui
+import "../DockLabels.js" as DockLabels
 
 Item {
   id: btn
@@ -40,6 +41,27 @@ Item {
   // sit low in their line box.
   // Drawn through DockIconArt so the dock's icon style (pixel, dot matrix…)
   // and icon shadow apply to the button like to every other icon.
+  // With always-on plate labels the button wears a plate of its own (no
+  // name), so the row reads as one set of buttons. Same fill, corners and
+  // margins as the label plates (DockLabel); it lifts with the glyph.
+  Rectangle {
+    id: buttonPlate
+    readonly property var style: root ? root.labelStyle("app") : null
+    readonly property real art: root ? root.baseIconArt : 28
+    readonly property real artTop: root ? btn.height - root.iconArtBottom - art : 0
+    readonly property real vMargin: Style.space(4)
+    property real level: area.containsMouse ? 1 : 0
+    Behavior on level { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+    visible: !!root && root.labelMode === "always" && root.labelBackground === "plate"
+    x: 0
+    width: btn.width - Style.space(1)
+    y: artTop - vMargin
+    height: art + vMargin * 2
+    radius: style ? Math.min(height * 0.32, DockLabels.labelRadius(style.shape, height, style.dockRatio)) : 0
+    color: style ? Util.alpha(style.fill, 0.55 + 0.25 * level) : "transparent"
+    transform: Translate { y: (root && root.hoverEffect === "lift") ? -buttonPlate.art * 0.16 * buttonPlate.level : 0 }
+  }
+
   DockIconArt {
     id: glyphBox
     anchors.horizontalCenter: parent.horizontalCenter

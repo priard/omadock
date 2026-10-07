@@ -27,6 +27,8 @@ Item {
   property string contextAppId: ""
   // The dock root, for the shared tooltip warmth (TooltipLife).
   property var dockRoot: null
+  // What the bubble points at; a tile with a label passes its icon.
+  property Item target: bubble.parent
 
   width: 0
   height: 0
@@ -65,7 +67,7 @@ Item {
     active: life.alive
 
     TooltipWindow {
-      target: bubble.parent
+      target: bubble.target
       gap: Style.space(8)
       shown: true
       level: life.level

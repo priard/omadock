@@ -8,6 +8,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
+import "DockLabels.js" as DockLabels
 import "components"
 import "components/logic"
 
@@ -84,7 +85,6 @@ Item {
   onDockScreenChanged: root.recheckOutputScale()
 
   function lookupOutputScale(_rev) { return screenLogic.lookupOutputScale(root, _rev) }
-
   function recheckOutputScale() { return screenLogic.recheckOutputScale(root) }
 
   // Bounded burst, not a poll: stops on its own after two seconds.
@@ -127,11 +127,8 @@ Item {
   readonly property bool filterByMonitor: root.perMonitorApps && root.forcedScreenName !== ""
 
   function monitorNameForWorkspace(target) { return screenLogic.monitorNameForWorkspace(root, target) }
-
   function monitorNameForHypr(h) { return screenLogic.monitorNameForHypr(root, h) }
-
   function isHyprOnThisMonitor(h) { return screenLogic.isHyprOnThisMonitor(root, h) }
-
   function isToplevelOnThisMonitor(top) { return screenLogic.isToplevelOnThisMonitor(root, top) }
 
   onFilterByMonitorChanged: modelTimer.restart()
@@ -142,7 +139,6 @@ Item {
   onSharedStateChanged: root.pullSharedState()
 
   function pushSharedState() { return screenLogic.pushSharedState(root) }
-
   function pullSharedState() { return screenLogic.pullSharedState(root) }
 
   Connections {
@@ -266,8 +262,13 @@ Item {
   // the part of the slot above a fixed indicator band. The box never moves with
   // running state, so icons stay level whether or not they carry dots.
   readonly property real indicatorBand: Style.space(6)
+  // Art and indicators sit this much above the band's centring, so the
+  // art's top margin matches the room under the indicators.
+  readonly property real indicatorLift: Style.spaceReal(1.5)
   // Distance from the slot's bottom edge to the bottom of the artwork.
-  readonly property real iconArtBottom: Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2)
+  // With indicators beside the art on label plates, the art is centred.
+  readonly property real iconArtBottom: root.labelSideMarks ? Math.round((root.iconSlot - root.baseIconArt) / 2)
+    : Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2) + root.indicatorLift
   // Vertical offset of the artwork's centre from the slot's centre, for
   // things centred on the row (separators, preview tiles).
   readonly property real iconCenterOffset: -root.indicatorBand / 2
@@ -376,7 +377,7 @@ Item {
   // Where the row starts within the card (card-local coordinates).
   readonly property real baseRowLeft: dockCard ? dockCard.contentLeftInset : Style.space(5)
 
-  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth) { return styleLogic.slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth) }
+  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) { return styleLogic.slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) }
 
   // Width the tile section consumes ahead of elements that follow it,
   // including its left divider.
@@ -386,9 +387,7 @@ Item {
   readonly property int tileElements: root.hasTiles ? root.tileCount : 0
 
   function magnifyAt(homeCenter) { return styleLogic.magnifyAt(root, homeCenter) }
-
   function magnifyScaleAt(homeCenter) { return styleLogic.magnifyScaleAt(root, homeCenter) }
-
   function waveOffsetAt(homeCenter) { return styleLogic.waveOffsetAt(root, homeCenter) }
 
   // ------------------------------------------------- contrast
@@ -488,7 +487,6 @@ Item {
   readonly property var notifEntries: root.pinnedSection.concat(root.runningSection).concat(root.groupedSection || [])
 
   function refreshDock() { return stateLogic.refreshDock(root) }
-
   function rescanMinimizedWindows() { return stateLogic.rescanMinimizedWindows(root) }
 
   readonly property string activeId: {
@@ -631,6 +629,7 @@ Item {
   property var activeAppGroupData: null
   property real activeAppGroupX: 0
   property var contextAppGroupData: null
+  property bool contextRenaming: false     // a context-menu name field has the keyboard
 
   // ------------------------------------------------- configuration options
 
@@ -767,7 +766,6 @@ Item {
   readonly property color iconTintColor: root.tintFor(root.iconTint, root.dockForeground, root.iconBackdropColor)
 
   function tintFor(mode, textColor, backdrop) { return styleLogic.tintFor(root, mode, textColor, backdrop) }
-
   function blackOrWhiteOn(backdrop) { return styleLogic.blackOrWhiteOn(root, backdrop) }
 
   // Best guess at the colour behind the icons: the card's fill (for a
@@ -832,7 +830,6 @@ Item {
 
   function luminance(c) { return styleLogic.luminance(root, c) }
   function contrastRatio(a, b) { return styleLogic.contrastRatio(root, a, b) }
-
   function readableOn(color, backdrop) { return styleLogic.readableOn(root, color, backdrop) }
   // Without a card to cast one, each icon casts its own shadow.
   readonly property bool iconShadow: root.showShadow && !root.showBackground && root.shadowStrength > 0
@@ -883,12 +880,23 @@ Item {
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
   property bool urgentOnNotification: true
-  // ---- name labels on the tiles (policy in DockLabelLogic)
-  property bool showLabels: false
+  // ---- name labels beside the icons (DockLabelLogic, DockLabels.js)
+  property string labelMode: "off"        // off | always | hover
   property string labelKind: "all"        // all | apps | groups | folders
-  property string labelPlacement: "below" // below | above
-  property string labelSize: "small"      // small | medium | large
-  property string labelContrast: "theme"  // theme | high | pill
+  property string labelFont: "theme"      // theme | sans | pixel
+  property string labelSize: "medium"     // small | medium | large
+  property string labelWeight: "medium"   // regular | medium | bold
+  property string labelColor: "auto"      // auto | theme | accent
+  property string labelBackground: "none" // none | pill | plate
+  property string labelShape: "dock"      // dock | pill | rounded | square
+  property string labelIndicators: "before" // before | after | under (always-on plates)
+  readonly property bool labelSideMarks: DockLabels.sideMarks(root.labelMode, root.labelBackground, root.labelIndicators)
+  property string labelReveal: "slide"    // slide | typewriter | scramble
+  property string labelEffect: "none"     // none | glow | outline
+  property int labelMaxWidth: 140
+  property var labelNames: ({})           // appId -> the user's label text
+  property var labelExtras: ({})          // slot -> { owner, width } (DockLabels.withExtra)
+  property int labelsOpen: 0              // hover-mode labels open or closing
 
   property bool showNotificationBadges: true
   // Badge look: what the pill carries, which corner it sits on, its colour.
@@ -1829,39 +1837,24 @@ Item {
   function closeSettingsPanel() { return stateLogic.closeSettingsPanel(root) }
 
   function setOption(key, value) { return settingsLogic.setOption(root, key, value) }
-
   function setDividerStyle(style) { return settingsLogic.setDividerStyle(root, style) }
-
   function setShowBorder(show) { return settingsLogic.setShowBorder(root, show) }
-
   function setDockScreen(name) { return settingsLogic.setDockScreen(root, name) }
-
   function setAutohideMode(mode) { return settingsLogic.setAutohideMode(root, mode) }
-
   function setDockOpacity(val) { return settingsLogic.setDockOpacity(root, val) }
-
   function setBorderOpacity(val) { return settingsLogic.setBorderOpacity(root, val) }
-
   function setHoverEffect(mode) { return settingsLogic.setHoverEffect(root, mode) }
-
   function setDockShape(shape) { return settingsLogic.setDockShape(root, shape) }
-
   function setDockBgColor(col) { return settingsLogic.setDockBgColor(root, col) }
-
   function setIconSize(sz) { return settingsLogic.setIconSize(root, sz) }
-
   function setItemSpacing(sp) { return settingsLogic.setItemSpacing(root, sp) }
-
   function setUrgentSoundName(name) { return settingsLogic.setUrgentSoundName(root, name) }
 
   // ------------------------------------------------- window plumbing
 
   function hyprToplevelFor(toplevel) { return windowLogic.hyprToplevelFor(root, toplevel) }
-
   function windowAddress(handle) { return windowLogic.windowAddress(root, handle) }
-
   function luaString(value) { return windowLogic.luaString(root, value) }
-
   function hyprDispatch(lua, legacy) { return windowLogic.hyprDispatch(root, lua, legacy) }
 
   // Runs action with Hyprland's pointer warps switched off. Activation goes
@@ -1879,9 +1872,14 @@ Item {
   function groupCycleFront(key, windows, frontIndex, angleDelta) { return groupCycleLogic.cycleFront(root, key, windows, frontIndex, angleDelta) }
   function focusPreviewedWindow(windows, frontIndex) { return groupCycleLogic.focusPreviewed(root, windows, frontIndex) }
 
-  // Name labels: rendering policy (visibility, size, contrast, band)
+  // Name labels: rendering policy and the per-slot width registry
   function labelStyle(kind) { return labelLogic.style(root, kind) }
-  function labelBandHeight() { return labelLogic.bandHeight(root) }
+  function labelName(appId, name) { return labelLogic.displayName(root, appId, name) }
+  function labelTooltipNeeded(kind, wins, hint, shortened) { return labelLogic.tooltipNeeded(root, kind, wins, hint, shortened) }
+  function labelExtraBefore(slot, ownLabel) { return labelLogic.extraBefore(root, slot, ownLabel) }
+  function setLabelExtra(slot, owner, width, before) { labelLogic.setExtra(root, slot, owner, width, before) }
+  function setLabelName(appId, name) { labelLogic.setName(root, appId, name) }
+  function labelNameRows() { return labelLogic.nameRows(root) }
 
   function withoutPointerWarp(action) { return stateLogic.withoutPointerWarp(root, action) }
 
@@ -2193,6 +2191,7 @@ Item {
   function isFolderPinned(path) { return folderLogic.isFolderPinned(root, path) }
 
   function toggleFolderPin(path, name, icon) { return folderLogic.toggleFolderPin(root, path, name, icon) }
+  function renamePinnedFolder(path, name) { folderLogic.renamePinnedFolder(root, path, name) }
 
   function moveAppGroup(groupId, insertIndex) { return groupsLogic.moveAppGroup(root, groupId, insertIndex) }
 
@@ -2235,7 +2234,7 @@ Item {
     color: "transparent"
     WlrLayershell.namespace: "omadock"
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: (appGroupLoader.item && appGroupLoader.item.body.isEditingName)
+    WlrLayershell.keyboardFocus: (root.contextRenaming || (appGroupLoader.item && appGroupLoader.item.body.isEditingName))
       ? WlrKeyboardFocus.OnDemand
       : WlrKeyboardFocus.None
     exclusionMode: (!root.autohide) ? ExclusionMode.Normal : ExclusionMode.Ignore

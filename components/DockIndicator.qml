@@ -23,6 +23,9 @@ Rectangle {
   property bool urgent: false
   // Smaller marks when many sit side by side.
   property bool dense: false
+  // Stacked in a column (side indicators on a label plate): the accent bar
+  // stands upright.
+  property bool vertical: false
   // 0..1 breathing for urgent marks, driven by the item.
   property real pulse: 1.0
 
@@ -79,9 +82,10 @@ Rectangle {
     ? Color.urgent
     : Util.alpha(root ? root.dockForeground : Color.bar.text, 0.88)
 
-  width: kind === "active" ? mark.snap(Style.space(dense ? 9 : 12)) : dotSize
-  height: kind === "active" ? mark.barHeight : dotSize
-  radius: (root && root.indicatorSquare) ? 0 : height / 2
+  readonly property real barLength: mark.snap(Style.space(dense ? 9 : 12))
+  width: kind === "active" ? (mark.vertical ? mark.barHeight : mark.barLength) : dotSize
+  height: kind === "active" ? (mark.vertical ? mark.barLength : mark.barHeight) : dotSize
+  radius: (root && root.indicatorSquare) ? 0 : Math.min(width, height) / 2
 
   color: kind === "active" ? Color.accent
     : kind === "minimized" ? "transparent"
@@ -95,6 +99,7 @@ Rectangle {
   opacity: urgent ? (0.4 + 0.6 * pulse) : 1.0
 
   Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+  Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
   Behavior on color { ColorAnimation { duration: 120 } }
   Behavior on border.color { ColorAnimation { duration: 120 } }
 }

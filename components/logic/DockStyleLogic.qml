@@ -25,13 +25,16 @@ QtObject {
     return n
   }
 
-  function slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth) {
+  // ownLabel false: the slot is not a labelled tile (a preview tile sharing
+  // the next running app's index), so a mirrored label is not its own.
+  function slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) {
     var seps = (typeof sepCount === "number") ? sepCount : (sepCount ? 1 : 0)
     return root.baseRowLeft
       + elementIndex * root.gapWidth
       + slotsBefore * root.iconSlot
       + seps * root.separatorWidth
       + (extraLeftWidth || 0)
+      + root.labelExtraBefore(slotsBefore, ownLabel)
       + root.iconSlot / 2
   }
 

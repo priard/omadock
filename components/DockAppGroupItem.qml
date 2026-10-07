@@ -13,6 +13,9 @@ Item {
 
   property var groupData: null
   property real homeCenter: 0
+  property int labelSlot: -1
+  readonly property real labelExtra: label.extra
+  readonly property real iconCenterX: iconSlot.x + iconSlot.width / 2
 
   readonly property string groupId: (groupData && groupData.id) ? groupData.id : ""
   readonly property string groupName: (groupData && groupData.name) ? groupData.name : "Folder"
@@ -57,9 +60,10 @@ Item {
   // Faded while dragged, fainter still once pulled off the dock.
   opacity: groupArea.dragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
 
-  width: root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0
+  width: (root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0) + gitem.labelExtra
   height: root ? root.iconSlot : 0
-  z: Math.round(gitem.magnifyScale * 100)
+  // An open hover label is drawn over the neighbours.
+  z: Math.round(gitem.magnifyScale * 100) + (label.overlay && label.progress > 0.01 ? 1000 : 0)
 
   readonly property bool isOpen: root ? root.activeAppGroupId === gitem.groupId : false
   readonly property bool isDropTarget: (root && (root.dropTargetGroupId === gitem.groupId || root.dropTargetAppId === gitem.groupId))
@@ -165,7 +169,7 @@ Item {
     id: iconSlot
     width: root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
-    anchors.horizontalCenter: parent.horizontalCenter
+    x: (label.mirror ? gitem.labelExtra - label.lead : label.lead) + Math.round((gitem.width - gitem.labelExtra - width) / 2)
     anchors.verticalCenter: parent.verticalCenter
 
     Item {
@@ -316,12 +320,13 @@ Item {
   // the row's own layout.
   Item {
     id: indicatorBand
-    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.horizontalCenter: iconSlot.horizontalCenter
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     width: indicatorRow.width
     height: indicatorRow.height
-    visible: gitem.hasRunningApps || gitem.isOpen
+    // On a plate with side indicators the label draws these as a column.
+    visible: (gitem.hasRunningApps || gitem.isOpen) && !label.sideMarks
     z: 2
 
     DockIndicatorRow {
@@ -366,12 +371,12 @@ Item {
     onTapped: function(mouse) {
       var targetWin = root ? root.contentItemRef : null
       if (mouse.button === Qt.RightButton) {
-        var mappedPos = targetWin ? gitem.mapToItem(targetWin, gitem.width / 2, 0) : null
+        var mappedPos = targetWin ? gitem.mapToItem(targetWin, gitem.iconCenterX, 0) : null
         if (!mappedPos) return
         gitem.menuRequested(gitem.groupData, mappedPos.x, 0)
       } else {
         gitem.clickPreviewOr(function() {
-          var centerPos = targetWin ? gitem.mapToItem(targetWin, gitem.width / 2, 0) : null
+          var centerPos = targetWin ? gitem.mapToItem(targetWin, gitem.iconCenterX, 0) : null
           if (!centerPos) return
           gitem.openGroupRequested(gitem.groupData, centerPos.x, centerPos.y)
         })
@@ -379,12 +384,17 @@ Item {
     }
   }
 
-  // Name label (visibility/size/contrast decided in DockLabelLogic).
+  // Name beside the tile (DockLabel, policy in DockLabelLogic).
   DockLabel {
+    id: label
+    z: -1
     rootRef: gitem.rootRef
-    name: gitem.groupName
     kind: "group"
-    tile: gitem
+    name: gitem.groupName
+    hovered: groupArea.containsMouse && !groupArea.dragging
+    iconBox: iconSlot
+    slot: gitem.labelSlot
+    marksFrom: indicatorRow
   }
 
   // Hover tooltip: the member windows as preview cards, like an app's.
@@ -396,6 +406,8 @@ Item {
     fallbackIcon: Quickshell.iconPath("folder", true)
     hovered: groupArea.containsMouse
     blocked: (!root || !root.showTooltips || root.activeAppGroupId !== "")
+      || (root && !root.labelTooltipNeeded("group", gitem.tooltipWindows.length > 0, false, label.shortened))
+    target: iconSlot
     showTooltips: root ? root.showTooltips : true
     tooltipDelay: root ? root.tooltipDelay : 450
     contextAppId: root ? root.contextAppId : ""

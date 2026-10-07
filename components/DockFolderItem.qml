@@ -15,6 +15,11 @@ Item {
   property string name: ""
   property string icon: "folder"
   property real homeCenter: 0
+  property int labelSlot: -1
+  // An open hover label is drawn over the neighbours.
+  z: label.overlay && label.progress > 0.01 ? 1000 : 0
+  readonly property real labelExtra: label.extra
+  readonly property real iconCenterX: iconSlot.x + iconSlot.width / 2
   // Position among the pinned folders; a folder dragged in from outside and
   // headed for this index opens a gap before this item.
   property int slotIndex: -1
@@ -31,7 +36,7 @@ Item {
   // Faded while dragged, fainter still once pulled off the dock.
   opacity: area.dragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
 
-  width: (root ? (root.iconSlot * (root.waveHover ? fitem.magnifyScale : 1)) : 0) + fitem.gapWidth
+  width: (root ? (root.iconSlot * (root.waveHover ? fitem.magnifyScale : 1)) : 0) + fitem.gapWidth + fitem.labelExtra
   height: root ? root.iconSlot : 0
 
   DropGhost {
@@ -65,7 +70,7 @@ Item {
     width: root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
     // Centred in the part of the item the drop gap leaves.
-    x: fitem.gapWidth + Math.round((fitem.width - fitem.gapWidth - width) / 2)
+    x: fitem.gapWidth + (label.mirror ? fitem.labelExtra - label.lead : label.lead) + Math.round((fitem.width - fitem.gapWidth - fitem.labelExtra - width) / 2)
     anchors.verticalCenter: parent.verticalCenter
 
     Item {
@@ -136,9 +141,9 @@ Item {
   // Open stack: the same accent bar an app with focus shows.
   DockIndicator {
     rootRef: fitem.rootRef
-    visible: fitem.isOpen
+    visible: fitem.isOpen && !label.sideMarks
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     anchors.horizontalCenter: iconSlot.horizontalCenter
     kind: "active"
   }
@@ -158,23 +163,27 @@ Item {
     onTapped: function(mouse) {
       var targetWin = root ? root.contentItemRef : null
       if (mouse.button === Qt.RightButton) {
-        var mappedPos = targetWin ? fitem.mapToItem(targetWin, fitem.width / 2, 0) : null
+        var mappedPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!mappedPos) return
         fitem.menuRequested(fitem.folderPath, fitem.name, mappedPos.x, 0)
       } else {
-        var centerPos = targetWin ? fitem.mapToItem(targetWin, fitem.width / 2, 0) : null
+        var centerPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!centerPos) return
         fitem.openStackRequested(fitem.folderPath, fitem.name, centerPos.x, centerPos.y)
       }
     }
   }
 
-  // Name label (visibility/size/contrast decided in DockLabelLogic).
+  // Name beside the folder (DockLabel, policy in DockLabelLogic).
   DockLabel {
+    id: label
+    z: -1
     rootRef: fitem.rootRef
-    name: fitem.name
     kind: "folder"
-    tile: fitem
+    name: fitem.name
+    hovered: area.containsMouse && !area.dragging
+    iconBox: iconSlot
+    slot: fitem.labelSlot
   }
 
   // Hover tooltip — uses our own HoverTooltip so textFormat: Text.PlainText is enforced.
@@ -183,6 +192,8 @@ Item {
     text: fitem.name + " (Folder)"
     hovered: area.containsMouse
     blocked: (!root || !root.showTooltips || root.activeStackFolder !== "")
+      || (root && !root.labelTooltipNeeded("folder", false, false, label.shortened))
+    target: iconSlot
     showTooltips: root ? root.showTooltips : true
     tooltipDelay: root ? root.tooltipDelay : 450
     contextAppId: root ? root.contextAppId : ""

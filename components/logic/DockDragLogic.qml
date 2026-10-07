@@ -27,7 +27,7 @@ QtObject {
     for (var i = 0; i < n; i++) {
       var it = card.foldersRepeater.itemAt(i)
       if (!it) continue
-      var iconCenter = it.x + it.width - (root ? root.iconSlot : it.width) / 2
+      var iconCenter = it.x + (it.iconCenterX !== undefined ? it.iconCenterX : it.width - (root ? root.iconSlot : it.width) / 2)
       if (px < iconCenter) return i
     }
     return n
@@ -71,14 +71,16 @@ QtObject {
       var slot = card.pinnedRowRepeater.itemAt(i)
       var it = slot ? slot.item : null
       if (!it) continue
-      var centre = slot.x + slot.width / 2
+      var extra = it.labelExtra || 0
+      var centre = slot.x + (it.iconCenterX !== undefined ? it.iconCenterX : slot.width / 2)
+      var span = slot.width - extra
       if (slot.isGroup) {
-        if (Math.abs(rx - centre) < slot.width * 0.45) {
+        if (Math.abs(rx - centre) < span * 0.45) {
           root.dropTargetGroupId = it.groupId
           root.dropRowIndex = -1
           return
         }
-      } else if (it.appId !== aid && Math.abs(rx - centre) < slot.width * 0.38) {
+      } else if (it.appId !== aid && Math.abs(rx - centre) < span * 0.38) {
         root.dropTargetAppId = it.appId
         root.dropRowIndex = -1
         return
@@ -115,7 +117,8 @@ QtObject {
     if (n === 0) return -1
     for (var i = 0; i < n; i++) {
       var slot = card.pinnedRowRepeater.itemAt(i)
-      if (slot && rx < slot.x + slot.width / 2) return i
+      var it = slot ? slot.item : null
+      if (slot && rx < slot.x + (it && it.iconCenterX !== undefined ? it.iconCenterX : slot.width / 2)) return i
     }
     return n
   }

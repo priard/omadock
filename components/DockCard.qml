@@ -5,6 +5,7 @@ import qs.Commons
 import qs.Ui
 import "logic"
 import "../DockModel.js" as DockModel
+import "../DockLabels.js" as DockLabels
 
 Item {
   id: cardWrapper
@@ -87,12 +88,7 @@ Item {
   anchors.bottom: parent ? parent.bottom : undefined
   anchors.bottomMargin: (root && root.dockVisible) ? Style.gapsOut + cardWrapper.shadowRoom : -(dockCard.height + Style.gapsOut + cardWrapper.shadowRoom + 10)
 
-  x: {
-    if (!parent) return 0
-    if (root && root.alignment === "left") return Style.gapsOut * 2
-    if (root && root.alignment === "right") return parent.width - width - (Style.gapsOut * 2)
-    return Math.round((parent.width - width) / 2)
-  }
+  x: parent ? DockLabels.anchoredX(parent.width, width, Style.gapsOut * 2, root ? root.alignment : "center", 0) : 0
 
   Behavior on anchors.bottomMargin {
     NumberAnimation {
@@ -309,10 +305,7 @@ Item {
     }
 
     width: row.implicitWidth + contentLeftInset + contentRightInset
-    // While name labels show, the card grows by their band (DockLabelLogic),
-    // and the window height, autohide mask and exclusive zone all follow
-    // this height already. The row itself never changes size.
-    height: row.implicitHeight + contentTopInset + contentBottomInset + (root ? root.labelBandHeight() : 0)
+    height: row.implicitHeight + contentTopInset + contentBottomInset
 
     // Click on card padding dismisses context menu
     MouseArea {
@@ -349,8 +342,7 @@ Item {
       spacing: Style.space(root ? root.itemSpacing : 4)
 
       x: dockCard.contentLeftInset
-      // Above-placement puts the label band over the icons' side of the card.
-      y: dockCard.contentTopInset + ((root && root.labelPlacement === "above") ? root.labelBandHeight() : 0)
+      y: dockCard.contentTopInset
 
       DockIconButton {
         rootRef: cardWrapper.rootRef
@@ -402,6 +394,7 @@ Item {
               windows: entry.windows || 0
               windowList: entry.windowList || []
               homeCenter: rowSlot.home
+              labelSlot: root ? root.appsSlots + rowSlot.index : -1
               pinned: true
               active: root ? (entry.appId === root.activeId) : false
               onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -427,6 +420,7 @@ Item {
               rootRef: cardWrapper.rootRef
               groupData: rowSlot.modelData.group || ({})
               homeCenter: rowSlot.home
+              labelSlot: root ? root.appsSlots + rowSlot.index : -1
               onOpenGroupRequested: function(gdata, cx, cy) {
                 if (root) root.openAppGroup(gdata, cx, cy)
               }
@@ -529,6 +523,7 @@ Item {
             root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx,
             (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0),
             root.tilesFixedWidth) : 0
+          labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx : -1
           pinned: false
           active: root ? (entry.appId === root.activeId) : false
           onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -592,6 +587,7 @@ Item {
             root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index,
             (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0),
             root.tilesFixedWidth) : 0
+          labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index : -1
           onOpenStackRequested: function(fpath, fname, cx, cy) {
             if (root) root.openFolderStack(fpath, fname, cx)
           }
