@@ -21,6 +21,13 @@ Item {
   property bool hovered: false
   property Item iconBox: null
   property int slot: -1
+  // The tile's own indicator row, mirrored into a column on the plate when
+  // indicators sit beside the art; and the tile's faint "running without a
+  // window" mark.
+  property Item marksFrom: null
+  property bool backgroundMarks: false
+  // A folder's open-stack bar.
+  property bool openMark: false
 
   readonly property var style: root ? root.labelStyle(label.kind) : null
   readonly property string fullText: root ? root.labelName(label.appId, label.name) : label.name
@@ -32,6 +39,14 @@ Item {
   property bool shortened: false
   readonly property real pad: (label.style && label.style.background !== "none") ? Style.space(6) : Style.space(2)
   readonly property bool plate: !!label.style && label.style.background === "plate"
+  // Indicators in a column at the plate's edge, before the icon or after the
+  // name; the column's room is kept whether or not anything runs.
+  readonly property bool sideMarks: label.plate && label.shown && label.style.marks !== "under"
+  readonly property bool marksAfter: label.sideMarks && label.style.marks === "after"
+  readonly property real markRoom: Style.space(7)
+  // Before the icon, the column's room is kept ahead of the art: the tile
+  // shifts its icon by this much (constant, so nothing moves with state).
+  readonly property real lead: (label.sideMarks && !label.marksAfter) ? Math.round(label.progress * label.markRoom) : 0
   // Empty room between the icon slot's edge and the drawn art.
   readonly property real artMargin: label.root ? (label.root.iconSlot - label.root.baseIconArt) / 2 : Style.space(7)
   // The name is placed from the art's edge, not the slot's: bare text and a
@@ -42,7 +57,7 @@ Item {
   // inside its art; the name ends with about the same room, so a label
   // keeps the spacing an icon would before the next item, a divider or the
   // dock's edge. A plate is its own frame and needs only a little.
-  readonly property real trail: label.plate ? Style.space(1) : label.artMargin + Style.space(3)
+  readonly property real trail: label.plate ? Style.space(1) + (label.marksAfter ? label.markRoom + Style.space(3) : 0) : label.artMargin + Style.space(3)
   readonly property real naturalWidth: label.shown && label.shortText !== ""
     ? Math.ceil(textWidth.advanceWidth) + label.pad * 2 + label.gap + label.trail : 0
 
@@ -87,7 +102,7 @@ Item {
   }
   property real progress: label.wantOpen ? 1 : 0
   Behavior on progress { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-  readonly property real extra: Math.round(label.progress * label.naturalWidth)
+  readonly property real extra: Math.round(label.progress * label.naturalWidth) + label.lead
 
   // ---- width registry
   readonly property string owner: String(label)
@@ -96,7 +111,8 @@ Item {
     if (!label.root) return
     if (label._slot >= 0 && label._slot !== label.slot) label.root.setLabelExtra(label._slot, label.owner, 0)
     label._slot = label.slot
-    if (label.slot >= 0) label.root.setLabelExtra(label.slot, label.owner, label.extra)
+    // The part ahead of the icon: a mirrored label, or the indicator lead.
+    if (label.slot >= 0) label.root.setLabelExtra(label.slot, label.owner, label.extra, label.mirror ? label.extra - label.lead : label.lead)
   }
   onExtraChanged: label.syncExtra()
   onSlotChanged: label.syncExtra()
@@ -150,7 +166,7 @@ Item {
 
   // ---- geometry: beside the icon, the whole tile height
   x: label.mirror ? 0 : (label.iconBox ? label.iconBox.x + label.iconBox.width : 0)
-  width: label.extra
+  width: label.extra - label.lead
   height: parent ? parent.height : 0
   visible: label.extra > 0
 
@@ -172,14 +188,66 @@ Item {
     readonly property real hMargin: Math.min(label.pad + label.trail, label.artMargin)
     y: artTop - vMargin
     // Indicators end Style.space(1) plus the lift above the slot floor.
-    height: label.height - Style.space(1) - (label.root ? label.root.indicatorLift : 0) + vMargin - y
-    x: label.mirror ? edge : -iconW + label.artMargin - hMargin
+    // With indicators beside the art (or none), the art gets the same
+    // margin below as above.
+    height: (label.sideMarks ? artTop + artSize : label.height - Style.space(1) - (label.root ? label.root.indicatorLift : 0)) + vMargin - y
+    x: label.mirror ? edge : -iconW - label.lead + label.artMargin - hMargin
     width: label.mirror
-      ? label.width + label.artMargin + artSize + hMargin - edge
+      ? label.width + label.artMargin + artSize + hMargin + label.lead - edge
       : label.width - edge - x
     radius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
     color: label.style ? Util.alpha(label.style.fill, 0.55 + 0.25 * label.hoverLevel) : "transparent"
     opacity: label.progress
+  }
+
+  // Side indicators: the tile's marks as a column in the plate's margin,
+  // centred on the art, before the icon or after the name.
+  Item {
+    id: markColumn
+    visible: label.sideMarks
+    opacity: label.progress
+    readonly property real artSize: label.root ? label.root.baseIconArt : 0
+    readonly property real iconW: label.iconBox ? label.iconBox.width : 0
+    // Centred between the plate's edge and the art (before) or the name (after).
+    readonly property real hMargin: plateRect.hMargin
+    readonly property real centreX: label.marksAfter
+      ? (label.mirror ? (Style.space(1) + label.trail + label.pad) / 2
+                      : (label.width - label.trail - label.pad + label.width - Style.space(1)) / 2)
+      : (label.mirror ? label.width + label.artMargin + artSize + (label.lead + hMargin) / 2
+                      : -markColumn.iconW + label.artMargin - (label.lead + hMargin) / 2)
+    readonly property real centreY: label.root ? label.height - label.root.iconArtBottom - artSize / 2 : 0
+    x: centreX
+    y: centreY
+
+    DockIndicatorRow {
+      rootRef: label.rootRef
+      vertical: true
+      x: -width / 2
+      y: -height / 2
+      windows: label.marksFrom ? label.marksFrom.windows : []
+      running: label.marksFrom ? label.marksFrom.running : false
+      focused: label.marksFrom ? label.marksFrom.focused : false
+      allMinimized: label.marksFrom ? label.marksFrom.allMinimized : false
+      urgent: label.marksFrom ? label.marksFrom.urgent : false
+      pulse: label.marksFrom ? label.marksFrom.pulse : 1
+    }
+
+    DockIndicator {
+      rootRef: label.rootRef
+      visible: label.openMark
+      vertical: true
+      x: -width / 2
+      y: -height / 2
+      kind: "active"
+    }
+
+    DockIndicator {
+      rootRef: label.rootRef
+      visible: label.backgroundMarks && !(label.marksFrom && label.marksFrom.running)
+      x: -width / 2
+      y: -height / 2
+      kind: "background"
+    }
   }
 
   Item {

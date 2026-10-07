@@ -169,13 +169,13 @@ test("pickLook carries the label look keys but not behaviour or names", () => {
   const look = plain(M.pickLook({
     labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
     labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
-    labelWeight: "bold", labelShape: "square",
+    labelWeight: "bold", labelShape: "square", labelIndicators: "after",
     labelMode: "hover", labelKind: "apps", labelNames: { a: "A" }
   }))
   assert.deepEqual(look, {
     labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
     labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
-    labelWeight: "bold", labelShape: "square",
+    labelWeight: "bold", labelShape: "square", labelIndicators: "after",
     iconSize: 0, cornerRadius: -1
   })
 })

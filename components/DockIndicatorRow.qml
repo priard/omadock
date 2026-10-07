@@ -25,6 +25,8 @@ Item {
   property bool urgent: false
   // 0..1 breathing for urgent marks, driven by the item.
   property real pulse: 1.0
+  // A column instead of a row (side indicators on a label plate).
+  property bool vertical: false
 
   readonly property int totalWindowCount: (marks.windows && marks.windows.length > 0) ? marks.windows.length : (marks.running ? 1 : 0)
   readonly property int maxVisibleDots: marks.totalWindowCount > 5 ? 4 : Math.min(marks.totalWindowCount, 5)
@@ -44,9 +46,14 @@ Item {
     return w.address === marks.root.activeWindowAddress
   }
 
-  Row {
+  Grid {
     id: indicatorRow
     spacing: marks.dynamicSpacing
+    columns: marks.vertical ? 1 : 8
+    rows: marks.vertical ? 8 : 1
+    flow: marks.vertical ? Grid.TopToBottom : Grid.LeftToRight
+    horizontalItemAlignment: Grid.AlignHCenter
+    verticalItemAlignment: Grid.AlignVCenter
 
     Repeater {
       model: marks.maxVisibleDots
@@ -57,7 +64,7 @@ Item {
         readonly property bool winActive: !winMinimized && ((winObj && winObj.address) ? marks.isWinActive(winObj) : (index === 0 && marks.focused))
 
         rootRef: marks.rootRef
-        anchors.verticalCenter: parent.verticalCenter
+        vertical: marks.vertical
         kind: winActive ? "active" : (winMinimized ? "minimized" : "window")
         dense: marks.totalWindowCount >= 5
         urgent: marks.urgent
@@ -71,7 +78,6 @@ Item {
       width: overflowText.implicitWidth + Style.space(4)
       height: Style.space(5)
       radius: (marks.root && marks.root.indicatorSquare) ? 0 : height / 2
-      anchors.verticalCenter: parent.verticalCenter
       color: Util.alpha(marks.root ? marks.root.dockForeground : Color.bar.text, 0.20)
       border.color: Qt.rgba(0, 0, 0, 0.35)
       border.width: 1

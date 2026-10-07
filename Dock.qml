@@ -8,6 +8,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
+import "DockLabels.js" as DockLabels
 import "components"
 import "components/logic"
 
@@ -265,7 +266,9 @@ Item {
   // art's top margin matches the room under the indicators.
   readonly property real indicatorLift: Style.spaceReal(1.5)
   // Distance from the slot's bottom edge to the bottom of the artwork.
-  readonly property real iconArtBottom: Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2) + root.indicatorLift
+  // With indicators beside the art on label plates, the art is centred.
+  readonly property real iconArtBottom: root.labelSideMarks ? Math.round((root.iconSlot - root.baseIconArt) / 2)
+    : Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2) + root.indicatorLift
   // Vertical offset of the artwork's centre from the slot's centre, for
   // things centred on the row (separators, preview tiles).
   readonly property real iconCenterOffset: -root.indicatorBand / 2
@@ -484,7 +487,6 @@ Item {
   readonly property var notifEntries: root.pinnedSection.concat(root.runningSection).concat(root.groupedSection || [])
 
   function refreshDock() { return stateLogic.refreshDock(root) }
-
   function rescanMinimizedWindows() { return stateLogic.rescanMinimizedWindows(root) }
 
   readonly property string activeId: {
@@ -764,7 +766,6 @@ Item {
   readonly property color iconTintColor: root.tintFor(root.iconTint, root.dockForeground, root.iconBackdropColor)
 
   function tintFor(mode, textColor, backdrop) { return styleLogic.tintFor(root, mode, textColor, backdrop) }
-
   function blackOrWhiteOn(backdrop) { return styleLogic.blackOrWhiteOn(root, backdrop) }
 
   // Best guess at the colour behind the icons: the card's fill (for a
@@ -829,7 +830,6 @@ Item {
 
   function luminance(c) { return styleLogic.luminance(root, c) }
   function contrastRatio(a, b) { return styleLogic.contrastRatio(root, a, b) }
-
   function readableOn(color, backdrop) { return styleLogic.readableOn(root, color, backdrop) }
   // Without a card to cast one, each icon casts its own shadow.
   readonly property bool iconShadow: root.showShadow && !root.showBackground && root.shadowStrength > 0
@@ -889,6 +889,8 @@ Item {
   property string labelColor: "auto"      // auto | theme | accent
   property string labelBackground: "none" // none | pill | plate
   property string labelShape: "dock"      // dock | pill | rounded | square
+  property string labelIndicators: "before" // before | after | under (always-on plates)
+  readonly property bool labelSideMarks: DockLabels.sideMarks(root.labelMode, root.labelBackground, root.labelIndicators)
   property string labelReveal: "slide"    // slide | typewriter | scramble
   property string labelEffect: "none"     // none | glow | outline
   property int labelMaxWidth: 140
@@ -1876,7 +1878,7 @@ Item {
   function labelName(appId, name) { return labelLogic.displayName(root, appId, name) }
   function labelTooltipNeeded(kind, wins, hint, shortened) { return labelLogic.tooltipNeeded(root, kind, wins, hint, shortened) }
   function labelExtraBefore(slot, ownLabel) { return labelLogic.extraBefore(root, slot, ownLabel) }
-  function setLabelExtra(slot, owner, width) { labelLogic.setExtra(root, slot, owner, width) }
+  function setLabelExtra(slot, owner, width, before) { labelLogic.setExtra(root, slot, owner, width, before) }
   function setLabelName(appId, name) { labelLogic.setName(root, appId, name) }
   function labelNameRows() { return labelLogic.nameRows(root) }
 

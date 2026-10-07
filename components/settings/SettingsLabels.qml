@@ -135,6 +135,19 @@ Column {
       onPicked: function(v) { root.setOption("labelShape", v) }
     }
     ChoiceRow {
+      key: "labelIndicators"
+      label: "Indicators"
+      hint: "Window marks as a column at the plate's edge, so every plate lines up. Labels that open on hover keep them under the icon."
+      visible: root ? root.labelBackground === "plate" : false
+      options: [
+        { value: "before", label: "Before icon" },
+        { value: "after", label: "After name" },
+        { value: "under", label: "Under icon" }
+      ]
+      value: root ? root.labelIndicators : "before"
+      onPicked: function(v) { root.setOption("labelIndicators", v) }
+    }
+    ChoiceRow {
       key: "labelReveal"
       label: "Reveal"
       options: [

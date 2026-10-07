@@ -10,6 +10,7 @@ var LABEL_WEIGHTS = ["regular", "medium", "bold"]
 var LABEL_COLORS = ["auto", "theme", "accent"]
 var LABEL_BACKGROUNDS = ["none", "pill", "plate"]
 var LABEL_SHAPES = ["dock", "pill", "rounded", "square"]
+var LABEL_INDICATORS = ["before", "after", "under"]
 var LABEL_REVEALS = ["slide", "typewriter", "scramble"]
 var LABEL_EFFECTS = ["none", "glow", "outline"]
 var LABEL_MAX_WIDTH_MIN = 80
@@ -19,7 +20,7 @@ var MAX_LABEL_NAMES = 200
 var MAX_LABEL_NAME = 40
 var MAX_LABEL_APP_ID = 128
 var LABEL_CONFIG_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "labelWeight",
-  "labelColor", "labelBackground", "labelShape", "labelReveal", "labelEffect", "labelMaxWidth", "labelNames"]
+  "labelColor", "labelBackground", "labelShape", "labelIndicators", "labelReveal", "labelEffect", "labelMaxWidth", "labelNames"]
 // The first label release spelled these; read once, dropped on save.
 var LEGACY_LABEL_KEYS = ["showLabels", "labelPlacement", "labelContrast"]
 var SYMBOL_WORD = /^[&+\-–—|\/·:,.]+$/
@@ -91,18 +92,21 @@ function tooltipNeeded(labelShown, hasWindows, hasStateHint, shortened) {
   return !!(hasWindows || hasStateHint || shortened)
 }
 
-// The dock's per-slot label widths: { slot: { owner, width } }. A clear
-// (width 0) only removes the entry its own owner wrote, so a tile leaving a
-// slot cannot erase the tile that just moved in. Unchanged input returns the
-// same object, so bindings on it do not re-run.
-function withExtra(extras, slot, owner, width) {
+// The dock's per-slot label widths: { slot: { owner, width, before } },
+// where before is the part of width that sits ahead of the slot's own icon
+// (a mirrored label, a side-indicator column). A clear (width 0) only
+// removes the entry its own owner wrote, so a tile leaving a slot cannot
+// erase the tile that just moved in. Unchanged input returns the same
+// object, so bindings on it do not re-run.
+function withExtra(extras, slot, owner, width, before) {
   var cur = extras ? extras[slot] : undefined
   var w = Math.max(0, Math.round(Number(width) || 0))
-  if (w > 0 && cur && cur.owner === owner && cur.width === w) return extras
+  var b = Math.max(0, Math.min(w, Math.round(Number(before) || 0)))
+  if (w > 0 && cur && cur.owner === owner && cur.width === w && cur.before === b) return extras
   if (w === 0 && (!cur || cur.owner !== owner)) return extras
   var next = {}
   for (var k in extras) next[k] = extras[k]
-  if (w > 0) next[slot] = { owner: owner, width: w }
+  if (w > 0) next[slot] = { owner: owner, width: w, before: b }
   else delete next[slot]
   return next
 }
@@ -133,17 +137,12 @@ function anchorX(latchedIconX, iconXInCard, parentWidth, width, inset) {
   return Math.max(inset, Math.min(parentWidth - width - inset, x))
 }
 
-// Label width that sits before a slot's icon: every earlier slot's label,
-// plus the slot's own when labels open on the leading side (mirror).
-function homeExtra(extras, slot, mirror) {
-  var own = (mirror && extras && extras[slot]) ? (extras[slot].width || 0) : 0
+// Label width that sits before a slot's icon: every earlier slot's, plus
+// the part of the slot's own that is ahead of its icon (includeOwn false
+// for a slot index shared with an unlabelled item).
+function homeExtra(extras, slot, includeOwn) {
+  var own = (includeOwn !== false && extras && extras[slot]) ? (extras[slot].before || 0) : 0
   return extrasBefore(extras, slot) + own
-}
-
-// Row x of the icon centre in a tile that may carry a label.
-function iconCentre(slotX, slotWidth, labelExtra, mirror) {
-  var iconWidth = slotWidth - (labelExtra || 0)
-  return slotX + (mirror ? (labelExtra || 0) : 0) + iconWidth / 2
 }
 
 function _noise(n) {
@@ -226,11 +225,19 @@ function readLabelConfig(parsed) {
     labelColor: color,
     labelBackground: background,
     labelShape: _pick(p.labelShape, LABEL_SHAPES, "dock"),
+    labelIndicators: _pick(p.labelIndicators, LABEL_INDICATORS, "before"),
     labelReveal: _pick(p.labelReveal, LABEL_REVEALS, "slide"),
     labelEffect: p.labelEffect === "shadow" ? "outline" : _pick(p.labelEffect, LABEL_EFFECTS, "none"),
     labelMaxWidth: w,
     labelNames: boundLabelNames(p.labelNames)
   }
+}
+
+// Window indicators move from under the icon to a column at the plate's
+// edge only for always-on plates: a hover label would make them jump as it
+// opens and closes.
+function sideMarks(mode, background, indicators) {
+  return mode === "always" && background === "plate" && (indicators === "before" || indicators === "after")
 }
 
 // Corner radius of a label background of height h. "dock" keeps the
@@ -244,7 +251,7 @@ function labelRadius(shape, h, dockRatio) {
 }
 
 var LABEL_LOOK_KEYS = ["labelFont", "labelSize", "labelWeight", "labelColor",
-  "labelBackground", "labelShape", "labelReveal", "labelEffect", "labelMaxWidth"]
+  "labelBackground", "labelShape", "labelIndicators", "labelReveal", "labelEffect", "labelMaxWidth"]
 
 // A preset's label look over the current one: known keys with valid
 // values win, anything else keeps its current value. (readLabelConfig
@@ -254,7 +261,7 @@ function pickLabelLook(look, current) {
   var c = current || {}
   var out = {}
   var lists = { labelFont: LABEL_FONTS, labelSize: LABEL_SIZES, labelWeight: LABEL_WEIGHTS,
-    labelColor: LABEL_COLORS, labelBackground: LABEL_BACKGROUNDS, labelShape: LABEL_SHAPES,
+    labelColor: LABEL_COLORS, labelBackground: LABEL_BACKGROUNDS, labelShape: LABEL_SHAPES, labelIndicators: LABEL_INDICATORS,
     labelReveal: LABEL_REVEALS, labelEffect: LABEL_EFFECTS }
   for (var i = 0; i < LABEL_LOOK_KEYS.length; i++) {
     var k = LABEL_LOOK_KEYS[i]

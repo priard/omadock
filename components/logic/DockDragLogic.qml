@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell
 import qs.Commons
 import "../../DockModel.js" as DockModel
-import "../../DockLabels.js" as DockLabels
 
 // Logic extracted from DockCard.qml: stateless functions taking the
 // dock root and the card wrapper. Bodies are verbatim.
@@ -28,7 +27,7 @@ QtObject {
     for (var i = 0; i < n; i++) {
       var it = card.foldersRepeater.itemAt(i)
       if (!it) continue
-      var iconCenter = DockLabels.iconCentre(it.x + (it.gapWidth || 0), it.width - (it.gapWidth || 0), it.labelExtra || 0, root ? root.alignment === "right" : false)
+      var iconCenter = it.x + (it.iconCenterX !== undefined ? it.iconCenterX : it.width - (root ? root.iconSlot : it.width) / 2)
       if (px < iconCenter) return i
     }
     return n
@@ -73,7 +72,7 @@ QtObject {
       var it = slot ? slot.item : null
       if (!it) continue
       var extra = it.labelExtra || 0
-      var centre = DockLabels.iconCentre(slot.x, slot.width, extra, root.alignment === "right")
+      var centre = slot.x + (it.iconCenterX !== undefined ? it.iconCenterX : slot.width / 2)
       var span = slot.width - extra
       if (slot.isGroup) {
         if (Math.abs(rx - centre) < span * 0.45) {
@@ -119,8 +118,7 @@ QtObject {
     for (var i = 0; i < n; i++) {
       var slot = card.pinnedRowRepeater.itemAt(i)
       var it = slot ? slot.item : null
-      var extra = it ? (it.labelExtra || 0) : 0
-      if (slot && rx < DockLabels.iconCentre(slot.x, slot.width, extra, root ? root.alignment === "right" : false)) return i
+      if (slot && rx < slot.x + (it && it.iconCenterX !== undefined ? it.iconCenterX : slot.width / 2)) return i
     }
     return n
   }

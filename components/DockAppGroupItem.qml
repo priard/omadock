@@ -168,7 +168,7 @@ Item {
     id: iconSlot
     width: root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
-    x: (label.mirror ? gitem.labelExtra : 0) + Math.round((gitem.width - gitem.labelExtra - width) / 2)
+    x: (label.mirror ? gitem.labelExtra - label.lead : label.lead) + Math.round((gitem.width - gitem.labelExtra - width) / 2)
     anchors.verticalCenter: parent.verticalCenter
 
     Item {
@@ -324,7 +324,8 @@ Item {
     anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     width: indicatorRow.width
     height: indicatorRow.height
-    visible: gitem.hasRunningApps || gitem.isOpen
+    // On a plate with side indicators the label draws these as a column.
+    visible: (gitem.hasRunningApps || gitem.isOpen) && !label.sideMarks
     z: 2
 
     DockIndicatorRow {
@@ -392,6 +393,7 @@ Item {
     hovered: groupArea.containsMouse && !groupArea.dragging
     iconBox: iconSlot
     slot: gitem.labelSlot
+    marksFrom: indicatorRow
   }
 
   // Hover tooltip: the member windows as preview cards, like an app's.

@@ -40,6 +40,8 @@ QtObject {
       glow: Qt.lighter(Color.accent, 1.6),
       background: root ? root.labelBackground : "none",
       shape: root ? root.labelShape : "dock",
+      // Where the tile's window indicators go: beside the art on the plate, or under it.
+      marks: (root && root.labelSideMarks) ? root.labelIndicators : "under",
       dockRatio: (root && dockH > 0) ? root.effectiveCardRadius / dockH : 0.25,
       reveal: root ? root.labelReveal : "slide",
       effect: root ? root.labelEffect : "none",
@@ -61,16 +63,15 @@ QtObject {
     return DockLabels.tooltipNeeded(shown, hasWindows, hasStateHint, shortened)
   }
 
-  // Label width before a slot's icon; on a right-aligned dock a tile's own
-  // label sits before its icon too.
+  // Label width before a slot's icon, the part of its own extra ahead of
+  // the icon included (a mirrored label, a side-indicator column).
   function extraBefore(root, slot, ownLabel) {
-    if (!root) return 0
-    return DockLabels.homeExtra(root.labelExtras, slot, ownLabel !== false && root.alignment === "right")
+    return root ? DockLabels.homeExtra(root.labelExtras, slot, ownLabel !== false) : 0
   }
 
-  function setExtra(root, slot, owner, width) {
+  function setExtra(root, slot, owner, width, before) {
     if (!root || slot < 0) return
-    var next = DockLabels.withExtra(root.labelExtras, slot, owner, width)
+    var next = DockLabels.withExtra(root.labelExtras, slot, owner, width, before)
     if (next !== root.labelExtras) root.labelExtras = next
   }
 

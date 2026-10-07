@@ -101,12 +101,6 @@ test("anchoredX keeps a centred dock's leading edge while labels open", () => {
   assert.equal(L.anchoredX(1000, 280, 20, "right", 80), 700)
 })
 
-test("iconCentre finds the icon in a wide tile", () => {
-  assert.equal(L.iconCentre(100, 60, 0, false), 130)
-  assert.equal(L.iconCentre(100, 160, 100, false), 130)
-  assert.equal(L.iconCentre(100, 160, 100, true), 230)
-})
-
 test("revealFrame types and scrambles without changing length", () => {
   assert.equal(L.revealFrame("Signal", "slide", 0.2, 1), "Signal")
   assert.equal(L.revealFrame("Signal", "typewriter", 0, 1), "")
@@ -146,7 +140,7 @@ test("readLabelConfig defaults", () => {
   assert.deepEqual(plain(L.readLabelConfig(null)), {
     labelMode: "off", labelKind: "all", labelFont: "theme", labelSize: "medium",
     labelWeight: "medium", labelColor: "auto", labelBackground: "none", labelShape: "dock",
-    labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelNames: {}
+    labelIndicators: "before", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelNames: {}
   })
 })
 
@@ -171,6 +165,8 @@ test("readLabelConfig validates values", () => {
   assert.equal(L.readLabelConfig({ labelMode: "always", labelEffect: "shadow" }).labelEffect, "outline")
   assert.equal(L.readLabelConfig({ labelWeight: "bold", labelShape: "square" }).labelWeight, "bold")
   assert.equal(L.readLabelConfig({ labelShape: "square" }).labelShape, "square")
+  assert.equal(L.readLabelConfig({ labelIndicators: "after" }).labelIndicators, "after")
+  assert.equal(L.readLabelConfig({ labelIndicators: "sideways" }).labelIndicators, "before")
   assert.equal(L.readLabelConfig({ labelShape: "blob", labelWeight: "heavy" }).labelShape, "dock")
   const c = L.readLabelConfig({ labelMode: "sideways", labelFont: "comic", labelMaxWidth: 9999, labelEffect: "glow" })
   assert.equal(c.labelMode, "off")
@@ -223,23 +219,29 @@ test("anchorX keeps the hovered icon where it was latched", () => {
   assert.equal(L.anchorX(600, 100, 1000, 1200, 20), 20)
 })
 
-test("homeExtra counts a mirrored slot's own label before its icon", () => {
+test("homeExtra counts the part of a slot's own extra that sits before its icon", () => {
   let e = {}
-  e = L.withExtra(e, 0, "a", 30)
-  e = L.withExtra(e, 1, "b", 50)
+  e = L.withExtra(e, 0, "a", 30, 0)
+  // Slot 1: 50 wide, 10 of it (a side-indicator column) before the icon.
+  e = L.withExtra(e, 1, "b", 50, 10)
+  assert.equal(L.homeExtra(e, 1), 40)
   assert.equal(L.homeExtra(e, 1, false), 30)
-  assert.equal(L.homeExtra(e, 1, true), 80)
-  assert.equal(L.homeExtra(e, 2, true), 80)
+  assert.equal(L.homeExtra(e, 2), 80)
+  // Same width, new split: still an update.
+  const e2 = L.withExtra(e, 1, "b", 50, 50)
+  assert.notEqual(e2, e)
+  assert.equal(L.homeExtra(e2, 1), 80)
 })
 
 test("pickLabelLook applies a preset's label look and keeps the rest", () => {
   const cur = { labelFont: "theme", labelSize: "small", labelWeight: "medium", labelColor: "auto",
-    labelBackground: "none", labelShape: "dock", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140 }
+    labelBackground: "none", labelShape: "dock", labelIndicators: "before", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140 }
   const out = plain(L.pickLabelLook({ labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 999, labelShape: "blob", iconSize: 40 }, cur))
   assert.deepEqual(out, Object.assign({}, cur, { labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 240 }))
   // A preset saved before label looks existed changes nothing.
   assert.deepEqual(plain(L.pickLabelLook({ iconSize: 40 }, cur)), cur)
   assert.equal(L.pickLabelLook({ labelEffect: "shadow" }, cur).labelEffect, "outline")
+  assert.equal(L.pickLabelLook({ labelIndicators: "under" }, cur).labelIndicators, "under")
 })
 
 test("nameRowsKey changes only when the listed apps change", () => {
@@ -260,4 +262,13 @@ test("withFolderName renames one pinned folder, blank restores the directory nam
   assert.equal(L.withFolderName([{ path: "~", name: "q" }], "~", "")[0].name, "Home")
   assert.equal(L.withFolderName(list, "~/code/omazen", "x".repeat(300))[1].name.length, 120)
   assert.equal(L.withFolderName(list, "/nope", "X"), list)
+})
+
+test("sideMarks only for an always-on plate with side indicators", () => {
+  assert.equal(L.sideMarks("always", "plate", "before"), true)
+  assert.equal(L.sideMarks("always", "plate", "after"), true)
+  assert.equal(L.sideMarks("always", "plate", "under"), false)
+  assert.equal(L.sideMarks("hover", "plate", "before"), false)
+  assert.equal(L.sideMarks("always", "pill", "before"), false)
+  assert.equal(L.sideMarks("off", "plate", "before"), false)
 })

@@ -68,7 +68,7 @@ Item {
     width: root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
     // Centred in the part of the item the drop gap leaves.
-    x: fitem.gapWidth + (label.mirror ? fitem.labelExtra : 0) + Math.round((fitem.width - fitem.gapWidth - fitem.labelExtra - width) / 2)
+    x: fitem.gapWidth + (label.mirror ? fitem.labelExtra - label.lead : label.lead) + Math.round((fitem.width - fitem.gapWidth - fitem.labelExtra - width) / 2)
     anchors.verticalCenter: parent.verticalCenter
 
     Item {
@@ -139,7 +139,7 @@ Item {
   // Open stack: the same accent bar an app with focus shows.
   DockIndicator {
     rootRef: fitem.rootRef
-    visible: fitem.isOpen
+    visible: fitem.isOpen && !label.sideMarks
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     anchors.horizontalCenter: iconSlot.horizontalCenter
@@ -182,6 +182,7 @@ Item {
     hovered: area.containsMouse && !area.dragging
     iconBox: iconSlot
     slot: fitem.labelSlot
+    openMark: fitem.isOpen
   }
 
   // Hover tooltip — uses our own HoverTooltip so textFormat: Text.PlainText is enforced.

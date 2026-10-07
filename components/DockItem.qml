@@ -209,7 +209,7 @@ Item {
   // the slot is the running indicator underneath.
   Item {
     id: iconBox
-    x: label.mirror ? item.labelExtra : 0
+    x: label.mirror ? item.labelExtra - label.lead : label.lead
     width: item.width - item.labelExtra
     height: parent.height
 
@@ -309,7 +309,7 @@ Item {
 
   DockIndicator {
     rootRef: item.rootRef
-    visible: item.backgroundMedia
+    visible: item.backgroundMedia && !label.sideMarks
     anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
@@ -320,6 +320,8 @@ Item {
   DockIndicatorRow {
     id: indicatorRow
     rootRef: item.rootRef
+    // On a plate with side indicators the label draws these as a column.
+    visible: item.running && !label.sideMarks
     anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
@@ -346,6 +348,8 @@ Item {
     hovered: area.containsMouse && !item.isDragging
     iconBox: iconBox
     slot: item.visible ? item.labelSlot : -1
+    marksFrom: indicatorRow
+    backgroundMarks: item.backgroundMedia
   }
 
   DropArea {
