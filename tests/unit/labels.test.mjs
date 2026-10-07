@@ -223,7 +223,7 @@ test("homeExtra counts the part of a slot's own extra that sits before its icon"
 })
 
 test("pickLabelLook applies a preset's label look and keeps the rest", () => {
-  const cur = { labelFont: "theme", labelSize: "small", labelWeight: "medium", labelColor: "auto",
+  const cur = { labelMode: "always", labelKind: "all", labelFont: "theme", labelSize: "small", labelWeight: "medium", labelColor: "auto",
     labelBackground: "none", labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140 }
   const out = plain(L.pickLabelLook({ labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 999, labelShape: "blob", iconSize: 40 }, cur))
   assert.deepEqual(out, Object.assign({}, cur, { labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 240 }))

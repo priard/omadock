@@ -816,7 +816,7 @@ var LOOK_KEYS = [
   "dividerGeometry", "dividerHeight", "dividerStyle", "dividerWidth", "dividerOpacity",
   "iconStyle", "iconTint", "iconHoverOriginal", "iconHoverReveal", "iconContrast", "iconStrength",
   "iconGrid", "indicatorShape", "hoverEffect", "launchBounce", "groupStyle",
-  "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing", "labelFont", "labelSize", "labelColor", "labelBackground", "labelReveal", "labelEffect", "labelMaxWidth", "labelWeight", "labelShape", "labelIndicators", "labelPlateHeight"
+  "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing", "labelMode", "labelKind", "labelFont", "labelSize", "labelColor", "labelBackground", "labelReveal", "labelEffect", "labelMaxWidth", "labelWeight", "labelShape", "labelIndicators", "labelPlateHeight"
 ]
 // The value a look key takes when the config lacks it (the fallbacks in
 // Dock.applyLook, spelled as saveConfig writes them). A preset saved before
@@ -830,7 +830,11 @@ var DEFAULT_LOOK = {
   dividerGeometry: "classic", dividerHeight: 70, dividerStyle: "simple", dividerWidth: 1.5, dividerOpacity: 0.4,
   iconStyle: "original", iconTint: "text", iconHoverOriginal: false, iconHoverReveal: false, iconContrast: 0, iconStrength: 1,
   iconGrid: 16, indicatorShape: "theme", hoverEffect: "zoom", launchBounce: true, groupStyle: "rounded",
-  groupIconEffects: "theme", folderColor: "theme", iconSize: 0, itemSpacing: 4, sectionSpacing: 18
+  groupIconEffects: "theme", folderColor: "theme", iconSize: 0, itemSpacing: 4, sectionSpacing: 18,
+  // Labels off: a preset from before them had none.
+  labelMode: "off", labelKind: "all", labelFont: "theme", labelSize: "medium", labelColor: "auto",
+  labelBackground: "none", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelWeight: "medium",
+  labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon"
 }
 var MAX_PRESETS = 6
 var MAX_PRESET_NAME = 40

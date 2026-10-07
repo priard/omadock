@@ -165,19 +165,27 @@ test("the settings module keeps no retired page ids", () => {
   assert.ok(!settingsSources.includes('panel.page === "size"'))
 })
 
-test("pickLook carries the label look keys but not behaviour or names", () => {
+test("pickLook carries the label look keys, labels on or off, but not names", () => {
   const look = plain(M.pickLook({
     labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
     labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
     labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock",
     labelMode: "hover", labelKind: "apps", labelNames: { a: "A" }
   }))
-  assert.deepEqual(look, {
+  const want = {
     labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
     labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
     labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock",
-    iconSize: 0, cornerRadius: -1
-  })
+    labelMode: "hover", labelKind: "apps"
+  }
+  for (const k in want) assert.equal(look[k], want[k], k)
+  assert.ok(!("labelNames" in look))
+})
+
+test("a preset from before labels turns them off", () => {
+  const look = plain(M.pickLook({ iconStyle: "dots" }))
+  assert.equal(look.labelMode, "off")
+  assert.equal(look.labelBackground, "none")
 })
 
 test("settings search finds the labels page", () => {

@@ -242,7 +242,7 @@ function labelRadius(shape, h, dockRatio) {
   return Math.min(h / 2, h * Math.max(0, Number(dockRatio) || 0))
 }
 
-var LABEL_LOOK_KEYS = ["labelFont", "labelSize", "labelWeight", "labelColor",
+var LABEL_LOOK_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "labelWeight", "labelColor",
   "labelBackground", "labelShape", "labelIndicators", "labelPlateHeight", "labelReveal", "labelEffect", "labelMaxWidth"]
 
 // A preset's label look over the current one: known keys with valid
@@ -252,7 +252,7 @@ function pickLabelLook(look, current) {
   var l = (look && typeof look === "object") ? look : {}
   var c = current || {}
   var out = {}
-  var lists = { labelFont: LABEL_FONTS, labelSize: LABEL_SIZES, labelWeight: LABEL_WEIGHTS,
+  var lists = { labelMode: LABEL_MODES, labelKind: LABEL_KINDS, labelFont: LABEL_FONTS, labelSize: LABEL_SIZES, labelWeight: LABEL_WEIGHTS,
     labelColor: LABEL_COLORS, labelBackground: LABEL_BACKGROUNDS, labelShape: LABEL_SHAPES, labelIndicators: LABEL_INDICATORS, labelPlateHeight: LABEL_PLATE_HEIGHTS,
     labelReveal: LABEL_REVEALS, labelEffect: LABEL_EFFECTS }
   for (var i = 0; i < LABEL_LOOK_KEYS.length; i++) {
