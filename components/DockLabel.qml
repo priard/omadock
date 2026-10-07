@@ -156,10 +156,12 @@ Item {
   NumberAnimation { id: eraseAnim; target: label; property: "revealT"; to: 0; duration: 160 }
   onWantOpenChanged: {
     if (!label.style) return
+    // Reveals belong to hover labels; always-on labels just stand there.
+    if (!label.style.hover) return
     if (label.wantOpen) label.reveal(label.style.reveal)
     else if (label.style.reveal === "typewriter") { revealAnim.stop(); label.revealStyle = "typewriter"; eraseAnim.restart() }
   }
-  onShortTextChanged: if (label.wantOpen && label.style && label.revealT >= 1 && !revealAnim.running) label.reveal(label.style.reveal)
+  onShortTextChanged: if (label.wantOpen && label.style && label.style.hover && label.revealT >= 1 && !revealAnim.running) label.reveal(label.style.reveal)
 
   // ---- hover sync with the icon's HoverFx
   property real hoverLevel: label.hovered ? 1 : 0

@@ -137,8 +137,8 @@ Column {
     ChoiceRow {
       key: "labelIndicators"
       label: "Indicators"
-      hint: "Window marks as a column at the plate's edge, so every plate lines up. Labels that open on hover keep them under the icon."
-      visible: root ? root.labelBackground === "plate" : false
+      hint: "Window marks as a column at the plate's edge, so every plate lines up."
+      visible: root ? (root.labelBackground === "plate" && root.labelMode === "always") : false
       options: [
         { value: "before", label: "Before icon" },
         { value: "after", label: "After name" },
@@ -150,6 +150,8 @@ Column {
     ChoiceRow {
       key: "labelReveal"
       label: "Reveal"
+      hint: "How a name appears when the pointer rests on an icon."
+      visible: root ? root.labelMode === "hover" : false
       options: [
         { value: "slide", label: "Slide" },
         { value: "typewriter", label: "Typewriter" },
