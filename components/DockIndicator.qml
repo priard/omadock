@@ -96,7 +96,10 @@ Rectangle {
     : Util.alpha(mark.inkOverride.a > 0 ? mark.inkOverride : (root ? root.dockForeground : Color.bar.text), 0.88)
 
   readonly property real barLength: mark.snap(Style.space(dense ? 9 : 12))
-  width: kind === "active" ? (mark.vertical ? mark.barHeight : mark.barLength) : dotSize
+  // Upright in a column the bar is as thick as a dot: the 1.5 output is
+  // drawn at 2x and scaled down, so a thinner bar could not be centred on
+  // the dots and leaned a pixel to one side.
+  width: kind === "active" ? (mark.vertical ? mark.dotSize : mark.barLength) : dotSize
   height: kind === "active" ? (mark.vertical ? mark.barLength : mark.barHeight) : dotSize
   radius: (root && root.indicatorSquare) ? 0 : Math.min(width, height) / 2
 
