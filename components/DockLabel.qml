@@ -31,16 +31,18 @@ Item {
   property string shortText: ""
   property bool shortened: false
   readonly property real pad: (label.style && label.style.background !== "none") ? Style.space(6) : Style.space(2)
-  // A plate already frames icon and name, so the name sits closer to the
-  // icon and keeps room before the plate's end instead.
   readonly property bool plate: !!label.style && label.style.background === "plate"
+  // Empty room between the icon slot's edge and the drawn art.
+  readonly property real artMargin: label.root ? (label.root.iconSlot - label.root.baseIconArt) / 2 : Style.space(7)
+  // The name is placed from the art's edge, not the slot's: bare text and a
+  // pill sit 4 px off the art, a plate's text 6 px. Negative gaps reach
+  // back into the slot's empty margin.
+  readonly property real gap: (label.plate ? 0 : label.style && label.style.background === "pill" ? Style.space(4) : Style.space(2)) - label.artMargin
   // An icon carries its slot padding on both sides, plus the empty margin
   // inside its art; the name ends with about the same room, so a label
   // keeps the spacing an icon would before the next item, a divider or the
-  // dock's edge.
-  readonly property real sidePad: (label.root ? (label.root.iconSlot - label.root.baseIconArt) / 2 : Style.space(7)) + Style.space(3)
-  readonly property real gap: label.plate ? Style.space(1) : Style.space(2)
-  readonly property real trail: label.plate ? Style.space(4) : label.sidePad
+  // dock's edge. A plate is its own frame and needs only a little.
+  readonly property real trail: label.plate ? Style.space(4) : label.artMargin + Style.space(3)
   readonly property real naturalWidth: label.shown && label.shortText !== ""
     ? Math.ceil(textWidth.advanceWidth) + label.pad * 2 + label.gap + label.trail : 0
 
@@ -149,28 +151,40 @@ Item {
   height: parent ? parent.height : 0
   visible: label.extra > 0
 
-  // Plate: one rounded surface behind icon and name.
+  // Plate: one surface behind icon and name, framing the art with the same
+  // margin on top and sides and reaching down to the slot's floor, so the
+  // window indicators sit inside it. Its corners stop short of a full pill
+  // so the curve never cuts into the icon.
   Rectangle {
-    visible: !!label.style && label.style.background === "plate"
+    id: plateRect
+    visible: label.plate
+    readonly property real artSize: label.root ? label.root.baseIconArt : 0
+    readonly property real artTop: label.root ? label.height - label.root.iconArtBottom - artSize : 0
+    readonly property real margin: Style.space(4)
     readonly property real iconW: label.iconBox ? label.iconBox.width : 0
-    // Inset so the plates of neighbouring tiles never touch.
-    readonly property real inset: Style.space(3)
-    x: (label.mirror ? 0 : -iconW) + inset
-    width: label.width + iconW - inset * 2
-    height: label.iconBox ? label.iconBox.height - Style.space(4) : 0
-    anchors.verticalCenter: parent.verticalCenter
-    radius: label.style ? DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio) : 0
+    readonly property real edge: Style.space(1)
+    y: artTop - margin
+    height: label.height + edge - y
+    x: label.mirror ? edge : -iconW + label.artMargin - Math.min(margin, label.artMargin - edge)
+    width: label.mirror
+      ? label.width + label.artMargin + artSize + Math.min(margin, label.artMargin - edge) - edge
+      : label.width - edge - x
+    radius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
     color: label.style ? Util.alpha(label.style.fill, 0.55 + 0.25 * label.hoverLevel) : "transparent"
     opacity: label.progress
   }
 
   Item {
+    id: clipBox
+    // Reaches back over the slot margin a negative gap uses.
     anchors.fill: parent
+    anchors.leftMargin: label.mirror ? 0 : Math.min(0, label.gap)
+    anchors.rightMargin: label.mirror ? Math.min(0, label.gap) : 0
     clip: label.progress < 0.999
 
     Item {
       id: content
-      x: label.mirror ? label.trail : label.gap
+      x: (label.mirror ? label.trail : label.gap) - (label.mirror ? 0 : Math.min(0, label.gap))
       width: Math.max(0, label.naturalWidth - label.gap - label.trail)
       height: textItem.implicitHeight + Style.space(2)
       // Centred on the icon art, which sits on the dock floor.
