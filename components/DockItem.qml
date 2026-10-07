@@ -325,6 +325,8 @@ Item {
     // under the icon on a plate they take the plate's ink.
     visible: item.running && !label.sideMarks
     markInk: (label.plate && label.shown) ? label.ink : "transparent"
+    // On a plate the marks rise and bounce with it.
+    transform: Translate { y: (label.plate && label.shown) ? label.rise : 0 }
     anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
@@ -353,6 +355,7 @@ Item {
     slot: item.visible ? item.labelSlot : -1
     marksFrom: indicatorRow
     backgroundMarks: item.backgroundMedia
+    bounce: item.bounceY
   }
 
   DropArea {

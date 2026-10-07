@@ -176,6 +176,10 @@ Item {
   Behavior on hoverLevel { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
   readonly property string hoverEffect: label.root ? label.root.hoverEffect : ""
   readonly property real liftY: label.hoverEffect === "lift" && label.root ? -label.root.baseIconArt * 0.16 * label.hoverLevel : 0
+  // The tile's launch / urgent bounce: a label (and its plate and marks)
+  // jumps with the icon, as one button.
+  property real bounce: 0
+  readonly property real rise: label.liftY + label.bounce
   onHoveredChanged: {
     if (label.hovered) dwell.restart()
     else { dwell.stop(); label.dwelled = false }
@@ -220,7 +224,7 @@ Item {
     color: label.style ? Util.alpha(label.fill, label.overlay ? 1 : 0.55 + 0.25 * label.hoverLevel) : "transparent"
     opacity: label.progress
     // Lifts with the icon and the name, like one button.
-    transform: Translate { y: label.liftY }
+    transform: Translate { y: label.rise }
     // Lifted off the icons it covers.
     layer.enabled: label.overlay && visible
     layer.effect: MultiEffect {
@@ -238,6 +242,7 @@ Item {
   Item {
     id: markColumn
     visible: label.sideMarks
+    transform: Translate { y: label.rise }
     opacity: label.progress * label.marksLevel
     readonly property real artSize: label.root ? label.root.baseIconArt : 0
     readonly property real iconW: label.iconBox ? label.iconBox.width : 0
@@ -291,7 +296,7 @@ Item {
       // Centred on the icon art, which sits on the dock floor.
       y: label.root ? Math.round(label.height - label.root.iconArtBottom - label.root.baseIconArt / 2 - height / 2) : 0
       opacity: label.progress
-      transform: Translate { y: label.liftY }
+      transform: Translate { y: label.rise }
 
       Rectangle {
         visible: !!label.style && label.style.background === "pill"
