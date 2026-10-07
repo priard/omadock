@@ -20,6 +20,9 @@ Item {
   property string name: ""
   property bool hovered: false
   property Item iconBox: null
+  // Room a drop gap opens at the tile's leading edge: the tile proper
+  // (and its plate) starts after it.
+  property real tileLead: 0
   property int slot: -1
   // The tile's own indicator row, mirrored into a column on the plate when
   // indicators sit beside the art; and the tile's faint "running without a
@@ -195,7 +198,7 @@ Item {
                label.hoverEffect === "glow" ? label.hoverLevel : 0)
 
   // ---- geometry: beside the icon, the whole tile height
-  x: label.mirror ? 0 : (label.iconBox ? label.iconBox.x + label.iconBox.width : 0)
+  x: label.mirror ? label.tileLead : (label.iconBox ? label.iconBox.x + label.iconBox.width : 0)
   width: label.overlay ? Math.round(label.progress * label.naturalWidth) : label.extra - label.lead
   height: parent ? parent.height : 0
   visible: label.width > 0
@@ -221,7 +224,7 @@ Item {
     // at "dock" height it also reaches the card's top and bottom, the same
     // gap away.
     readonly property var spacing: (label.root && label.root.labelPlates) ? label.root.plateSpacing : null
-    readonly property real tileW: label.parent ? label.parent.width : 0
+    readonly property real tileW: label.parent ? label.parent.width - label.tileLead : 0
     // In a plate row the vertical box is shared with the unlabelled tiles'
     // plates (DockLabelLogic.plateBox); otherwise around the art (and the
     // indicators under it).
@@ -229,7 +232,7 @@ Item {
     y: box ? box.y : artTop - vMargin
     height: box ? box.h
       : ((label.sideMarks || label.overlay) ? artTop + artSize : label.height - Style.space(1) - (label.root ? label.root.indicatorLift : 0)) + vMargin - y
-    x: spacing ? spacing.inset - label.x
+    x: spacing ? label.tileLead + spacing.inset - label.x
       : label.mirror ? edge : -iconW - label.lead + label.artMargin - hMargin
     width: spacing ? tileW - 2 * spacing.inset
       : label.mirror

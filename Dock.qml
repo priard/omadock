@@ -556,7 +556,6 @@ Item {
   property string dropTargetAppId: ""
   property string dropTargetGroupId: ""
   property string dragSourceGroupId: ""
-  property real dropIndicatorX: 0
   // Pinned folders and app groups are dragged too: folders to reorder them,
   // and either one off the dock to take it away.
   property string dragFolderPath: ""
@@ -572,6 +571,20 @@ Item {
   // Pointer of the drag in progress, in dock card coordinates.
   property real dragPointerX: 0
   property real dragPointerY: 0
+  // Where the accent line of a drag inside the dock stands (DropGap): the
+  // insert index in the pinned run or among the folders, -1 for none.
+  readonly property int dropLineRow: !root.dragRemoveArmed && root.dropRowIndex >= 0
+    && ((root.dragAppId !== "" && root.dropTargetAppId === "" && root.dropTargetGroupId === "") || root.dragGroupId !== "")
+    ? root.dropRowIndex : -1
+  readonly property int dropLineFolder: !root.dragRemoveArmed && root.dragFolderPath !== "" ? root.dropFolderIndex : -1
+  // Room the drag opens there: enough that the line reads between tiles
+  // packed close together (plates one small gap apart), and a little
+  // anywhere so the dock answers the drag.
+  readonly property real dropGapWidth: {
+    var seen = root.labelPlates ? root.plateSpacing.gap
+      : root.gapWidth + (root.iconSlot - root.baseIconArt) / (root.labelMode === "always" ? 2 : 1)
+    return DockLabels.gridRound(Math.max(Style.space(6), Style.space(18) - seen), root.outputScale)
+  }
   readonly property bool dockDragActive: root.dragAppId !== "" || root.dragFolderPath !== "" || root.dragGroupId !== ""
 
   // ------------------------------------------------- context menu

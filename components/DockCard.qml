@@ -41,7 +41,6 @@ Item {
 
   function rowInsertIndex(rx) { return dragLogic.rowInsertIndex(root, cardWrapper, rx) }
 
-  function rowIndicatorX(idx) { return dragLogic.rowIndicatorX(root, cardWrapper, idx) }
 
   function handleDragDropped(aid) { return dragLogic.handleDragDropped(root, cardWrapper, aid) }
 
@@ -404,6 +403,7 @@ Item {
               windowList: entry.windowList || []
               homeCenter: rowSlot.home
               labelSlot: root ? root.appsSlots + rowSlot.index : -1
+              dropLineHere: root ? root.dropLineRow === rowSlot.index : false
               pinned: true
               active: root ? (entry.appId === root.activeId) : false
               onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -430,6 +430,7 @@ Item {
               groupData: rowSlot.modelData.group || ({})
               homeCenter: rowSlot.home
               labelSlot: root ? root.appsSlots + rowSlot.index : -1
+              dropLineHere: root ? root.dropLineRow === rowSlot.index : false
               onOpenGroupRequested: function(gdata, cx, cy) {
                 if (root) root.openAppGroup(gdata, cx, cy)
               }
@@ -442,6 +443,13 @@ Item {
             }
           }
         }
+      }
+
+      // A drag landing after the last pinned app or group.
+      DropGap {
+        rootRef: cardWrapper.rootRef
+        spacer: true
+        open: root ? (root.dropLineRow >= 0 && root.dropLineRow === pinnedRowRepeater.count) : false
       }
 
       // Divider between pinned apps and the minimized-tile section.
@@ -591,6 +599,7 @@ Item {
           name: modelData.name || "Folder"
           icon: modelData.icon || DockModel.folderIconFor(modelData.path, "")
           slotIndex: index
+          dropLineHere: root ? root.dropLineFolder === index : false
           homeCenter: root ? root.slotHomeCenter(
             root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + index,
             root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index,
@@ -607,6 +616,13 @@ Item {
           onDragMoved: function(fpath, mx, my) { cardWrapper.handleFolderDragMoved(fpath, mx, my) }
           onDragDropped: function(fpath) { cardWrapper.handleFolderDragDropped(fpath) }
         }
+      }
+
+      // A folder dragged after the last one.
+      DropGap {
+        rootRef: cardWrapper.rootRef
+        spacer: true
+        open: root ? (root.dropLineFolder >= 0 && root.dropLineFolder === foldersRepeater.count) : false
       }
 
       // Drop gap after the last pinned folder (see DockFolderItem.gapWidth).
@@ -677,21 +693,6 @@ Item {
       border.color: Color.accent
       border.width: 2
       z: 20
-    }
-
-    // Drop indicator line
-    Rectangle {
-      visible: root ? (!root.dragRemoveArmed
-        && ((root.dragAppId !== "" && root.dropTargetAppId === "" && root.dropTargetGroupId === "" && root.dropRowIndex >= 0)
-          || (root.dragFolderPath !== "" && root.dropFolderIndex >= 0)
-          || (root.dragGroupId !== "" && root.dropRowIndex >= 0))) : false
-      x: root ? root.dropIndicatorX : 0
-      anchors.verticalCenter: row.verticalCenter
-      width: Style.space(2)
-      height: root ? (root.iconSize + Style.space(4)) : 36
-      radius: 1
-      color: Color.accent
-      z: 10
     }
 
     // Over the pointer while a drag is pulled off the dock: letting go here

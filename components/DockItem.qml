@@ -40,7 +40,7 @@ Item {
 
   // Only the wave lets a slot grow; zoom keeps the layout still and simply
   // draws its icon larger.
-  width: (root ? (root.iconSlot * (root.waveHover ? item.magnifyScale : 1)) : 0) + item.labelExtra
+  width: (root ? (root.iconSlot * (root.waveHover ? item.magnifyScale : 1)) : 0) + item.labelExtra + item.dropGap
   height: root ? root.iconSlot : 0
   // An open hover label is drawn over the neighbours.
   z: Math.round(item.magnifyScale * 100) + (label.overlay && label.progress > 0.01 ? 1000 : 0)
@@ -53,6 +53,15 @@ Item {
   property real homeCenter: 0
   property int labelSlot: -1
   readonly property real labelExtra: label.extra
+  // A drag in the dock lands before this tile: room opens ahead of it.
+  property bool dropLineHere: false
+  readonly property real dropGap: dropGapItem.width
+
+  DropGap {
+    id: dropGapItem
+    rootRef: item.rootRef
+    open: item.dropLineHere
+  }
   readonly property real iconCenterX: iconBox.x + iconBox.width / 2
 
   Connections {
@@ -214,8 +223,8 @@ Item {
   // the slot is the running indicator underneath.
   Item {
     id: iconBox
-    x: label.mirror ? item.labelExtra - label.lead : label.lead
-    width: item.width - item.labelExtra
+    x: item.dropGap + (label.mirror ? item.labelExtra - label.lead : label.lead)
+    width: item.width - item.labelExtra - item.dropGap
     height: parent.height
 
     scale: area.pressed ? 0.92 : 1.0
@@ -358,6 +367,7 @@ Item {
     name: item.name
     hovered: area.containsMouse && !item.isDragging
     iconBox: iconBox
+    tileLead: item.dropGap
     slot: item.visible ? item.labelSlot : -1
     marksFrom: indicatorRow
     backgroundMarks: item.backgroundMedia
