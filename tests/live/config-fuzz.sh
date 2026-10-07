@@ -25,6 +25,7 @@ cases = {
     "array-like": '{"appGroups": {"length": 1000000}, "pinnedFolders": {"length": 1000000}}',
     "bad-sound": '{"urgentSoundName": "../../../etc/passwd", "urgentSound": true}',
     "relative-folder": '{"pinnedFolders": [{"path": "-x"}, {"path": "rel"}]}',
+    "bad-layout": '{"layout": 5, "alignment": ["x"]}',
     "oversize": json.dumps({"pad": "x" * (2 * 1024 * 1024)}),
 }
 for name, text in cases.items():
