@@ -332,6 +332,7 @@ Item {
     DockIndicatorRow {
       id: indicatorRow
       rootRef: gitem.rootRef
+      markInk: (label.plate && label.shown) ? label.ink : "transparent"
       windows: gitem.groupWindows
       running: gitem.hasRunningApps || gitem.isOpen
       focused: gitem.isOpen || gitem.hasFocusedMember

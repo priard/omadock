@@ -298,6 +298,42 @@ function withFolderName(folders, path, name) {
   return next
 }
 
+// The dock's gradient fill (shaders/gradient.frag) at card point (x, y),
+// without the dock's opacity: base and colours as {r, g, b} in 0..1, w x h
+// the card size. Lets an auto label pick black or white for what is behind
+// it there rather than for the gradient's average.
+function _ramp(t, s0, s1) { return Math.max(0, Math.min(1, (s1 - t) / (s1 - s0))) }
+function _linearT(x, y, w, h, deg) {
+  var a = deg * Math.PI / 180
+  var dx = Math.sin(a), dy = -Math.cos(a)
+  var len = Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a))
+  return ((x - w / 2) * dx + (y - h / 2) * dy) / len + 0.5
+}
+function _radialT(x, y, w, h, cx, cy) {
+  var px = cx * w, py = cy * h
+  var r = Math.max(Math.max(Math.hypot(px, py), Math.hypot(px - w, py)), Math.max(Math.hypot(px, py - h), Math.hypot(px - w, py - h)))
+  return Math.hypot(x - px, y - py) / r
+}
+function _over(under, layer, cover, strength) {
+  var k = Math.max(0, Math.min(1, cover * strength))
+  return { r: under.r + (layer.r - under.r) * k, g: under.g + (layer.g - under.g) * k, b: under.b + (layer.b - under.b) * k }
+}
+function gradientAt(base, cols, strength, w, h, x, y) {
+  var col = { r: base.r, g: base.g, b: base.b }
+  var c = cols || []
+  if (c.length === 0 || !(w > 0) || !(h > 0)) return col
+  var c1 = c[0], c2 = c.length > 1 ? c[1] : c1, c3 = c.length > 2 ? c[2] : c2
+  if (c.length < 3) {
+    col = _over(col, c2, _ramp(_linearT(x, y, w, h, -30), 0.3, 1.2), strength)
+    col = _over(col, c1, _ramp(_linearT(x, y, w, h, 150), 0.3, 1.2), strength)
+  } else {
+    col = _over(col, c1, _ramp(_radialT(x, y, w, h, 0, 0), 0.1, 0.7), strength)
+    col = _over(col, c2, _ramp(_radialT(x, y, w, h, 0.95, 0), 0, 0.75), strength)
+    col = _over(col, c3, _ramp(_linearT(x, y, w, h, -5), 0.1, 0.8), strength)
+  }
+  return col
+}
+
 function writeLabelConfig(conf, state) {
   for (var i = 0; i < LABEL_CONFIG_KEYS.length; i++) conf[LABEL_CONFIG_KEYS[i]] = state[LABEL_CONFIG_KEYS[i]]
   for (var j = 0; j < LEGACY_LABEL_KEYS.length; j++) delete conf[LEGACY_LABEL_KEYS[j]]

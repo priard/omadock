@@ -32,6 +32,19 @@ Item {
   readonly property bool shown: !!label.style && label.style.show && label.fullText !== ""
   readonly property bool mirror: !!label.style && label.style.mirror
 
+  // Auto colour follows what is behind this label (a gradient changes
+  // along the dock), not the gradient's average.
+  readonly property point cardPos: {
+    var r = label.root
+    if (!r || !r.dockCard || !label.parent) return Qt.point(0, 0)
+    var _deps = [label.x, label.width, label.height, label.parent.x,
+      label.parent.parent ? label.parent.parent.x : 0, r.dockCard.width, r.dockCard.height]
+    return label.mapToItem(r.dockCard, label.width / 2, label.height / 2)
+  }
+  readonly property color ink: label.root ? label.root.labelInkAt(label.cardPos.x, label.cardPos.y) : Color.bar.text
+  readonly property color fill: label.root ? label.root.labelFillFor(label.ink, label.overlay) : "transparent"
+  readonly property color halo: (label.root && label.root.isLight(Qt.color(label.ink))) ? "#000000" : "#ffffff"
+
   // ---- text and width
   property string shortText: ""
   property bool shortened: false
@@ -213,7 +226,7 @@ Item {
       ? label.width + label.artMargin + artSize + hMargin + label.lead - edge
       : label.width - edge - x
     radius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
-    color: label.style ? Util.alpha(label.style.fill, label.overlay ? 1 : 0.55 + 0.25 * label.hoverLevel) : "transparent"
+    color: label.style ? Util.alpha(label.fill, label.overlay ? 1 : 0.55 + 0.25 * label.hoverLevel) : "transparent"
     opacity: label.progress
     // Lifts with the icon and the name, like one button.
     transform: Translate { y: label.liftY }
@@ -250,6 +263,7 @@ Item {
     DockIndicatorRow {
       rootRef: label.rootRef
       vertical: true
+      markInk: label.ink
       x: -width / 2
       y: -height / 2
       windows: label.marksFrom ? label.marksFrom.windows : []
@@ -263,6 +277,7 @@ Item {
     DockIndicator {
       rootRef: label.rootRef
       visible: label.backgroundMarks && !(label.marksFrom && label.marksFrom.running)
+      inkOverride: label.ink
       x: -width / 2
       y: -height / 2
       kind: "background"
@@ -291,7 +306,7 @@ Item {
         visible: !!label.style && label.style.background === "pill"
         anchors.fill: parent
         radius: label.style ? DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio) : 0
-        color: label.style ? Util.alpha(label.style.fill, label.overlay ? 1 : label.style.fill.a) : "transparent"
+        color: label.style ? Util.alpha(label.fill, label.overlay ? 1 : label.fill.a) : "transparent"
         layer.enabled: label.overlay && visible
         layer.effect: MultiEffect {
           shadowEnabled: true
@@ -332,7 +347,7 @@ Item {
         anchors.rightMargin: label.pad
         text: label.drawnText
         textFormat: Text.PlainText
-        color: label.style ? label.style.ink : Color.bar.text
+        color: label.ink
         font.family: label.style ? label.style.family : Style.font.family
         font.pixelSize: label.style ? label.style.fontPx : Style.font.caption
         font.weight: label.style ? label.style.weight : Font.Medium
@@ -345,8 +360,8 @@ Item {
         style: (label.style && (bare || label.style.effect !== "none")) ? Text.Outline : Text.Normal
         styleColor: !label.style ? "transparent"
           : label.style.effect === "glow" ? Util.alpha(label.style.glow, 0.5 + 0.4 * label.glowLevel)
-          : label.style.effect === "outline" ? Util.alpha(label.style.halo, 0.85)
-          : Util.alpha(label.style.halo, 0.35)
+          : label.style.effect === "outline" ? Util.alpha(label.halo, 0.85)
+          : Util.alpha(label.halo, 0.35)
       }
     }
   }

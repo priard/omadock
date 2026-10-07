@@ -51,6 +51,13 @@ Item {
     readonly property real artTop: root ? btn.height - root.iconArtBottom - art : 0
     readonly property real vMargin: Style.space(4)
     property real level: area.containsMouse ? 1 : 0
+    // Ink and fill for what is behind the button (see DockLabel).
+    readonly property color ink: {
+      if (!root || !root.dockCard) return Color.bar.text
+      var _deps = [btn.x, btn.width, root.dockCard.width, root.dockCard.height]
+      var p = btn.mapToItem(root.dockCard, btn.width / 2, btn.height / 2)
+      return root.labelInkAt(p.x, p.y)
+    }
     Behavior on level { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
     visible: !!root && root.labelMode === "always" && root.labelBackground === "plate"
     x: 0
@@ -58,7 +65,7 @@ Item {
     y: artTop - vMargin
     height: art + vMargin * 2
     radius: style ? Math.min(height * 0.32, DockLabels.labelRadius(style.shape, height, style.dockRatio)) : 0
-    color: style ? Util.alpha(style.fill, 0.55 + 0.25 * level) : "transparent"
+    color: root ? Util.alpha(root.labelFillFor(ink, false), 0.55 + 0.25 * level) : "transparent"
     transform: Translate { y: (root && root.hoverEffect === "lift") ? -buttonPlate.art * 0.16 * buttonPlate.level : 0 }
   }
 
@@ -104,7 +111,10 @@ Item {
       textFormat: Text.PlainText
       font.family: "omarchy"
       font.pixelSize: Math.max(1, Math.round(glyphBox.width * btn.glyphFill / inkRatio))
-      color: area.containsMouse ? Color.accent
+      // On its plate the glyph takes the labels' ink, which always reads on
+      // the plate; the theme's text colour or accent may not.
+      color: buttonPlate.visible ? buttonPlate.ink
+        : area.containsMouse ? Color.accent
         : ((glyphBox.shownStyle === "mono" || glyphBox.shownStyle === "dots") ? glyphBox.tint : btn.glyphColor)
       x: Math.round(glyphBox.width / 2 - (glyphMetrics.tightBoundingRect.x + glyphMetrics.tightBoundingRect.width / 2))
       y: Math.round(glyphBox.height / 2 - (glyphText.baselineOffset + glyphMetrics.tightBoundingRect.y + glyphMetrics.tightBoundingRect.height / 2))
