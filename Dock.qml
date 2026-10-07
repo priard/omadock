@@ -250,7 +250,8 @@ Item {
   // window coordinates. Nothing that magnification changes feeds back into
   // those numbers, so the wave cannot chase itself.
   readonly property real magnifyPeak: 1.4
-  readonly property real zoomPeak: 1.22
+  // On always-on label plates the zoom stays inside the plate's margin.
+  readonly property real zoomPeak: (root.labelMode === "always" && root.labelBackground === "plate") ? 1.1 : 1.22
   readonly property real magnifyRange: root.iconSlot * 2.2
   readonly property real baseIconArt: root.iconSize - Style.space(4)
   // Largest size an icon reaches under either hover effect; icons decode at
