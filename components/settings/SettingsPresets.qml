@@ -26,7 +26,7 @@ Column {
     width: parent.width
     topPadding: Style.spacing.xs
     bottomPadding: Style.spacing.lg
-    text: (root ? root.presets.length : 0) + " of 6 · A preset keeps the look: background, effects, border, dividers, icons, size and spacing."
+    text: (root ? root.presets.length : 0) + " of 6 · A preset keeps the look: background, effects, border, dividers, icons, label style, size and spacing."
     textFormat: Text.PlainText
     color: Util.alpha(Color.menu.text, 0.55)
     wrapMode: Text.WordWrap
