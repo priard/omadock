@@ -47,6 +47,7 @@
  "components/logic/DockWindowLogic.qml::unused-imports": 3,
  "components/settings/SettingsFolders.qml::comma": 1,
  "components/settings/SettingsGroups.qml::unresolved-type": 2,
+ "components/settings/SettingsLabels.qml::unresolved-type": 1,
  "components/settings/SettingsPresets.qml::unresolved-type": 1,
  "components/settings/SliderRow.qml::unresolved-type": 1
 }
