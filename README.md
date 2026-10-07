@@ -212,7 +212,8 @@ Zero-CPU hardware integration for removable media and USB storage:
 
 Flexible screen placement tailored to your workflow:
 
-- **`"center"`, `"left"`, `"right"`** along the bottom edge, with smooth cubic transitions.
+- **`"center"`, `"left"`, `"right"`, `"spread"`** along the bottom edge, with smooth cubic transitions. `"spread"` (Both sides) keeps the apps at the left edge and puts folders and drives at the right; it needs the panel layout or Split sections.
+- **Panel layout** (`"layout": "panel"`): a full-width bar on the bottom edge with square corners; alignment moves the icons inside it.
 - **Popovers, tooltips, and menus** self-reposition so nothing clips at screen edges.
 
 #### 🖥️ Multi-Monitor Docks
@@ -304,7 +305,7 @@ The settings at a glance:
 
 - **Shapes**: `Auto (Theme)`, `Rounded`, `Round (Pill)`, `Square`.
 - **Opacity**: `Auto (Theme)`, `100%`, `80%`, `65%`, `35%`, `0% (Transparent Specular)`.
-- **Placement & Alignment**: `Center (Default)`, `Left Aligned`, `Right Aligned` along the screen edge.
+- **Placement & Alignment**: `Dock` or `Panel` layout; `Left`, `Center (Default)`, `Right`, `Both sides` along the screen edge.
 - **Color Presets**: Theme Auto, Pure Black, Mocha, Deep Slate, Midnight Blue, Dark Navy, Emerald Forest, Velvet Ruby.
 - **Icon Sizing**: Small ($28\text{px}$), Medium ($36\text{px}$), Large ($44\text{px}$), Extra Large ($52\text{px}$).
 - **Icon Styles**: `Original`, `Mono`, `Pixel` (coarse grid) and `Dots` (dithered dot matrix), with grid size, tint, contrast and hover-reveal controls.
@@ -475,7 +476,8 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `alignment` | `string` | `"center"` | Dock placement along screen edge: `"center"`, `"left"`, `"right"`. |
+| `alignment` | `string` | `"center"` | Dock placement along screen edge: `"center"`, `"left"`, `"right"`, `"spread"` (apps left, folders and drives right; panel layout or `splitSections` only). |
+| `layout` | `string` | `"dock"` | `"dock"` floats above the edge; `"panel"` spans the full width on the bottom edge. |
 | `screen` | `string` | first monitor | Monitor for the single dock (e.g. `"DP-3"`). With `multiMonitor`, the dock on this monitor plays alert sounds. |
 | `multiMonitor` | `bool` | `false` | Runs one dock on every connected monitor. |
 | `perMonitorApps` | `bool` | `true` | With `multiMonitor`, each dock lists only the windows on its own monitor. |
@@ -570,7 +572,8 @@ o.bind("SUPER + SHIFT + M", "Restore oldest minimized", "exec qs -p /usr/share/o
 Additional IPC methods available:
 - `reveal`: Force dock to slide into view.
 - `hide`: Force dock to slide out of view.
-- `setAlignment("center" | "left" | "right")`: Change dock alignment dynamically.
+- `setAlignment("center" | "left" | "right" | "spread")`: Change dock alignment dynamically.
+- `setLayout("dock" | "panel")`: Switch between the floating dock and the full-width panel.
 - `setPosition("bottom" | "top" | "left" | "right")`: Change dock edge position.
 - `openSettings`: Open the settings panel on the focused monitor's dock.
 - `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.

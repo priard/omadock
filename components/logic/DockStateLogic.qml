@@ -7,6 +7,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
+import "../../DockLayout.js" as DockLayout
 
 // Logic extracted from Dock.qml: stateless functions, the dock root
 // is passed in and owns all state. Bodies are verbatim.
@@ -74,8 +75,14 @@ QtObject {
   }
 
   function setDockAlignment(root, align) {
-    var a = String(align || "").toLowerCase()
-    root.alignment = (a === "left" || a === "right") ? a : "center"
+    root.alignment = DockLayout.normalizeAlignment(align)
+    root.saveConfig()
+    if (root.intelligentAutohide) root.debounceOverlapTimerRef.restart()
+    root.syncVisibility()
+  }
+
+  function setDockLayout(root, layout) {
+    root.layout = DockLayout.normalizeLayout(layout)
     root.saveConfig()
     if (root.intelligentAutohide) root.debounceOverlapTimerRef.restart()
     root.syncVisibility()

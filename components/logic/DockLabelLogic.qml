@@ -30,7 +30,7 @@ QtObject {
     return {
       show: show,
       hover: hover,
-      mirror: !!root && root.alignment === "right",
+      mirror: !!root && (root.placement.align === "right" || (root.placement.align === "spread" && kind === "folders")),
       fontPx: sizes[root ? root.labelSize : "medium"] || sizes.medium,
       weight: pixel ? Font.Normal : (weights[root ? root.labelWeight : "medium"] || Font.Medium),
       family: pixel ? "Silkscreen" : ((root && root.labelFont === "sans") ? "sans-serif" : Style.font.family),

@@ -36,6 +36,15 @@ ipc reveal; sleep 0.5
 align=$(python3 -c "import json; print(json.load(open('$CFG')).get('alignment', 'center'))")
 ipc setAlignment "$align"; sleep 0.5
 
+layout=$(python3 -c "import json; print(json.load(open('$CFG')).get('layout', 'dock'))")
+ipc setLayout panel; sleep 0.5
+[ "$(st layout)" = panel ] || fail "setLayout panel"
+ipc setAlignment spread; sleep 0.5
+[ "$(st align)" = spread ] || [ "$(st align)" = left ] || fail "setAlignment spread in panel"
+ipc setLayout bogus; sleep 0.5
+[ "$(st layout)" = dock ] || fail "setLayout bogus -> dock"
+ipc setLayout "$layout"; ipc setAlignment "$align"; sleep 0.5
+
 ipc itemGeometry | python3 -c "import json,sys; assert len(json.load(sys.stdin)) > 0" || fail "itemGeometry empty"
 bash tests/smoke-test.sh >/dev/null || fail "smoke test"
 if journalctl --user --since "$since" | grep -iE "omadock/.*(error|TypeError|ReferenceError|is not a)"; then
