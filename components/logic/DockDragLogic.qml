@@ -27,7 +27,9 @@ QtObject {
     for (var i = 0; i < n; i++) {
       var it = card.foldersRepeater.itemAt(i)
       if (!it) continue
-      var iconCenter = it.x + (it.iconCenterX !== undefined ? it.iconCenterX : it.width - (root ? root.iconSlot : it.width) / 2)
+      // The middle of the folder's tile (icon and any label), past the drop gap.
+      var gap = it.gapWidth || 0
+      var iconCenter = it.x + gap + (it.width - gap) / 2
       if (px < iconCenter) return i
     }
     return n
@@ -71,9 +73,10 @@ QtObject {
       var slot = card.pinnedRowRepeater.itemAt(i)
       var it = slot ? slot.item : null
       if (!it) continue
-      var extra = it.labelExtra || 0
-      var centre = slot.x + (it.iconCenterX !== undefined ? it.iconCenterX : slot.width / 2)
-      var span = slot.width - extra
+      // A tile with a label (or a plate) is one button: its whole width is
+      // the target, with the edges left for placing before or after it.
+      var centre = slot.x + slot.width / 2
+      var span = slot.width
       if (slot.isGroup) {
         if (Math.abs(rx - centre) < span * 0.45) {
           root.dropTargetGroupId = it.groupId
@@ -117,8 +120,7 @@ QtObject {
     if (n === 0) return -1
     for (var i = 0; i < n; i++) {
       var slot = card.pinnedRowRepeater.itemAt(i)
-      var it = slot ? slot.item : null
-      if (slot && rx < slot.x + (it && it.iconCenterX !== undefined ? it.iconCenterX : slot.width / 2)) return i
+      if (slot && rx < slot.x + slot.width / 2) return i
     }
     return n
   }
