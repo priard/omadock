@@ -458,8 +458,8 @@ Item {
       }
       if (mouse.button === Qt.RightButton) {
         var targetWin = root ? root.contentItemRef : null
-        var pt = targetWin ? item.mapToItem(targetWin, item.width / 2, 0) : null
-        var gx = pt ? pt.x : (item.width / 2)
+        var pt = targetWin ? item.mapToItem(targetWin, item.iconCenterX, 0) : null
+        var gx = pt ? pt.x : item.iconCenterX
         item.menuRequested(item.appId, gx, 0)
       } else if (mouse.button === Qt.MiddleButton) {
         item.newWindowRequested(item.appId)
@@ -514,6 +514,7 @@ Item {
     property bool tipShown: false
     readonly property bool wanted: area.containsMouse && !item.isDragging
       && item.name !== "" && (root ? (root.showTooltips && root.contextAppId === "") : true)
+      && (root ? root.labelTooltipNeeded("app", item.tooltipWindows.length > 0, item.tooltipText !== item.name, label.shortened) : true)
     readonly property bool showing: itemTooltip.tipShown && itemTooltip.wanted
 
     TooltipLife {
@@ -546,7 +547,7 @@ Item {
       active: itemTooltipLife.alive
 
       TooltipWindow {
-        target: item
+        target: iconBox
         gap: Style.space(10)
         shown: true
         level: itemTooltipLife.level

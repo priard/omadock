@@ -369,12 +369,12 @@ Item {
     onTapped: function(mouse) {
       var targetWin = root ? root.contentItemRef : null
       if (mouse.button === Qt.RightButton) {
-        var mappedPos = targetWin ? gitem.mapToItem(targetWin, gitem.width / 2, 0) : null
+        var mappedPos = targetWin ? gitem.mapToItem(targetWin, gitem.iconCenterX, 0) : null
         if (!mappedPos) return
         gitem.menuRequested(gitem.groupData, mappedPos.x, 0)
       } else {
         gitem.clickPreviewOr(function() {
-          var centerPos = targetWin ? gitem.mapToItem(targetWin, gitem.width / 2, 0) : null
+          var centerPos = targetWin ? gitem.mapToItem(targetWin, gitem.iconCenterX, 0) : null
           if (!centerPos) return
           gitem.openGroupRequested(gitem.groupData, centerPos.x, centerPos.y)
         })
@@ -403,6 +403,8 @@ Item {
     fallbackIcon: Quickshell.iconPath("folder", true)
     hovered: groupArea.containsMouse
     blocked: (!root || !root.showTooltips || root.activeAppGroupId !== "")
+      || (root && !root.labelTooltipNeeded("group", gitem.tooltipWindows.length > 0, false, label.shortened))
+    target: iconSlot
     showTooltips: root ? root.showTooltips : true
     tooltipDelay: root ? root.tooltipDelay : 450
     contextAppId: root ? root.contextAppId : ""

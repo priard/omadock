@@ -161,11 +161,11 @@ Item {
     onTapped: function(mouse) {
       var targetWin = root ? root.contentItemRef : null
       if (mouse.button === Qt.RightButton) {
-        var mappedPos = targetWin ? fitem.mapToItem(targetWin, fitem.width / 2, 0) : null
+        var mappedPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!mappedPos) return
         fitem.menuRequested(fitem.folderPath, fitem.name, mappedPos.x, 0)
       } else {
-        var centerPos = targetWin ? fitem.mapToItem(targetWin, fitem.width / 2, 0) : null
+        var centerPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!centerPos) return
         fitem.openStackRequested(fitem.folderPath, fitem.name, centerPos.x, centerPos.y)
       }
@@ -190,6 +190,8 @@ Item {
     text: fitem.name + " (Folder)"
     hovered: area.containsMouse
     blocked: (!root || !root.showTooltips || root.activeStackFolder !== "")
+      || (root && !root.labelTooltipNeeded("folder", false, false, label.shortened))
+    target: iconSlot
     showTooltips: root ? root.showTooltips : true
     tooltipDelay: root ? root.tooltipDelay : 450
     contextAppId: root ? root.contextAppId : ""
