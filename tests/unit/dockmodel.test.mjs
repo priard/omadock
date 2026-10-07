@@ -177,3 +177,9 @@ test("pickLook carries the label look keys but not behaviour or names", () => {
     iconSize: 0, cornerRadius: -1
   })
 })
+
+test("settings search finds the labels page", () => {
+  const hits = plain(M.searchSettings("typewriter"))
+  assert.ok(hits.some((h) => h.key === "labelReveal" && h.page === "labels"))
+  assert.ok(!plain(M.SETTINGS_SEARCH).some((e) => e.key === "labelPlacement" || e.key === "showLabels"))
+})

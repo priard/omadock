@@ -5,6 +5,7 @@ import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
 import "../DockModel.js" as DockModel
+import "../DockLabels.js" as DockLabels
 
 BorderSurface {
   id: contextMenu
@@ -692,6 +693,17 @@ BorderSurface {
               root.togglePin(canonicalId)
               root.closeContext()
             }
+          }
+        }
+
+        ContextRow {
+          visible: root ? DockLabels.labelVisible(root.labelMode, root.labelKind, "app") : false
+          text: "Rename Label…"
+          onTriggered: {
+            if (!root) return
+            var aid = root.contextAppId
+            root.closeContext()
+            root.openLabelRename(aid)
           }
         }
 
