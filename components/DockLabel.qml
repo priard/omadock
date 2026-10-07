@@ -42,7 +42,7 @@ Item {
   // inside its art; the name ends with about the same room, so a label
   // keeps the spacing an icon would before the next item, a divider or the
   // dock's edge. A plate is its own frame and needs only a little.
-  readonly property real trail: label.plate ? Style.space(4) : label.artMargin + Style.space(3)
+  readonly property real trail: label.plate ? Style.space(1) : label.artMargin + Style.space(3)
   readonly property real naturalWidth: label.shown && label.shortText !== ""
     ? Math.ceil(textWidth.advanceWidth) + label.pad * 2 + label.gap + label.trail : 0
 
@@ -154,23 +154,28 @@ Item {
   height: parent ? parent.height : 0
   visible: label.extra > 0
 
-  // Plate: one surface behind icon and name, framing the art with the same
-  // margin on top and sides and reaching down to the slot's floor, so the
-  // window indicators sit inside it. Its corners stop short of a full pill
-  // so the curve never cuts into the icon.
+  // Plate: one surface behind icon and name. The art gets the same margin
+  // on its leading side as the name on the trailing one, and the window
+  // indicators under the art get the same room below as the art has above,
+  // so they sit inside. Its corners stop short of a full pill so the curve
+  // never cuts into the icon.
   Rectangle {
     id: plateRect
     visible: label.plate
     readonly property real artSize: label.root ? label.root.baseIconArt : 0
     readonly property real artTop: label.root ? label.height - label.root.iconArtBottom - artSize : 0
-    readonly property real margin: Style.space(4)
+    readonly property real vMargin: Style.space(4)
     readonly property real iconW: label.iconBox ? label.iconBox.width : 0
     readonly property real edge: Style.space(1)
-    y: artTop - margin
-    height: label.height + edge - y
-    x: label.mirror ? edge : -iconW + label.artMargin - Math.min(margin, label.artMargin - edge)
+    // Side margin: matches the name's padding plus trail (a glyph's own
+    // trailing bearing makes that side read wider), up to the slot's edge.
+    readonly property real hMargin: Math.min(label.pad + label.trail, label.artMargin)
+    y: artTop - vMargin
+    // Indicators end Style.space(1) above the slot floor.
+    height: label.height - Style.space(1) + vMargin - y
+    x: label.mirror ? edge : -iconW + label.artMargin - hMargin
     width: label.mirror
-      ? label.width + label.artMargin + artSize + Math.min(margin, label.artMargin - edge) - edge
+      ? label.width + label.artMargin + artSize + hMargin - edge
       : label.width - edge - x
     radius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
     color: label.style ? Util.alpha(label.style.fill, 0.55 + 0.25 * label.hoverLevel) : "transparent"
