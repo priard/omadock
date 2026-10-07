@@ -24,8 +24,19 @@ Item {
   // headed for this index opens a gap before this item.
   property int slotIndex: -1
   readonly property bool gapOpen: root ? (root.dropPreviewPath !== "" && root.dropInsertIndex === fitem.slotIndex) : false
-  property real gapWidth: gapOpen && root ? root.iconSlot + root.gapWidth : 0
-  Behavior on gapWidth { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  property real ghostWidth: gapOpen && root ? root.iconSlot + root.gapWidth : 0
+  Behavior on ghostWidth { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  // A pinned folder dragged in the dock lands before this one.
+  property bool dropLineHere: false
+  // All the room ahead of the folder's tile: the ghost's, or the drag's.
+  readonly property real gapWidth: fitem.ghostWidth + dropGapItem.width
+  readonly property real dropGap: dropGapItem.width
+
+  DropGap {
+    id: dropGapItem
+    rootRef: fitem.rootRef
+    open: fitem.dropLineHere
+  }
 
   signal openStackRequested(string path, string name, real cx, real cy)
   signal menuRequested(string path, string name, real cx, real cy)
@@ -41,7 +52,7 @@ Item {
 
   DropGhost {
     rootRef: fitem.rootRef
-    width: fitem.gapWidth
+    width: fitem.ghostWidth
     height: parent.height
   }
 
@@ -96,7 +107,7 @@ Item {
         renderSize: root ? root.maxIconArt : 64
         visible: !iconContainer.themedSymbolic
         iconStyle: root ? root.iconStyle : "original"
-        tint: (label.plate && label.shown) ? label.ink : (root ? root.iconTintColor : Color.bar.text)
+        tint: (root && label.plate && label.shown) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
         toneInvert: fitem.isSymbolic ? 1 : -1
         allowReveal: !fitem.isSymbolic
         grid: root ? root.iconGrid : 16
@@ -186,6 +197,7 @@ Item {
     name: fitem.name
     hovered: area.containsMouse && !area.dragging
     iconBox: iconSlot
+    tileLead: fitem.gapWidth
     slot: fitem.labelSlot
   }
 

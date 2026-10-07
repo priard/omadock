@@ -125,6 +125,15 @@ QtObject {
     return root.isLight(Qt.color(ink)) ? Util.alpha("#141414", hover ? 0.9 : 0.62) : Util.alpha("#f2f2f2", hover ? 0.94 : 0.72)
   }
 
+  // A plate at rest as seen: its fill (fillFor the label ink, at the
+  // plate's resting opacity) laid over the dock behind the icons.
+  function plateBackdrop(root) {
+    var fill = Qt.color(fillFor(root, style(root, "app").ink, false))
+    var under = seen(root, Qt.color(root.iconBackdropColor))
+    var k = 0.55
+    return Qt.rgba(under.r + (fill.r - under.r) * k, under.g + (fill.g - under.g) * k, under.b + (fill.b - under.b) * k, 1)
+  }
+
   // The user's name wins; an app without a desktop entry (its name is its
   // class id) gets a readable one.
   function displayName(root, appId, name) {

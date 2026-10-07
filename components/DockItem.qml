@@ -40,7 +40,7 @@ Item {
 
   // Only the wave lets a slot grow; zoom keeps the layout still and simply
   // draws its icon larger.
-  width: (root ? (root.iconSlot * (root.waveHover ? item.magnifyScale : 1)) : 0) + item.labelExtra
+  width: (root ? (root.iconSlot * (root.waveHover ? item.magnifyScale : 1)) : 0) + item.labelExtra + item.dropGap
   height: root ? root.iconSlot : 0
   // An open hover label is drawn over the neighbours.
   z: Math.round(item.magnifyScale * 100) + (label.overlay && label.progress > 0.01 ? 1000 : 0)
@@ -53,6 +53,15 @@ Item {
   property real homeCenter: 0
   property int labelSlot: -1
   readonly property real labelExtra: label.extra
+  // A drag in the dock lands before this tile: room opens ahead of it.
+  property bool dropLineHere: false
+  readonly property real dropGap: dropGapItem.width
+
+  DropGap {
+    id: dropGapItem
+    rootRef: item.rootRef
+    open: item.dropLineHere
+  }
   readonly property real iconCenterX: iconBox.x + iconBox.width / 2
 
   Connections {
@@ -214,8 +223,8 @@ Item {
   // the slot is the running indicator underneath.
   Item {
     id: iconBox
-    x: label.mirror ? item.labelExtra - label.lead : label.lead
-    width: item.width - item.labelExtra
+    x: item.dropGap + (label.mirror ? item.labelExtra - label.lead : label.lead)
+    width: item.width - item.labelExtra - item.dropGap
     height: parent.height
 
     scale: area.pressed ? 0.92 : 1.0
@@ -263,8 +272,8 @@ Item {
       renderSize: root ? root.maxIconArt : 64
       opacity: item.starting ? (0.4 + 0.6 * item.pulse) : 1.0
       iconStyle: root ? root.iconStyle : "original"
-      // On a label plate the mono/dots tint is the plate's ink.
-      tint: (label.plate && label.shown) ? label.ink : (root ? root.iconTintColor : Color.bar.text)
+      // On a label plate the mono/dots tint is chosen against the plate.
+      tint: (root && label.plate && label.shown) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
       grid: root ? root.iconGrid : 16
       outputScale: root ? root.outputScale : 1
       contrast: root ? root.iconContrast : 0
@@ -332,6 +341,7 @@ Item {
     markInk: (label.plate && label.shown) ? label.ink : "transparent"
     // On a plate the marks rise and bounce with it.
     transform: Translate { y: (label.plate && label.shown) ? label.rise : 0 }
+    moveKey: (label.plate && label.shown) ? label.rise : 0
     anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
@@ -357,6 +367,7 @@ Item {
     name: item.name
     hovered: area.containsMouse && !item.isDragging
     iconBox: iconBox
+    tileLead: item.dropGap
     slot: item.visible ? item.labelSlot : -1
     marksFrom: indicatorRow
     backgroundMarks: item.backgroundMedia

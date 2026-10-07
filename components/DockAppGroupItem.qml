@@ -15,6 +15,15 @@ Item {
   property real homeCenter: 0
   property int labelSlot: -1
   readonly property real labelExtra: label.extra
+  // A drag in the dock lands before this group: room opens ahead of it.
+  property bool dropLineHere: false
+  readonly property real dropGap: dropGapItem.width
+
+  DropGap {
+    id: dropGapItem
+    rootRef: gitem.rootRef
+    open: gitem.dropLineHere
+  }
   readonly property real iconCenterX: iconSlot.x + iconSlot.width / 2
 
   readonly property string groupId: (groupData && groupData.id) ? groupData.id : ""
@@ -60,7 +69,7 @@ Item {
   // Faded while dragged, fainter still once pulled off the dock.
   opacity: groupArea.dragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
 
-  width: (root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0) + gitem.labelExtra
+  width: (root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0) + gitem.labelExtra + gitem.dropGap
   height: root ? root.iconSlot : 0
   // An open hover label is drawn over the neighbours.
   z: Math.round(gitem.magnifyScale * 100) + (label.overlay && label.progress > 0.01 ? 1000 : 0)
@@ -169,7 +178,7 @@ Item {
     id: iconSlot
     width: root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
-    x: (label.mirror ? gitem.labelExtra - label.lead : label.lead) + Math.round((gitem.width - gitem.labelExtra - width) / 2)
+    x: gitem.dropGap + (label.mirror ? gitem.labelExtra - label.lead : label.lead) + Math.round((gitem.width - gitem.dropGap - gitem.labelExtra - width) / 2)
     anchors.verticalCenter: parent.verticalCenter
 
     Item {
@@ -299,7 +308,7 @@ Item {
                 source: miniCell.miniSource
                 renderSize: miniCell.miniSize * 2
                 iconStyle: root ? root.iconStyle : "original"
-                tint: (label.plate && label.shown) ? label.ink : (root ? root.iconTintColor : Color.bar.text)
+                tint: (root && label.plate && label.shown) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
                 // Same cell size as a full icon, so the minis match it.
                 grid: root ? Math.round(root.iconGrid * miniCell.miniSize / Math.max(1, root.baseIconArt)) : 8
                 outputScale: root ? root.outputScale : 1
@@ -335,6 +344,7 @@ Item {
       markInk: (label.plate && label.shown) ? label.ink : "transparent"
       // On a plate the marks rise with it.
       transform: Translate { y: (label.plate && label.shown) ? label.rise : 0 }
+      moveKey: (label.plate && label.shown) ? label.rise : 0
       windows: gitem.groupWindows
       running: gitem.hasRunningApps || gitem.isOpen
       focused: gitem.isOpen || gitem.hasFocusedMember
@@ -396,6 +406,7 @@ Item {
     name: gitem.groupName
     hovered: groupArea.containsMouse && !groupArea.dragging
     iconBox: iconSlot
+    tileLead: gitem.dropGap
     slot: gitem.labelSlot
     marksFrom: indicatorRow
   }
