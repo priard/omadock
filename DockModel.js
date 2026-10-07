@@ -816,16 +816,35 @@ var LOOK_KEYS = [
   "dividerGeometry", "dividerHeight", "dividerStyle", "dividerWidth", "dividerOpacity",
   "iconStyle", "iconTint", "iconHoverOriginal", "iconHoverReveal", "iconContrast", "iconStrength",
   "iconGrid", "indicatorShape", "hoverEffect", "launchBounce", "groupStyle",
-  "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing", "labelFont", "labelSize", "labelColor", "labelBackground", "labelReveal", "labelEffect", "labelMaxWidth", "labelWeight", "labelShape", "labelIndicators", "labelPlateHeight"
+  "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing", "labelMode", "labelKind", "labelFont", "labelSize", "labelColor", "labelBackground", "labelReveal", "labelEffect", "labelMaxWidth", "labelWeight", "labelShape", "labelIndicators", "labelPlateHeight"
 ]
+// The value a look key takes when the config lacks it (the fallbacks in
+// Dock.applyLook, spelled as saveConfig writes them). A preset saved before
+// a key existed gets it from here: the dock then looked as the default
+// does, so applying the preset brings that setting back instead of leaving
+// today's value in place.
+var DEFAULT_LOOK = {
+  showBackground: true, bgColor: "theme", bgFill: "solid", gradientPreset: "theme", gradientStrength: 0.6,
+  grain: 0, opacity: 1, blur: "system", showShadow: true, shadowStrength: 0.4, showBorder: true,
+  borderWidth: 1.5, borderOpacity: "theme", shape: "rounded", cornerRadius: -1, splitSections: false,
+  dividerGeometry: "classic", dividerHeight: 70, dividerStyle: "simple", dividerWidth: 1.5, dividerOpacity: 0.4,
+  iconStyle: "original", iconTint: "text", iconHoverOriginal: false, iconHoverReveal: false, iconContrast: 0, iconStrength: 1,
+  iconGrid: 16, indicatorShape: "theme", hoverEffect: "zoom", launchBounce: true, groupStyle: "rounded",
+  groupIconEffects: "theme", folderColor: "theme", iconSize: 0, itemSpacing: 4, sectionSpacing: 18,
+  // Labels off: a preset from before them had none.
+  labelMode: "off", labelKind: "all", labelFont: "theme", labelSize: "medium", labelColor: "auto",
+  labelBackground: "none", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelWeight: "medium",
+  labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon"
+}
 var MAX_PRESETS = 6
 var MAX_PRESET_NAME = 40
 var MAX_PRESET_ID = 64
 var MAX_LOOK_STRING = 64
 
 // Exactly the look keys of a config-shaped object, scalars only, strings
-// capped. Values the config writes as a missing key are written out:
-// iconSize 0 (automatic) and cornerRadius -1 (follow the shape).
+// capped. A key that is missing or not a scalar gets its DEFAULT_LOOK value
+// (iconSize 0 is automatic, cornerRadius -1 follows the shape), so every
+// look holds every key.
 function pickLook(conf) {
   var src = (conf && typeof conf === "object") ? conf : {}
   var out = {}
@@ -837,13 +856,15 @@ function pickLook(conf) {
     else if (typeof v === "boolean") out[k] = v
     else if (typeof v === "number" && isFinite(v)) out[k] = v
   }
-  if (!Object.prototype.hasOwnProperty.call(out, "iconSize")) out.iconSize = 0
-  if (!Object.prototype.hasOwnProperty.call(out, "cornerRadius")) out.cornerRadius = -1
+  for (var j = 0; j < LOOK_KEYS.length; j++) {
+    var key = LOOK_KEYS[j]
+    if (!Object.prototype.hasOwnProperty.call(out, key)) out[key] = DEFAULT_LOOK[key]
+  }
   return out
 }
 
-// Every look key the preset holds has the same value in cur. A preset
-// saved before a key existed still matches on the keys it has.
+// Every look key the preset holds has the same value in cur. (Presets are
+// read through pickLook, so they hold every key.)
 function lookIncludes(cur, look) {
   var x = cur || {}
   var y = look || {}

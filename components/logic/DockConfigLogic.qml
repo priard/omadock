@@ -327,11 +327,13 @@ QtObject {
     return true
   }
 
-  // Keys a preset lacks (saved before they existed) keep their current value.
+  // A preset holds every look key: those it was saved without (they did not
+  // exist yet) were filled with their defaults when it was read
+  // (DockModel.pickLook), so applying it sets them back too.
   function applyPreset(root, id) {
     var i = presetIndex(root, id)
     if (i < 0) return false
-    applyLook(root, Object.assign({}, root.currentLook, root.presets[i].look))
+    applyLook(root, root.presets[i].look)
     root.applyBlurRule(false)
     root.saveConfig()
     return true
