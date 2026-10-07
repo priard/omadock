@@ -34,8 +34,13 @@ Item {
   // A plate already frames icon and name, so the name sits closer to the
   // icon and keeps room before the plate's end instead.
   readonly property bool plate: !!label.style && label.style.background === "plate"
-  readonly property real gap: label.plate ? Style.space(1) : Style.space(4)
-  readonly property real trail: label.plate ? Style.space(4) : 0
+  // An icon carries its slot padding on both sides, plus the empty margin
+  // inside its art; the name ends with about the same room, so a label
+  // keeps the spacing an icon would before the next item, a divider or the
+  // dock's edge.
+  readonly property real sidePad: (label.root ? (label.root.iconSlot - label.root.baseIconArt) / 2 : Style.space(7)) + Style.space(3)
+  readonly property real gap: label.plate ? Style.space(1) : Style.space(2)
+  readonly property real trail: label.plate ? Style.space(4) : label.sidePad
   readonly property real naturalWidth: label.shown && label.shortText !== ""
     ? Math.ceil(textWidth.advanceWidth) + label.pad * 2 + label.gap + label.trail : 0
 
