@@ -57,7 +57,8 @@ Item {
     scale: btn.magnifyScale * (area.pressed ? 0.92 : 1.0)
     transformOrigin: Item.Bottom
     iconStyle: root ? root.iconStyle : "original"
-    tint: root ? root.iconTintColor : Color.bar.text
+    // On its plate the mono/dots tint is the plate's ink.
+    tint: buttonPlate.visible ? buttonPlate.ink : (root ? root.iconTintColor : Color.bar.text)
     grid: root ? root.iconGrid : 16
     outputScale: root ? root.outputScale : 1
     contrast: root ? root.iconContrast : 0

@@ -299,7 +299,7 @@ Item {
                 source: miniCell.miniSource
                 renderSize: miniCell.miniSize * 2
                 iconStyle: root ? root.iconStyle : "original"
-                tint: root ? root.iconTintColor : Color.bar.text
+                tint: (label.plate && label.shown) ? label.ink : (root ? root.iconTintColor : Color.bar.text)
                 // Same cell size as a full icon, so the minis match it.
                 grid: root ? Math.round(root.iconGrid * miniCell.miniSize / Math.max(1, root.baseIconArt)) : 8
                 outputScale: root ? root.outputScale : 1

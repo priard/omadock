@@ -96,7 +96,7 @@ Item {
         renderSize: root ? root.maxIconArt : 64
         visible: !iconContainer.themedSymbolic
         iconStyle: root ? root.iconStyle : "original"
-        tint: root ? root.iconTintColor : Color.bar.text
+        tint: (label.plate && label.shown) ? label.ink : (root ? root.iconTintColor : Color.bar.text)
         grid: root ? root.iconGrid : 16
         outputScale: root ? root.outputScale : 1
         contrast: root ? root.iconContrast : 0
