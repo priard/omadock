@@ -113,7 +113,10 @@ Item {
   }
   property real progress: label.wantOpen ? 1 : 0
   Behavior on progress { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-  readonly property real extra: Math.round(label.progress * label.naturalWidth) + label.lead
+  // Hover labels slide out over the neighbours instead of widening the
+  // tile, so the dock never moves under the pointer.
+  readonly property bool overlay: !!label.style && label.style.hover
+  readonly property real extra: label.overlay ? 0 : Math.round(label.progress * label.naturalWidth) + label.lead
 
   // ---- width registry
   readonly property string owner: String(label)
@@ -166,9 +169,6 @@ Item {
   onHoveredChanged: {
     if (label.hovered) dwell.restart()
     else { dwell.stop(); label.dwelled = false }
-    // Hover mode: the card keeps this icon under the pointer from now on.
-    if (label.hovered && label.style && label.style.hover && label.root && label.root.dockCardComp)
-      label.root.dockCardComp.anchorLabel(label.parent)
     if (label.hovered && label.hoverEffect === "glitch" && label.progress > 0.5) label.reveal("scramble")
   }
   readonly property real glowLevel: !label.style ? 0
@@ -177,9 +177,9 @@ Item {
 
   // ---- geometry: beside the icon, the whole tile height
   x: label.mirror ? 0 : (label.iconBox ? label.iconBox.x + label.iconBox.width : 0)
-  width: label.extra - label.lead
+  width: label.overlay ? Math.round(label.progress * label.naturalWidth) : label.extra - label.lead
   height: parent ? parent.height : 0
-  visible: label.extra > 0
+  visible: label.width > 0
 
   // Plate: one surface behind icon and name. The art gets the same margin
   // on its leading side as the name on the trailing one, and the window
@@ -201,14 +201,26 @@ Item {
     // Indicators end Style.space(1) plus the lift above the slot floor.
     // With indicators beside the art (or none), the art gets the same
     // margin below as above.
-    height: (label.sideMarks ? artTop + artSize : label.height - Style.space(1) - (label.root ? label.root.indicatorLift : 0)) + vMargin - y
+    height: ((label.sideMarks || label.overlay) ? artTop + artSize : label.height - Style.space(1) - (label.root ? label.root.indicatorLift : 0)) + vMargin - y
     x: label.mirror ? edge : -iconW - label.lead + label.artMargin - hMargin
     width: label.mirror
       ? label.width + label.artMargin + artSize + hMargin + label.lead - edge
       : label.width - edge - x
     radius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
-    color: label.style ? Util.alpha(label.style.fill, 0.55 + 0.25 * label.hoverLevel) : "transparent"
+    color: label.style ? Util.alpha(label.style.fill, label.overlay ? 1 : 0.55 + 0.25 * label.hoverLevel) : "transparent"
     opacity: label.progress
+    // Lifts with the icon and the name, like one button.
+    transform: Translate { y: label.liftY }
+    // Lifted off the icons it covers.
+    layer.enabled: label.overlay && visible
+    layer.effect: MultiEffect {
+      shadowEnabled: true
+      shadowColor: "#000000"
+      shadowOpacity: 0.35
+      shadowBlur: 0.5
+      shadowVerticalOffset: 1
+      autoPaddingEnabled: true
+    }
   }
 
   // Side indicators: the tile's marks as a column in the plate's margin,
@@ -273,7 +285,16 @@ Item {
         visible: !!label.style && label.style.background === "pill"
         anchors.fill: parent
         radius: label.style ? DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio) : 0
-        color: label.style ? label.style.fill : "transparent"
+        color: label.style ? Util.alpha(label.style.fill, label.overlay ? 1 : label.style.fill.a) : "transparent"
+        layer.enabled: label.overlay && visible
+        layer.effect: MultiEffect {
+          shadowEnabled: true
+          shadowColor: "#000000"
+          shadowOpacity: 0.35
+          shadowBlur: 0.5
+          shadowVerticalOffset: 1
+          autoPaddingEnabled: true
+        }
       }
 
       // Glow: a lightly blurred copy of the name behind it, under an outline

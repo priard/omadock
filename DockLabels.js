@@ -119,22 +119,12 @@ function extrasBefore(extras, slot) {
 
 function extrasTotal(extras) { return extrasBefore(extras, Infinity) }
 
-// The card's x. A centred dock centres on its width without the hover-mode
-// label widths, so a label opening on hover grows the dock away from its
-// leading edge and the hovered icon stays under the pointer. Right-aligned
-// docks keep their right edge (their labels open to the left).
+// The card's x for its alignment. hoverExtra is width a centred dock leaves
+// out of its centring (0 when nothing should grow one way only).
 function anchoredX(parentWidth, width, inset, alignment, hoverExtra) {
   if (alignment === "left") return inset
   if (alignment === "right") return parentWidth - width - inset
   return Math.round((parentWidth - (width - (hoverExtra || 0))) / 2)
-}
-
-// The card's x while a hover-mode label is anchored: the hovered icon stays
-// at latchedIconX (screen) whatever opens or closes around it, within the
-// screen's insets.
-function anchorX(latchedIconX, iconXInCard, parentWidth, width, inset) {
-  var x = latchedIconX - iconXInCard
-  return Math.max(inset, Math.min(parentWidth - width - inset, x))
 }
 
 // Label width that sits before a slot's icon: every earlier slot's, plus

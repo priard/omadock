@@ -318,7 +318,7 @@ The settings at a glance:
 
 ### 🏷️ Name labels
 
-*Settings → Labels* puts each item's name to the right of its icon (to the left on a right-aligned dock). **Always** keeps every name out; **On hover** slides a name out after a short rest on the icon, and the dock grows away from it so the icon stays under the pointer. Moving along the dock switches names at once.
+*Settings → Labels* puts each item's name to the right of its icon (to the left on a right-aligned dock). **Always** keeps every name out; **On hover** slides a name out over the neighbouring icons after a short rest on the icon, on its own background, so the dock never moves under the pointer. Moving along the dock switches names at once.
 
 <div align="center">
   <img src="assets/preview-labels.png" width="760" alt="Name labels beside the icons on rounded plates that join icon and name into one button" />

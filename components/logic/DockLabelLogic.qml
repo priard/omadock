@@ -24,21 +24,26 @@ QtObject {
     var inkLight = root ? root.isLight(Qt.color(ink)) : true
     var weights = { regular: Font.Normal, medium: Font.Medium, bold: Font.Bold }
     var dockH = (root && root.dockCard) ? root.dockCard.height : 0
+    // Hover labels are drawn over the neighbouring icons, so they always
+    // get a background, and a denser one.
+    var hover = !!root && root.labelMode === "hover"
+    var background = root ? root.labelBackground : "none"
+    if (hover && background === "none") background = "pill"
     return {
       show: show,
-      hover: !!root && root.labelMode === "hover",
+      hover: hover,
       mirror: !!root && root.alignment === "right",
       fontPx: sizes[root ? root.labelSize : "medium"] || sizes.medium,
       weight: pixel ? Font.Normal : (weights[root ? root.labelWeight : "medium"] || Font.Medium),
       family: pixel ? "Silkscreen" : ((root && root.labelFont === "sans") ? "sans-serif" : Style.font.family),
       ink: ink,
       // Backgrounds and outlines take the side of the scale opposite the ink.
-      fill: inkLight ? Util.alpha("#141414", 0.62) : Util.alpha("#f2f2f2", 0.72),
+      fill: inkLight ? Util.alpha("#141414", hover ? 0.9 : 0.62) : Util.alpha("#f2f2f2", hover ? 0.94 : 0.72),
       halo: inkLight ? "#000000" : "#ffffff",
       // A lighter accent: themes often fill the dock from the same palette,
       // and a plain accent glow vanishes into it.
       glow: Qt.lighter(Color.accent, 1.6),
-      background: root ? root.labelBackground : "none",
+      background: background,
       shape: root ? root.labelShape : "dock",
       // Where the tile's window indicators go: beside the art on the plate, or under it.
       marks: (root && root.labelSideMarks) ? root.labelIndicators : "under",
@@ -73,11 +78,6 @@ QtObject {
     if (!root || slot < 0) return
     var next = DockLabels.withExtra(root.labelExtras, slot, owner, width, before)
     if (next !== root.labelExtras) root.labelExtras = next
-  }
-
-  // Hover-mode label widths, which the card leaves out of its centring.
-  function hoverExtra(root) {
-    return (root && root.labelMode === "hover") ? DockLabels.extrasTotal(root.labelExtras) : 0
   }
 
   function setName(root, appId, name) {

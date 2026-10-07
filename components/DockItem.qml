@@ -42,7 +42,8 @@ Item {
   // draws its icon larger.
   width: (root ? (root.iconSlot * (root.waveHover ? item.magnifyScale : 1)) : 0) + item.labelExtra
   height: root ? root.iconSlot : 0
-  z: Math.round(item.magnifyScale * 100)
+  // An open hover label is drawn over the neighbours.
+  z: Math.round(item.magnifyScale * 100) + (label.overlay && label.progress > 0.01 ? 1000 : 0)
 
   property bool isDragging: false
   property bool _dragJustEnded: false

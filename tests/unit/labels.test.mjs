@@ -206,19 +206,6 @@ test("labelRadius follows the shape, or the dock's own corner ratio", () => {
   assert.equal(L.labelRadius("dock", 20, 3), 10)
 })
 
-test("anchorX keeps the hovered icon where it was latched", () => {
-  // Icon latched at screen x 600; its centre is now 260 px into the card.
-  assert.equal(L.anchorX(600, 260, 2000, 900, 20), 340)
-  // An earlier label collapsed: the icon is 140 px further left in the card,
-  // so the card moves right by 140.
-  assert.equal(L.anchorX(600, 120, 2000, 900, 20), 480)
-  // Never past the screen edges.
-  assert.equal(L.anchorX(600, 900, 2000, 900, 20), 20)
-  assert.equal(L.anchorX(1990, 10, 2000, 900, 20), 1080)
-  // A dock wider than the room left sticks to the leading inset.
-  assert.equal(L.anchorX(600, 100, 1000, 1200, 20), 20)
-})
-
 test("homeExtra counts the part of a slot's own extra that sits before its icon", () => {
   let e = {}
   e = L.withExtra(e, 0, "a", 30, 0)

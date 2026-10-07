@@ -16,6 +16,8 @@ Item {
   property string icon: "folder"
   property real homeCenter: 0
   property int labelSlot: -1
+  // An open hover label is drawn over the neighbours.
+  z: label.overlay && label.progress > 0.01 ? 1000 : 0
   readonly property real labelExtra: label.extra
   readonly property real iconCenterX: iconSlot.x + iconSlot.width / 2
   // Position among the pinned folders; a folder dragged in from outside and

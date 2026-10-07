@@ -62,7 +62,8 @@ Item {
 
   width: (root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0) + gitem.labelExtra
   height: root ? root.iconSlot : 0
-  z: Math.round(gitem.magnifyScale * 100)
+  // An open hover label is drawn over the neighbours.
+  z: Math.round(gitem.magnifyScale * 100) + (label.overlay && label.progress > 0.01 ? 1000 : 0)
 
   readonly property bool isOpen: root ? root.activeAppGroupId === gitem.groupId : false
   readonly property bool isDropTarget: (root && (root.dropTargetGroupId === gitem.groupId || root.dropTargetAppId === gitem.groupId))

@@ -897,7 +897,6 @@ Item {
   property var labelNames: ({})           // appId -> the user's label text
   property var labelExtras: ({})          // slot -> { owner, width } (DockLabels.withExtra)
   property int labelsOpen: 0              // hover-mode labels open or closing
-  readonly property real labelHoverExtra: labelLogic.hoverExtra(root)
 
   property bool showNotificationBadges: true
   // Badge look: what the pill carries, which corner it sits on, its colour.
