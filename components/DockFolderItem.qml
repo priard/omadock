@@ -182,7 +182,6 @@ Item {
     hovered: area.containsMouse && !area.dragging
     iconBox: iconSlot
     slot: fitem.labelSlot
-    openMark: fitem.isOpen
   }
 
   // Hover tooltip — uses our own HoverTooltip so textFormat: Text.PlainText is enforced.

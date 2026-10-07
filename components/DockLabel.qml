@@ -26,8 +26,6 @@ Item {
   // window" mark.
   property Item marksFrom: null
   property bool backgroundMarks: false
-  // A folder's open-stack bar.
-  property bool openMark: false
 
   readonly property var style: root ? root.labelStyle(label.kind) : null
   readonly property string fullText: root ? root.labelName(label.appId, label.name) : label.name
@@ -43,10 +41,22 @@ Item {
   // name; the column's room is kept whether or not anything runs.
   readonly property bool sideMarks: label.plate && label.shown && label.style.marks !== "under"
   readonly property bool marksAfter: label.sideMarks && label.style.marks === "after"
-  readonly property real markRoom: Style.space(7)
-  // Before the icon, the column's room is kept ahead of the art: the tile
-  // shifts its icon by this much (constant, so nothing moves with state).
-  readonly property real lead: (label.sideMarks && !label.marksAfter) ? Math.round(label.progress * label.markRoom) : 0
+  // The column's room opens only while there is something to show, and
+  // eases in and out as an app starts or stops.
+  readonly property bool hasMarks: !!(label.marksFrom && label.marksFrom.running) || label.backgroundMarks
+  property real marksLevel: label.sideMarks && label.hasMarks ? 1 : 0
+  Behavior on marksLevel { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+  // The column keeps the plate's own padding to the plate's edge (the
+  // room a name has at the far end), a fixed width, and a gap to the art
+  // or the name.
+  readonly property real markEdge: label.pad + Style.space(1)
+  readonly property real markWidth: Style.space(4)
+  readonly property real markGap: Style.space(5)
+  readonly property real markSpan: label.markEdge + label.markWidth + label.markGap
+  // Before the icon, the room sits ahead of the art (less the margin the
+  // plate already has there): the tile shifts its icon by this much.
+  readonly property real lead: (label.sideMarks && !label.marksAfter)
+    ? Math.round(label.progress * label.marksLevel * Math.max(0, label.markSpan - label.artMargin)) : 0
   // Empty room between the icon slot's edge and the drawn art.
   readonly property real artMargin: label.root ? (label.root.iconSlot - label.root.baseIconArt) / 2 : Style.space(7)
   // The name is placed from the art's edge, not the slot's: bare text and a
@@ -57,7 +67,7 @@ Item {
   // inside its art; the name ends with about the same room, so a label
   // keeps the spacing an icon would before the next item, a divider or the
   // dock's edge. A plate is its own frame and needs only a little.
-  readonly property real trail: label.plate ? Style.space(1) + (label.marksAfter ? label.markRoom + Style.space(3) : 0) : label.artMargin + Style.space(3)
+  readonly property real trail: label.plate ? Style.space(1) + (label.marksAfter ? label.marksLevel * (label.markSpan - label.pad) : 0) : label.artMargin + Style.space(3)
   readonly property real naturalWidth: label.shown && label.shortText !== ""
     ? Math.ceil(textWidth.advanceWidth) + label.pad * 2 + label.gap + label.trail : 0
 
@@ -71,7 +81,8 @@ Item {
 
   function reshorten() {
     if (!label.style) return
-    var limit = label.style.maxWidth - label.pad * 2 - label.gap - label.trail
+    // Max width is for the name; the indicator column comes on top of it.
+    var limit = label.style.maxWidth - label.pad * 2 - label.gap - (label.plate ? Style.space(1) : label.trail)
     var r = DockLabels.shortenName(label.fullText, function(t) { probe.text = t; return probe.advanceWidth <= limit })
     label.shortText = r.text
     label.shortened = r.shortened
@@ -205,16 +216,15 @@ Item {
   Item {
     id: markColumn
     visible: label.sideMarks
-    opacity: label.progress
+    opacity: label.progress * label.marksLevel
     readonly property real artSize: label.root ? label.root.baseIconArt : 0
     readonly property real iconW: label.iconBox ? label.iconBox.width : 0
-    // Centred between the plate's edge and the art (before) or the name (after).
-    readonly property real hMargin: plateRect.hMargin
-    readonly property real centreX: label.marksAfter
-      ? (label.mirror ? (Style.space(1) + label.trail + label.pad) / 2
-                      : (label.width - label.trail - label.pad + label.width - Style.space(1)) / 2)
-      : (label.mirror ? label.width + label.artMargin + artSize + (label.lead + hMargin) / 2
-                      : -markColumn.iconW + label.artMargin - (label.lead + hMargin) / 2)
+    // At the plate's leading edge for "before", its trailing edge for
+    // "after" (swapped on a mirrored dock), markEdge in from it.
+    readonly property bool atLeft: label.marksAfter === label.mirror
+    readonly property real centreX: atLeft
+      ? plateRect.x + label.markEdge + label.markWidth / 2
+      : plateRect.x + plateRect.width - label.markEdge - label.markWidth / 2
     readonly property real centreY: label.root ? label.height - label.root.iconArtBottom - artSize / 2 : 0
     x: centreX
     y: centreY
@@ -230,15 +240,6 @@ Item {
       allMinimized: label.marksFrom ? label.marksFrom.allMinimized : false
       urgent: label.marksFrom ? label.marksFrom.urgent : false
       pulse: label.marksFrom ? label.marksFrom.pulse : 1
-    }
-
-    DockIndicator {
-      rootRef: label.rootRef
-      visible: label.openMark
-      vertical: true
-      x: -width / 2
-      y: -height / 2
-      kind: "active"
     }
 
     DockIndicator {
