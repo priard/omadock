@@ -75,6 +75,8 @@ Item {
       visible: String(source) !== "" && !iconSlot.themedSymbolic
       iconStyle: root ? root.iconStyle : "original"
       tint: root ? root.iconTintColor : Color.bar.text
+      toneInvert: ditem.isSymbolic ? 1 : -1
+      allowReveal: !ditem.isSymbolic
       grid: root ? root.iconGrid : 16
       outputScale: root ? root.outputScale : 1
       contrast: root ? root.iconContrast : 0
