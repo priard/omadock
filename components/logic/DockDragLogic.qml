@@ -13,16 +13,20 @@ QtObject {
   // The folder section of the row: from the folder divider on, or, with no
   // divider (no folders or drives yet, or nothing before them), the last
   // three quarters of a slot at the end of the row and beyond.
+  // Folders and drives sit in their own row (card.rightRowRef); px is in
+  // the outer row's coordinates.
   function inPinZone(root, card, px) {
-    if (card.folderSeparatorRef.visible) return px >= card.folderSeparatorRef.x - (root ? root.gapWidth : 0)
+    var rx = px - card.rightRowRef.x
+    if (card.folderSeparatorRef.visible) return rx >= card.folderSeparatorRef.x - (root ? root.gapWidth : 0)
     if (card.foldersRepeater.count > 0) {
       var first = card.foldersRepeater.itemAt(0)
-      if (first) return px >= first.x
+      if (first) return rx >= first.x
     }
     return px >= card.row.width - (root ? root.iconSlot * 0.75 : 0)
   }
 
   function folderInsertIndex(root, card, px) {
+    var rx = px - card.rightRowRef.x
     var n = card.foldersRepeater ? card.foldersRepeater.count : 0
     for (var i = 0; i < n; i++) {
       var it = card.foldersRepeater.itemAt(i)
@@ -30,7 +34,7 @@ QtObject {
       // The middle of the folder's tile (icon and any label), past the drop gap.
       var gap = it.gapWidth || 0
       var iconCenter = it.x + gap + (it.width - gap) / 2
-      if (px < iconCenter) return i
+      if (rx < iconCenter) return i
     }
     return n
   }
@@ -208,8 +212,9 @@ QtObject {
     var first = n > 0 ? card.foldersRepeater.itemAt(0) : null
     var last = n > 0 ? card.foldersRepeater.itemAt(n - 1) : null
     var rx = mx - card.row.x
+    var fx = rx - card.rightRowRef.x
     if (root.dragRemoveArmed || !first || !last
-        || rx < first.x - card.row.spacing || rx > last.x + last.width + card.row.spacing) {
+        || fx < first.x - card.row.spacing || fx > last.x + last.width + card.row.spacing) {
       root.dropFolderIndex = -1
       return
     }
