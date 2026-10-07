@@ -140,7 +140,11 @@ Item {
   property real revealT: 1
   property string revealStyle: "slide"
   property real seed: 0
-  readonly property string drawnText: DockLabels.revealFrame(label.shortText, label.revealStyle, label.revealT, label.seed)
+  // Always-on labels show the whole name unless an animation is running
+  // (a glitch burst); a hover label's erased state must not outlive a
+  // switch to always.
+  readonly property string drawnText: ((label.style && label.style.hover) || revealAnim.running || eraseAnim.running)
+    ? DockLabels.revealFrame(label.shortText, label.revealStyle, label.revealT, label.seed) : label.shortText
   NumberAnimation {
     id: revealAnim
     target: label; property: "revealT"; from: 0; to: 1
