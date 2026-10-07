@@ -277,6 +277,30 @@ function nameRowsKey(rows) {
   return JSON.stringify((rows || []).map(function(r) { return [r.appId, r.auto] }))
 }
 
+// A pinned folder's own name; blank goes back to the directory's name.
+// Bounded like DockModel.boundPinnedFolders (120 characters).
+var MAX_FOLDER_LABEL = 120
+function folderBaseName(path) {
+  var p = String(path == null ? "" : path).replace(/\/+$/, "")
+  if (p === "" || p === "~") return "Home"
+  var parts = p.split("/")
+  return parts[parts.length - 1] || "Folder"
+}
+
+function withFolderName(folders, path, name) {
+  var list = folders || []
+  var at = -1
+  for (var i = 0; i < list.length; i++) if (list[i] && list[i].path === path) { at = i; break }
+  if (at < 0) return list
+  var v = _chars(String(name == null ? "" : name).replace(/\s+/g, " ").trim()).slice(0, MAX_FOLDER_LABEL).join("")
+  var next = list.slice()
+  var entry = {}
+  for (var k in list[at]) entry[k] = list[at][k]
+  entry.name = v !== "" ? v : folderBaseName(path)
+  next[at] = entry
+  return next
+}
+
 function writeLabelConfig(conf, state) {
   for (var i = 0; i < LABEL_CONFIG_KEYS.length; i++) conf[LABEL_CONFIG_KEYS[i]] = state[LABEL_CONFIG_KEYS[i]]
   for (var j = 0; j < LEGACY_LABEL_KEYS.length; j++) delete conf[LEGACY_LABEL_KEYS[j]]

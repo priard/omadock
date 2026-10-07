@@ -84,12 +84,6 @@ QtObject {
     root.saveConfig()
   }
 
-  function openRename(root, appId) {
-    root.labelEditAppId = appId
-    root.settingsPanelPage = "labels"
-    root.openSettingsPanel()
-  }
-
   // Apps the Labels page lists: pinned first, then running, once each.
   function nameRows(root) {
     var rows = []

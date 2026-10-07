@@ -384,9 +384,7 @@ Item {
   readonly property int tileElements: root.hasTiles ? root.tileCount : 0
 
   function magnifyAt(homeCenter) { return styleLogic.magnifyAt(root, homeCenter) }
-
   function magnifyScaleAt(homeCenter) { return styleLogic.magnifyScaleAt(root, homeCenter) }
-
   function waveOffsetAt(homeCenter) { return styleLogic.waveOffsetAt(root, homeCenter) }
 
   // ------------------------------------------------- contrast
@@ -629,6 +627,7 @@ Item {
   property var activeAppGroupData: null
   property real activeAppGroupX: 0
   property var contextAppGroupData: null
+  property bool contextRenaming: false     // a context-menu name field has the keyboard
 
   // ------------------------------------------------- configuration options
 
@@ -896,7 +895,6 @@ Item {
   property var labelNames: ({})           // appId -> the user's label text
   property var labelExtras: ({})          // slot -> { owner, width } (DockLabels.withExtra)
   property int labelsOpen: 0              // hover-mode labels open or closing
-  property string labelEditAppId: ""      // app the Labels page should focus
   readonly property real labelHoverExtra: labelLogic.hoverExtra(root)
 
   property bool showNotificationBadges: true
@@ -1880,7 +1878,6 @@ Item {
   function labelExtraBefore(slot, ownLabel) { return labelLogic.extraBefore(root, slot, ownLabel) }
   function setLabelExtra(slot, owner, width) { labelLogic.setExtra(root, slot, owner, width) }
   function setLabelName(appId, name) { labelLogic.setName(root, appId, name) }
-  function openLabelRename(appId) { labelLogic.openRename(root, appId) }
   function labelNameRows() { return labelLogic.nameRows(root) }
 
   function withoutPointerWarp(action) { return stateLogic.withoutPointerWarp(root, action) }
@@ -2193,6 +2190,7 @@ Item {
   function isFolderPinned(path) { return folderLogic.isFolderPinned(root, path) }
 
   function toggleFolderPin(path, name, icon) { return folderLogic.toggleFolderPin(root, path, name, icon) }
+  function renamePinnedFolder(path, name) { folderLogic.renamePinnedFolder(root, path, name) }
 
   function moveAppGroup(groupId, insertIndex) { return groupsLogic.moveAppGroup(root, groupId, insertIndex) }
 
@@ -2235,7 +2233,7 @@ Item {
     color: "transparent"
     WlrLayershell.namespace: "omadock"
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: (appGroupLoader.item && appGroupLoader.item.body.isEditingName)
+    WlrLayershell.keyboardFocus: (root.contextRenaming || (appGroupLoader.item && appGroupLoader.item.body.isEditingName))
       ? WlrKeyboardFocus.OnDemand
       : WlrKeyboardFocus.None
     exclusionMode: (!root.autohide) ? ExclusionMode.Normal : ExclusionMode.Ignore

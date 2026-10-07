@@ -248,3 +248,16 @@ test("nameRowsKey changes only when the listed apps change", () => {
   assert.equal(L.nameRowsKey(a), L.nameRowsKey(b))
   assert.notEqual(L.nameRowsKey(a), L.nameRowsKey(a.slice(0, 1)))
 })
+
+test("withFolderName renames one pinned folder, blank restores the directory name", () => {
+  const list = [{ path: "/home/u/Downloads", name: "Downloads", icon: "folder-download" }, { path: "~/code/omazen", name: "omazen", icon: "folder" }]
+  const a = plain(L.withFolderName(list, "~/code/omazen", "  Zen work  "))
+  assert.equal(a[1].name, "Zen work")
+  assert.equal(a[1].icon, "folder")
+  assert.equal(a[0].name, "Downloads")
+  assert.equal(L.withFolderName(list, "~/code/omazen", "   ")[1].name, "omazen")
+  assert.equal(L.withFolderName([{ path: "/data/x/", name: "q" }], "/data/x/", "")[0].name, "x")
+  assert.equal(L.withFolderName([{ path: "~", name: "q" }], "~", "")[0].name, "Home")
+  assert.equal(L.withFolderName(list, "~/code/omazen", "x".repeat(300))[1].name.length, 120)
+  assert.equal(L.withFolderName(list, "/nope", "X"), list)
+})

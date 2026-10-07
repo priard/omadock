@@ -5,7 +5,8 @@ import "../../DockLabels.js" as DockLabels
 
 // Settings page: name labels beside the dock icons — when they show, how
 // they look, and per-app names. Instantiated by SettingsPanel, which injects
-// root (the Dock) and panel.
+// root (the Dock) and panel. Renaming also works in place from an app's
+// right-click menu (ContextRenameRow).
 
 Column {
   id: labelsPage
@@ -179,15 +180,6 @@ Column {
           ? labelsPage.root.labelNames[nameRow.modelData.appId] : ""
         width: labelsPage.width
         implicitHeight: Style.space(44)
-
-        // The context menu's "Rename Label…" lands here with this app.
-        readonly property bool wanted: !!labelsPage.root && labelsPage.visible
-          && labelsPage.root.labelEditAppId === nameRow.modelData.appId
-        onWantedChanged: if (nameRow.wanted) Qt.callLater(function() {
-          nameField.forceActiveFocus()
-          nameField.selectAll()
-          labelsPage.root.labelEditAppId = ""
-        })
 
         Text {
           anchors.left: parent.left

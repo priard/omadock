@@ -330,7 +330,7 @@ The settings at a glance:
 - **Background**: none, a `Pill` behind the name, or a `Plate` that joins icon and name like a button; **Corners**: `Dock` (follows the dock's own corners), `Pill`, `Rounded` or `Square`.
 - **Reveal**: `Slide`, `Typewriter` or `Scramble`; **Effect**: `Glow` or `Outline`. Lift, glow and glitch hover effects carry the name along with the icon.
 - **Max width**: long names drop a subtitle ("Signal - Private Messenger" → "Signal"), then trailing words, and only then end in an ellipsis. Apps without a desktop entry get a readable name instead of their class id.
-- **Names**: per-app label text; *Rename Label…* in an app's right-click menu opens it.
+- **Rename…** in the right-click menu of an app, an app group or a pinned folder edits its name in place (Enter saves, Escape cancels, blank restores the default). An app's name is its label text, also listed under **Names**; a folder's name replaces the directory name on the dock.
 
 With labels on, an item's tooltip shows only when it adds something: window previews, a starting/minimized/workspace hint, or the full name of a shortened label.
 

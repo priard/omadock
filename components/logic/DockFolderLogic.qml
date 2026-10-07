@@ -7,6 +7,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
+import "../../DockLabels.js" as DockLabels
 
 // Logic extracted from Dock.qml: stateless functions, the dock root
 // is passed in and owns all state. Bodies are verbatim.
@@ -222,6 +223,14 @@ QtObject {
     if (!found) {
       next.push({ path: path, name: name || "Folder", icon: icon || DockModel.folderIconFor(path, "") })
     }
+    root.pinnedFolders = next
+    root.saveConfig()
+  }
+
+  // A pinned folder's own name; blank restores the directory's name.
+  function renamePinnedFolder(root, path, name) {
+    var next = DockLabels.withFolderName(root.pinnedFolders, path, name)
+    if (next === root.pinnedFolders) return
     root.pinnedFolders = next
     root.saveConfig()
   }
