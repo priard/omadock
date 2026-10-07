@@ -321,8 +321,10 @@ Item {
   DockIndicatorRow {
     id: indicatorRow
     rootRef: item.rootRef
-    // On a plate with side indicators the label draws these as a column.
+    // On a plate with side indicators the label draws these as a column;
+    // under the icon on a plate they take the plate's ink.
     visible: item.running && !label.sideMarks
+    markInk: (label.plate && label.shown) ? label.ink : "transparent"
     anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)

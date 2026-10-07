@@ -27,6 +27,8 @@ Item {
   property real pulse: 1.0
   // A column instead of a row (side indicators on a label plate).
   property bool vertical: false
+  // Ink when the marks stand on a label plate (transparent: the dock's own).
+  property color markInk: "transparent"
 
   readonly property int totalWindowCount: (marks.windows && marks.windows.length > 0) ? marks.windows.length : (marks.running ? 1 : 0)
   readonly property int maxVisibleDots: marks.totalWindowCount > 5 ? 4 : Math.min(marks.totalWindowCount, 5)
@@ -65,6 +67,7 @@ Item {
 
         rootRef: marks.rootRef
         vertical: marks.vertical
+        inkOverride: marks.markInk
         kind: winActive ? "active" : (winMinimized ? "minimized" : "window")
         dense: marks.totalWindowCount >= 5
         urgent: marks.urgent
@@ -87,7 +90,7 @@ Item {
         anchors.centerIn: parent
         text: "+" + (marks.totalWindowCount - marks.maxVisibleDots)
         textFormat: Text.PlainText
-        color: marks.root ? marks.root.dockForeground : Color.bar.text
+        color: marks.markInk.a > 0 ? marks.markInk : (marks.root ? marks.root.dockForeground : Color.bar.text)
         font.family: Style.font.family
         font.pixelSize: Math.max(7, Style.font.caption - 4)
         font.bold: true

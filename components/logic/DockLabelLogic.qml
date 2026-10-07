@@ -21,7 +21,6 @@ QtObject {
     var ink = root ? root.blackOrWhiteOn(root.iconBackdropColor) : Color.bar.text
     if (root && root.labelColor === "theme") ink = root.dockForeground
     else if (root && root.labelColor === "accent") ink = Color.accent
-    var inkLight = root ? root.isLight(Qt.color(ink)) : true
     var weights = { regular: Font.Normal, medium: Font.Medium, bold: Font.Bold }
     var dockH = (root && root.dockCard) ? root.dockCard.height : 0
     // Hover labels are drawn over the neighbouring icons: always a pill,
@@ -36,9 +35,6 @@ QtObject {
       weight: pixel ? Font.Normal : (weights[root ? root.labelWeight : "medium"] || Font.Medium),
       family: pixel ? "Silkscreen" : ((root && root.labelFont === "sans") ? "sans-serif" : Style.font.family),
       ink: ink,
-      // Backgrounds and outlines take the side of the scale opposite the ink.
-      fill: inkLight ? Util.alpha("#141414", hover ? 0.9 : 0.62) : Util.alpha("#f2f2f2", hover ? 0.94 : 0.72),
-      halo: inkLight ? "#000000" : "#ffffff",
       // A lighter accent: themes often fill the dock from the same palette,
       // and a plain accent glow vanishes into it.
       glow: Qt.lighter(Color.accent, 1.6),
@@ -51,6 +47,28 @@ QtObject {
       effect: root ? root.labelEffect : "none",
       maxWidth: root ? root.labelMaxWidth : 140
     }
+  }
+
+  // What is behind card point (x, y): the gradient there (DockLabels.gradientAt,
+  // the shader's own formula), or the flat backdrop.
+  function backdropAt(root, x, y) {
+    if (!root || !root.showBackground || root.bgFill !== "gradient" || !root.dockCard) return root ? root.iconBackdropColor : Color.bar.background
+    var b = Color.bar.background
+    var cols = (root.gradientColors || []).map(function(c) { var q = Qt.color(c); return { r: q.r, g: q.g, b: q.b } })
+    var g = DockLabels.gradientAt({ r: b.r, g: b.g, b: b.b }, cols, root.gradientStrength, root.dockCard.width, root.dockCard.height, x, y)
+    return Qt.rgba(g.r, g.g, g.b, 1)
+  }
+
+  // A label's ink at card point (x, y): auto picks black or white for what
+  // is behind it there; theme and accent are the same everywhere.
+  function inkAt(root, x, y) {
+    if (root && root.labelColor === "auto") return root.blackOrWhiteOn(backdropAt(root, x, y))
+    return style(root, "app").ink
+  }
+
+  // Background for a name or plate in that ink: the other end of the scale.
+  function fillFor(root, ink, hover) {
+    return root.isLight(Qt.color(ink)) ? Util.alpha("#141414", hover ? 0.9 : 0.62) : Util.alpha("#f2f2f2", hover ? 0.94 : 0.72)
   }
 
   // The user's name wins; an app without a desktop entry (its name is its

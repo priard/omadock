@@ -26,6 +26,8 @@ Rectangle {
   // Stacked in a column (side indicators on a label plate): the accent bar
   // stands upright.
   property bool vertical: false
+  // Ink for marks standing on a label plate (transparent: the dock's own).
+  property color inkOverride: "transparent"
   // 0..1 breathing for urgent marks, driven by the item.
   property real pulse: 1.0
 
@@ -80,7 +82,7 @@ Rectangle {
   }
   readonly property color ink: urgent
     ? Color.urgent
-    : Util.alpha(root ? root.dockForeground : Color.bar.text, 0.88)
+    : Util.alpha(mark.inkOverride.a > 0 ? mark.inkOverride : (root ? root.dockForeground : Color.bar.text), 0.88)
 
   readonly property real barLength: mark.snap(Style.space(dense ? 9 : 12))
   width: kind === "active" ? (mark.vertical ? mark.barHeight : mark.barLength) : dotSize

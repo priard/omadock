@@ -259,3 +259,20 @@ test("sideMarks only for an always-on plate with side indicators", () => {
   assert.equal(L.sideMarks("always", "pill", "before"), false)
   assert.equal(L.sideMarks("off", "plate", "before"), false)
 })
+
+test("gradientAt follows the dock's gradient shader", () => {
+  const base = { r: 0.5, g: 0.5, b: 0.5 }
+  const black = { r: 0, g: 0, b: 0 }, white = { r: 1, g: 1, b: 1 }
+  // Two colours: c2 ramps in toward the top-right end, c1 toward the bottom-left.
+  const left = L.gradientAt(base, [black, white], 1, 1000, 60, 5, 55)
+  const right = L.gradientAt(base, [black, white], 1, 1000, 60, 995, 5)
+  assert.ok(left.r < 0.2, "left end is the first colour")
+  assert.ok(right.r > 0.6, "right end leans to the second colour")
+  // Strength 0 leaves the base.
+  assert.deepEqual(plain(L.gradientAt(base, [black, white], 0, 1000, 60, 500, 30)), base)
+  // Three colours stay within 0..1 and differ across the card.
+  const a = L.gradientAt(base, [black, white, { r: 1, g: 0, b: 0 }], 0.8, 1000, 60, 10, 10)
+  const b = L.gradientAt(base, [black, white, { r: 1, g: 0, b: 0 }], 0.8, 1000, 60, 990, 50)
+  for (const c of [a, b]) for (const k of ["r", "g", "b"]) assert.ok(c[k] >= 0 && c[k] <= 1)
+  assert.notDeepEqual(plain(a), plain(b))
+})
