@@ -46,6 +46,14 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 
 - none.
 
+## Not upstream yet
+
+- `feat/side-labels`: names beside the icons (always, or over the
+  neighbours on hover), readable auto colour, pill/plate backgrounds with
+  corner options, indicator column on plates, tooltips only when they add
+  something, Labels settings page, in-place Rename in the right-click
+  menu for apps, groups and folders, icon block centred vertically.
+
 ## Fork only
 
 - `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
