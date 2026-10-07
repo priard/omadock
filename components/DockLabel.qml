@@ -24,7 +24,7 @@ Item {
   // The tile's own indicator row, mirrored into a column on the plate when
   // indicators sit beside the art; and the tile's faint "running without a
   // window" mark.
-  property Item marksFrom: null
+  property var marksFrom: null
   property bool backgroundMarks: false
 
   readonly property var style: root ? root.labelStyle(label.kind) : null
