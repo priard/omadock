@@ -332,6 +332,7 @@ Item {
     markInk: (label.plate && label.shown) ? label.ink : "transparent"
     // On a plate the marks rise and bounce with it.
     transform: Translate { y: (label.plate && label.shown) ? label.rise : 0 }
+    moveKey: (label.plate && label.shown) ? label.rise : 0
     anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
     anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)

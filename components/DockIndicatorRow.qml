@@ -29,10 +29,21 @@ Item {
   property bool vertical: false
   // Ink when the marks stand on a label plate (transparent: the dock's own).
   property color markInk: "transparent"
+  // Passed to each mark (DockIndicator.moveKey).
+  property real moveKey: 0
 
   readonly property int totalWindowCount: (marks.windows && marks.windows.length > 0) ? marks.windows.length : (marks.running ? 1 : 0)
   readonly property int maxVisibleDots: marks.totalWindowCount > 5 ? 4 : Math.min(marks.totalWindowCount, 5)
-  readonly property real dynamicSpacing: marks.totalWindowCount >= 5 ? Style.space(2) : Style.space(3)
+  readonly property bool dense: marks.totalWindowCount >= 5
+  // Sizes on the output's pixel grid (see DockIndicator), so a dot and the
+  // accent bar share one centre line: each mark sits in a cell as wide
+  // across the row (or column) as the largest mark, centred by whole
+  // device pixels. Left to the Grid, the half-pixel offset rounded the bar
+  // against one side of the dots.
+  readonly property real dpr: marks.root ? marks.root.outputScale : 1
+  function snap(v) { return Math.max(1, Math.round(v * marks.dpr)) / marks.dpr }
+  readonly property real cross: Math.max(marks.snap(Style.space(marks.dense ? 4 : 5)), marks.snap(Style.space(4)))
+  readonly property real dynamicSpacing: marks.snap(marks.dense ? Style.space(2) : Style.space(3))
 
   visible: marks.running
   width: indicatorRow.width
@@ -60,18 +71,29 @@ Item {
     Repeater {
       model: marks.maxVisibleDots
       // Active window: accent bar; open window: dot; minimized: hollow dot.
-      delegate: DockIndicator {
+      delegate: Item {
+        id: cell
+        required property int index
         readonly property var winObj: (marks.windows && marks.windows.length > index) ? marks.windows[index] : null
         readonly property bool winMinimized: winObj ? marks.isWinMinimized(winObj) : marks.allMinimized
         readonly property bool winActive: !winMinimized && ((winObj && winObj.address) ? marks.isWinActive(winObj) : (index === 0 && marks.focused))
 
-        rootRef: marks.rootRef
-        vertical: marks.vertical
-        inkOverride: marks.markInk
-        kind: winActive ? "active" : (winMinimized ? "minimized" : "window")
-        dense: marks.totalWindowCount >= 5
-        urgent: marks.urgent
-        pulse: marks.pulse
+        width: marks.vertical ? marks.cross : mark.width
+        height: marks.vertical ? mark.height : marks.cross
+
+        DockIndicator {
+          id: mark
+          x: marks.vertical ? Math.round((marks.cross - width) * marks.dpr / 2) / marks.dpr : 0
+          y: marks.vertical ? 0 : Math.round((marks.cross - height) * marks.dpr / 2) / marks.dpr
+          rootRef: marks.rootRef
+          vertical: marks.vertical
+          inkOverride: marks.markInk
+          kind: cell.winActive ? "active" : (cell.winMinimized ? "minimized" : "window")
+          dense: marks.dense
+          urgent: marks.urgent
+          pulse: marks.pulse
+          moveKey: marks.moveKey
+        }
       }
     }
 

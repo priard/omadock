@@ -30,6 +30,10 @@ Rectangle {
   property color inkOverride: "transparent"
   // 0..1 breathing for urgent marks, driven by the item.
   property real pulse: 1.0
+  // Anything that moves the mark without changing its own x or y (a plate
+  // lifting it on hover, say): the owner binds it so the mark re-snaps.
+  property real moveKey: 0
+  onMoveKeyChanged: Qt.callLater(mark.resnap)
 
   // Marks are unsmoothed rectangles, so at a fractional scale (1.5) they lost
   // or gained a row of pixels depending on where they landed, and anything
@@ -79,6 +83,13 @@ Rectangle {
     function onShowBorderChanged() { Qt.callLater(mark.resnap) }
     function onIconSizeChanged() { Qt.callLater(mark.resnap) }
     function onDockVisibleChanged() { settleSnap.restart() }
+  }
+  // The card re-centres as tiles come and go or a drop gap opens.
+  Connections {
+    target: mark.root ? mark.root.dockCard : null
+    ignoreUnknownSignals: true
+    function onXChanged() { Qt.callLater(mark.resnap) }
+    function onWidthChanged() { Qt.callLater(mark.resnap) }
   }
   readonly property color ink: urgent
     ? Color.urgent

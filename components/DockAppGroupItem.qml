@@ -335,6 +335,7 @@ Item {
       markInk: (label.plate && label.shown) ? label.ink : "transparent"
       // On a plate the marks rise with it.
       transform: Translate { y: (label.plate && label.shown) ? label.rise : 0 }
+      moveKey: (label.plate && label.shown) ? label.rise : 0
       windows: gitem.groupWindows
       running: gitem.hasRunningApps || gitem.isOpen
       focused: gitem.isOpen || gitem.hasFocusedMember

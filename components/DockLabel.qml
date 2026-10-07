@@ -54,7 +54,8 @@ Item {
   // room a name has at the far end), a fixed width, and a gap to the art
   // or the name.
   readonly property real markEdge: label.pad + Style.space(1)
-  readonly property real markWidth: Style.space(4)
+  // As wide as the column's marks (DockIndicatorRow.cross).
+  readonly property real markWidth: label.root ? Math.max(1, Math.round(Style.space(5) * label.root.outputScale)) / label.root.outputScale : Style.space(5)
   readonly property real markGap: Style.space(5)
   readonly property real markSpan: label.markEdge + label.markWidth + label.markGap
   // Before the icon, the room sits ahead of the art (less the margin the
@@ -274,6 +275,7 @@ Item {
       rootRef: label.rootRef
       vertical: true
       markInk: label.ink
+      moveKey: label.rise + markColumn.x
       x: -width / 2
       y: -height / 2
       windows: label.marksFrom ? label.marksFrom.windows : []
@@ -288,6 +290,7 @@ Item {
       rootRef: label.rootRef
       visible: label.backgroundMarks && !(label.marksFrom && label.marksFrom.running)
       inkOverride: label.ink
+      moveKey: label.rise + markColumn.x
       x: -width / 2
       y: -height / 2
       kind: "background"
