@@ -318,38 +318,8 @@ Item {
   // get a section of their own instead of trailing the pinned folders.
   readonly property bool hasDriveSeparator: root.folderSlots > 0 && root.driveSlots > 0
 
-  // Minimized-window preview tiles (macOS-style section on the dock's right).
-  // In minimizeMode "all", a parked app's windows compress into ONE stacked
-  // group tile; in "active" mode every window keeps its own tile.
-  readonly property var tileModel: {
-    if (!root.showMinimizedTiles) return []
-    var list = root.minimizedWindows
-    if (root.minimizeMode !== "all") {
-      var singles = []
-      for (var s = 0; s < list.length; s++) singles.push({ type: "single", win: list[s] })
-      return singles
-    }
-    var groups = {}
-    var order = []
-    for (var i = 0; i < list.length; i++) {
-      var w = list[i]
-      var key = w.appId || w.address
-      if (!groups[key]) {
-        groups[key] = { type: "group", appId: key, title: w.title, windows: [] }
-        order.push(key)
-      }
-      groups[key].windows.push(w)
-    }
-    // Oldest member parks the group's slot in line.
-    order.sort(function (a, b) {
-      var ta = root.parkedAt[groups[a].windows[0].address] !== undefined ? root.parkedAt[groups[a].windows[0].address] : 0
-      var tb = root.parkedAt[groups[b].windows[0].address] !== undefined ? root.parkedAt[groups[b].windows[0].address] : 0
-      return ta - tb
-    })
-    var out = []
-    for (var g = 0; g < order.length; g++) out.push(groups[order[g]])
-    return out
-  }
+  // Minimized-window preview tiles (DockStyleLogic.tileModel).
+  readonly property var tileModel: styleLogic.tileModel(root)
   readonly property int tileCount: root.tileModel.length
   readonly property real tileWidth: Math.round(root.iconSlot * 1.5)
   readonly property real tileHeight: Math.round(root.iconSlot * 0.95)
