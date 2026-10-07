@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell
 import qs.Commons
 import qs.Ui
-import "../DockLabels.js" as DockLabels
 
 Item {
   id: btn
