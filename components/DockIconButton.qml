@@ -57,8 +57,8 @@ Item {
     scale: btn.magnifyScale * (area.pressed ? 0.92 : 1.0)
     transformOrigin: Item.Bottom
     iconStyle: root ? root.iconStyle : "original"
-    // On its plate the mono/dots tint is the plate's ink.
-    tint: buttonPlate.visible ? buttonPlate.ink : (root ? root.iconTintColor : Color.bar.text)
+    // On its plate the mono/dots tint is chosen against the plate.
+    tint: (root && buttonPlate.visible) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
     grid: root ? root.iconGrid : 16
     outputScale: root ? root.outputScale : 1
     contrast: root ? root.iconContrast : 0
@@ -91,8 +91,9 @@ Item {
       font.family: "omarchy"
       font.pixelSize: Math.max(1, Math.round(glyphBox.width * btn.glyphFill / inkRatio))
       // On its plate the glyph takes the labels' ink, which always reads on
-      // the plate; the theme's text colour or accent may not.
-      color: buttonPlate.visible ? buttonPlate.ink
+      // the plate; the theme's text colour or accent may not. With the mono
+      // or dots style it follows the icons' colour, chosen against the plate.
+      color: buttonPlate.visible ? ((glyphBox.shownStyle === "mono" || glyphBox.shownStyle === "dots") ? glyphBox.tint : buttonPlate.ink)
         : area.containsMouse ? Color.accent
         : ((glyphBox.shownStyle === "mono" || glyphBox.shownStyle === "dots") ? glyphBox.tint : btn.glyphColor)
       x: Math.round(glyphBox.width / 2 - (glyphMetrics.tightBoundingRect.x + glyphMetrics.tightBoundingRect.width / 2))

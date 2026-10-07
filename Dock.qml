@@ -765,6 +765,10 @@ Item {
   // (see readableOn): an accent tint over a theme gradient built from that
   // same accent would otherwise vanish into it.
   readonly property color iconTintColor: root.tintFor(root.iconTint, root.dockForeground, root.iconBackdropColor)
+  // The same choice on a label plate, kept readable against the plate
+  // rather than the dock: B/W comes out as the plate's own ink.
+  readonly property color plateIconTintColor: root.labelPlateTint ? root.tintFor(root.iconTint, root.dockForeground, labelLogic.plateBackdrop(root)) : root.iconTintColor
+  readonly property bool labelPlateTint: root.labelMode === "always" && root.labelBackground === "plate"
 
   function tintFor(mode, textColor, backdrop) { return styleLogic.tintFor(root, mode, textColor, backdrop) }
   function blackOrWhiteOn(backdrop) { return styleLogic.blackOrWhiteOn(root, backdrop) }

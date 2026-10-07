@@ -263,8 +263,8 @@ Item {
       renderSize: root ? root.maxIconArt : 64
       opacity: item.starting ? (0.4 + 0.6 * item.pulse) : 1.0
       iconStyle: root ? root.iconStyle : "original"
-      // On a label plate the mono/dots tint is the plate's ink.
-      tint: (label.plate && label.shown) ? label.ink : (root ? root.iconTintColor : Color.bar.text)
+      // On a label plate the mono/dots tint is chosen against the plate.
+      tint: (root && label.plate && label.shown) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
       grid: root ? root.iconGrid : 16
       outputScale: root ? root.outputScale : 1
       contrast: root ? root.iconContrast : 0
