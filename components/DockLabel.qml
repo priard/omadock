@@ -60,9 +60,9 @@ Item {
   // Empty room between the icon slot's edge and the drawn art.
   readonly property real artMargin: label.root ? (label.root.iconSlot - label.root.baseIconArt) / 2 : Style.space(7)
   // The name is placed from the art's edge, not the slot's: a pill sits
-  // 4 px off the art, bare text and a plate's text about 7 px. Negative
+  // 6 px off the art, bare text and a plate's text about 7 px. Negative
   // gaps reach back into the slot's empty margin.
-  readonly property real gap: (label.plate ? 0 : label.style && label.style.background === "pill" ? Style.space(4) : Style.space(5)) - label.artMargin
+  readonly property real gap: (label.plate ? 0 : label.style && label.style.background === "pill" ? Style.space(6) : Style.space(5)) - label.artMargin
   // An icon carries its slot padding on both sides, plus the empty margin
   // inside its art; the name ends with about the same room, so a label
   // keeps the spacing an icon would before the next item, a divider or the
