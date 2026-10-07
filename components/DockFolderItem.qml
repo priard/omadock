@@ -179,7 +179,7 @@ Item {
     rootRef: fitem.rootRef
     kind: "folder"
     name: fitem.name
-    hovered: area.containsMouse
+    hovered: area.containsMouse && !area.dragging
     iconBox: iconSlot
     slot: fitem.labelSlot
   }

@@ -68,7 +68,7 @@ Item {
   // the dock does not ripple; with another label still open or closing it
   // switches at once. Never during a drag.
   property bool dwelled: false
-  readonly property bool dragFree: label.root ? label.root.dragAppId === "" : true
+  readonly property bool dragFree: label.root ? !label.root.dockDragActive : true
   readonly property bool wantOpen: label.shown
     && (!label.style.hover || (label.hovered && label.dwelled && label.dragFree))
   Timer {
@@ -139,6 +139,9 @@ Item {
   onHoveredChanged: {
     if (label.hovered) dwell.restart()
     else { dwell.stop(); label.dwelled = false }
+    // Hover mode: the card keeps this icon under the pointer from now on.
+    if (label.hovered && label.style && label.style.hover && label.root && label.root.dockCardComp)
+      label.root.dockCardComp.anchorLabel(label.parent)
     if (label.hovered && label.hoverEffect === "glitch" && label.progress > 0.5) label.reveal("scramble")
   }
   readonly property real glowLevel: !label.style ? 0

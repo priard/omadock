@@ -374,7 +374,7 @@ Item {
   // Where the row starts within the card (card-local coordinates).
   readonly property real baseRowLeft: dockCard ? dockCard.contentLeftInset : Style.space(5)
 
-  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth) { return styleLogic.slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth) }
+  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) { return styleLogic.slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) }
 
   // Width the tile section consumes ahead of elements that follow it,
   // including its left divider.
@@ -1877,7 +1877,7 @@ Item {
   function labelStyle(kind) { return labelLogic.style(root, kind) }
   function labelName(appId, name) { return labelLogic.displayName(root, appId, name) }
   function labelTooltipNeeded(kind, wins, hint, shortened) { return labelLogic.tooltipNeeded(root, kind, wins, hint, shortened) }
-  function labelExtraBefore(slot) { return labelLogic.extraBefore(root, slot) }
+  function labelExtraBefore(slot, ownLabel) { return labelLogic.extraBefore(root, slot, ownLabel) }
   function setLabelExtra(slot, owner, width) { labelLogic.setExtra(root, slot, owner, width) }
   function setLabelName(appId, name) { labelLogic.setName(root, appId, name) }
   function openLabelRename(appId) { labelLogic.openRename(root, appId) }

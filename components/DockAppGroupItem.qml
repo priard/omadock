@@ -389,7 +389,7 @@ Item {
     rootRef: gitem.rootRef
     kind: "group"
     name: gitem.groupName
-    hovered: groupArea.containsMouse
+    hovered: groupArea.containsMouse && !groupArea.dragging
     iconBox: iconSlot
     slot: gitem.labelSlot
   }

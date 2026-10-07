@@ -47,7 +47,8 @@ Item {
     root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + tileIndex,
     root.appsSlots + root.pinnedSection.length + root.groupSlots,
     0,
-    (root.hasLeftTileSeparator ? root.separatorWidth : 0) + tileIndex * root.tileWidth + (root.tileWidth - root.iconSlot) / 2) : 0
+    (root.hasLeftTileSeparator ? root.separatorWidth : 0) + tileIndex * root.tileWidth + (root.tileWidth - root.iconSlot) / 2,
+    false) : 0
   property real magnifyScale: {
     if (!root) return 1
     if (root.waveHover) return root.magnifyScaleAt(tile.homeCenter)

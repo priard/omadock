@@ -88,10 +88,33 @@ Item {
   anchors.bottom: parent ? parent.bottom : undefined
   anchors.bottomMargin: (root && root.dockVisible) ? Style.gapsOut + cardWrapper.shadowRoom : -(dockCard.height + Style.gapsOut + cardWrapper.shadowRoom + 10)
 
-  // Hover-mode labels grow the dock away from its leading edge, so the icon
-  // under the pointer stays put (DockLabels.anchoredX).
-  x: parent ? DockLabels.anchoredX(parent.width, width, Style.gapsOut * 2,
+  // Hover-mode labels grow the dock away from its leading edge
+  // (DockLabels.anchoredX). Moving on to another icon while labels open and
+  // close around it, the card follows so that icon stays where it was when
+  // the pointer reached it (anchorLabel, DockLabels.anchorX); off the dock
+  // the shift eases back to the aligned position.
+  readonly property real alignedX: parent ? DockLabels.anchoredX(parent.width, width, Style.gapsOut * 2,
     root ? root.alignment : "center", root ? root.labelHoverExtra : 0) : 0
+  property Item labelAnchor: null
+  property real labelAnchorX: 0
+  function anchorLabel(tile) {
+    if (!tile || tile === cardWrapper.labelAnchor) return
+    cardWrapper.labelAnchorX = cardWrapper.x + tile.mapToItem(cardWrapper, tile.iconCenterX, 0).x
+    cardWrapper.labelAnchor = tile
+  }
+  property real labelShift: {
+    var t = cardWrapper.labelAnchor
+    if (!t || !parent || !root || root.labelMode !== "hover") return 0
+    // Geometry the icon's position depends on, so this re-runs as it moves.
+    var _deps = [t.x, t.width, t.iconCenterX, t.parent ? t.parent.x : 0, root.labelExtras, cardWrapper.width]
+    var iconX = t.mapToItem(cardWrapper, t.iconCenterX, 0).x
+    return DockLabels.anchorX(cardWrapper.labelAnchorX, iconX, parent.width, cardWrapper.width, Style.gapsOut * 2) - cardWrapper.alignedX
+  }
+  Behavior on labelShift {
+    enabled: !cardWrapper.labelAnchor
+    NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+  }
+  x: alignedX + labelShift
 
   Behavior on anchors.bottomMargin {
     NumberAnimation {
@@ -304,7 +327,10 @@ Item {
 
     HoverHandler {
       id: cardHover
-      onHoveredChanged: if (root) root.syncVisibility()
+      onHoveredChanged: {
+        if (!cardHover.hovered) cardWrapper.labelAnchor = null
+        if (root) root.syncVisibility()
+      }
     }
 
     width: row.implicitWidth + contentLeftInset + contentRightInset

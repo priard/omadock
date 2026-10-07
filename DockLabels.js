@@ -125,6 +125,21 @@ function anchoredX(parentWidth, width, inset, alignment, hoverExtra) {
   return Math.round((parentWidth - (width - (hoverExtra || 0))) / 2)
 }
 
+// The card's x while a hover-mode label is anchored: the hovered icon stays
+// at latchedIconX (screen) whatever opens or closes around it, within the
+// screen's insets.
+function anchorX(latchedIconX, iconXInCard, parentWidth, width, inset) {
+  var x = latchedIconX - iconXInCard
+  return Math.max(inset, Math.min(parentWidth - width - inset, x))
+}
+
+// Label width that sits before a slot's icon: every earlier slot's label,
+// plus the slot's own when labels open on the leading side (mirror).
+function homeExtra(extras, slot, mirror) {
+  var own = (mirror && extras && extras[slot]) ? (extras[slot].width || 0) : 0
+  return extrasBefore(extras, slot) + own
+}
+
 // Row x of the icon centre in a tile that may carry a label.
 function iconCentre(slotX, slotWidth, labelExtra, mirror) {
   var iconWidth = slotWidth - (labelExtra || 0)
@@ -226,6 +241,40 @@ function labelRadius(shape, h, dockRatio) {
   if (shape === "rounded") return h / 4
   if (shape === "square") return 0
   return Math.min(h / 2, h * Math.max(0, Number(dockRatio) || 0))
+}
+
+var LABEL_LOOK_KEYS = ["labelFont", "labelSize", "labelWeight", "labelColor",
+  "labelBackground", "labelShape", "labelReveal", "labelEffect", "labelMaxWidth"]
+
+// A preset's label look over the current one: known keys with valid
+// values win, anything else keeps its current value. (readLabelConfig
+// would treat a look without labelMode as a legacy config.)
+function pickLabelLook(look, current) {
+  var l = (look && typeof look === "object") ? look : {}
+  var c = current || {}
+  var out = {}
+  var lists = { labelFont: LABEL_FONTS, labelSize: LABEL_SIZES, labelWeight: LABEL_WEIGHTS,
+    labelColor: LABEL_COLORS, labelBackground: LABEL_BACKGROUNDS, labelShape: LABEL_SHAPES,
+    labelReveal: LABEL_REVEALS, labelEffect: LABEL_EFFECTS }
+  for (var i = 0; i < LABEL_LOOK_KEYS.length; i++) {
+    var k = LABEL_LOOK_KEYS[i]
+    var v = l[k]
+    if (k === "labelEffect" && v === "shadow") v = "outline"
+    if (k === "labelColor" && v === "high") v = "auto"
+    if (k === "labelMaxWidth") {
+      out[k] = (typeof v === "number" && isFinite(v))
+        ? Math.max(LABEL_MAX_WIDTH_MIN, Math.min(LABEL_MAX_WIDTH_MAX, Math.round(v))) : c[k]
+    } else {
+      out[k] = lists[k].indexOf(v) >= 0 ? v : c[k]
+    }
+  }
+  return out
+}
+
+// Identity of the Labels page's name rows: only the apps and their default
+// names, so window-title churn in the dock model does not rebuild them.
+function nameRowsKey(rows) {
+  return JSON.stringify((rows || []).map(function(r) { return [r.appId, r.auto] }))
 }
 
 function writeLabelConfig(conf, state) {

@@ -209,3 +209,42 @@ test("labelRadius follows the shape, or the dock's own corner ratio", () => {
   assert.equal(L.labelRadius("dock", 20, 0.2), 4)
   assert.equal(L.labelRadius("dock", 20, 3), 10)
 })
+
+test("anchorX keeps the hovered icon where it was latched", () => {
+  // Icon latched at screen x 600; its centre is now 260 px into the card.
+  assert.equal(L.anchorX(600, 260, 2000, 900, 20), 340)
+  // An earlier label collapsed: the icon is 140 px further left in the card,
+  // so the card moves right by 140.
+  assert.equal(L.anchorX(600, 120, 2000, 900, 20), 480)
+  // Never past the screen edges.
+  assert.equal(L.anchorX(600, 900, 2000, 900, 20), 20)
+  assert.equal(L.anchorX(1990, 10, 2000, 900, 20), 1080)
+  // A dock wider than the room left sticks to the leading inset.
+  assert.equal(L.anchorX(600, 100, 1000, 1200, 20), 20)
+})
+
+test("homeExtra counts a mirrored slot's own label before its icon", () => {
+  let e = {}
+  e = L.withExtra(e, 0, "a", 30)
+  e = L.withExtra(e, 1, "b", 50)
+  assert.equal(L.homeExtra(e, 1, false), 30)
+  assert.equal(L.homeExtra(e, 1, true), 80)
+  assert.equal(L.homeExtra(e, 2, true), 80)
+})
+
+test("pickLabelLook applies a preset's label look and keeps the rest", () => {
+  const cur = { labelFont: "theme", labelSize: "small", labelWeight: "medium", labelColor: "auto",
+    labelBackground: "none", labelShape: "dock", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140 }
+  const out = plain(L.pickLabelLook({ labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 999, labelShape: "blob", iconSize: 40 }, cur))
+  assert.deepEqual(out, Object.assign({}, cur, { labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 240 }))
+  // A preset saved before label looks existed changes nothing.
+  assert.deepEqual(plain(L.pickLabelLook({ iconSize: 40 }, cur)), cur)
+  assert.equal(L.pickLabelLook({ labelEffect: "shadow" }, cur).labelEffect, "outline")
+})
+
+test("nameRowsKey changes only when the listed apps change", () => {
+  const a = [{ appId: "zen", auto: "Zen Browser" }, { appId: "t3", auto: "T3 Code" }]
+  const b = [{ appId: "zen", auto: "Zen Browser", windowTitle: "x" }, { appId: "t3", auto: "T3 Code" }]
+  assert.equal(L.nameRowsKey(a), L.nameRowsKey(b))
+  assert.notEqual(L.nameRowsKey(a), L.nameRowsKey(a.slice(0, 1)))
+})

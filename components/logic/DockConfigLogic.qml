@@ -18,6 +18,9 @@ QtObject {
       ? parsed.hoverEffect
       : ((parsed && parsed.magnification === false) ? "off" : "zoom")
     root.launchBounce = parsed && parsed.launchBounce !== false
+    // Label looks (a preset's, or the file's before readLabelConfig runs).
+    var labelLook = DockLabels.pickLabelLook(parsed, root)
+    for (var llk in labelLook) root[llk] = labelLook[llk]
     root.configuredIconSize = parsed && typeof parsed.iconSize === "number" && isFinite(parsed.iconSize) && parsed.iconSize > 0
       ? Math.max(16, Math.min(96, Math.round(parsed.iconSize))) : 0
     if (parsed && (parsed.opacity === "theme" || parsed.opacity === "auto" || parsed.opacity === -1)) {

@@ -13,6 +13,20 @@ Column {
   property var panel: null
   width: parent.width
 
+  // Name rows rebuild only when the listed apps change: the dock model is
+  // replaced on every window-title event, which would drop the focus of a
+  // field being typed in.
+  property var nameRows: []
+  function refreshNameRows() {
+    var rows = labelsPage.root ? labelsPage.root.labelNameRows() : []
+    if (DockLabels.nameRowsKey(rows) !== DockLabels.nameRowsKey(labelsPage.nameRows)) labelsPage.nameRows = rows
+  }
+  Connections {
+    target: labelsPage.root
+    function onDockModelChanged() { labelsPage.refreshNameRows() }
+  }
+  Component.onCompleted: labelsPage.refreshNameRows()
+
   SectionLabel { text: "Labels" }
 
   ChoiceRow {
@@ -156,10 +170,13 @@ Column {
     SectionLabel { text: "Names"; visible: root ? root.labelKind === "all" || root.labelKind === "apps" : false }
 
     Repeater {
-      model: (root && (root.labelKind === "all" || root.labelKind === "apps")) ? root.labelNameRows() : []
+      model: (root && (root.labelKind === "all" || root.labelKind === "apps")) ? labelsPage.nameRows : []
       delegate: Item {
         id: nameRow
         required property var modelData
+        // The stored name, read live (own keys only: an app id can be any string).
+        readonly property string storedName: (labelsPage.root && Object.prototype.hasOwnProperty.call(labelsPage.root.labelNames, nameRow.modelData.appId))
+          ? labelsPage.root.labelNames[nameRow.modelData.appId] : ""
         width: labelsPage.width
         implicitHeight: Style.space(44)
 
@@ -190,12 +207,12 @@ Column {
           anchors.right: parent.right
           anchors.verticalCenter: parent.verticalCenter
           width: Style.space(220)
-          text: nameRow.modelData.name
+          text: nameRow.storedName
           placeholderText: nameRow.modelData.auto
           maximumLength: DockLabels.MAX_LABEL_NAME
           foreground: Color.menu.text
           function commit() {
-            if (text !== nameRow.modelData.name) labelsPage.root.setLabelName(nameRow.modelData.appId, text)
+            if (text !== nameRow.storedName) labelsPage.root.setLabelName(nameRow.modelData.appId, text)
           }
           Keys.onReturnPressed: { commit(); labelsPage.panel.refocus() }
           Keys.onEnterPressed: { commit(); labelsPage.panel.refocus() }

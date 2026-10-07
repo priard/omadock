@@ -61,8 +61,11 @@ QtObject {
     return DockLabels.tooltipNeeded(shown, hasWindows, hasStateHint, shortened)
   }
 
-  function extraBefore(root, slot) {
-    return root ? DockLabels.extrasBefore(root.labelExtras, slot) : 0
+  // Label width before a slot's icon; on a right-aligned dock a tile's own
+  // label sits before its icon too.
+  function extraBefore(root, slot, ownLabel) {
+    if (!root) return 0
+    return DockLabels.homeExtra(root.labelExtras, slot, ownLabel !== false && root.alignment === "right")
   }
 
   function setExtra(root, slot, owner, width) {
@@ -98,7 +101,7 @@ QtObject {
         if (!e || !e.appId || seen[e.appId]) continue
         seen[e.appId] = true
         var auto = (e.name === "" || e.name === e.appId) ? DockLabels.prettyAppId(e.appId) : e.name
-        rows.push({ appId: e.appId, name: root.labelNames[e.appId] || "", auto: auto })
+        rows.push({ appId: e.appId, auto: auto })
       }
     }
     return rows
