@@ -24,11 +24,10 @@ QtObject {
     var inkLight = root ? root.isLight(Qt.color(ink)) : true
     var weights = { regular: Font.Normal, medium: Font.Medium, bold: Font.Bold }
     var dockH = (root && root.dockCard) ? root.dockCard.height : 0
-    // Hover labels are drawn over the neighbouring icons, so they always
-    // get a background, and a denser one.
+    // Hover labels are drawn over the neighbouring icons: always a pill,
+    // and a denser one.
     var hover = !!root && root.labelMode === "hover"
-    var background = root ? root.labelBackground : "none"
-    if (hover && background === "none") background = "pill"
+    var background = hover ? "pill" : (root ? root.labelBackground : "none")
     return {
       show: show,
       hover: hover,

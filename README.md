@@ -318,7 +318,7 @@ The settings at a glance:
 
 ### 🏷️ Name labels
 
-*Settings → Labels* puts each item's name to the right of its icon (to the left on a right-aligned dock). **Always** keeps every name out; **On hover** slides a name out over the neighbouring icons after a short rest on the icon, on its own background, so the dock never moves under the pointer. Moving along the dock switches names at once.
+*Settings → Labels* puts each item's name to the right of its icon (to the left on a right-aligned dock). **Always** keeps every name out; **On hover** slides a name out over the neighbouring icons after a short rest on the icon, on an opaque pill, so the dock never moves under the pointer. Moving along the dock switches names at once.
 
 <div align="center">
   <img src="assets/preview-labels.png" width="760" alt="Name labels beside the icons on rounded plates that join icon and name into one button" />
@@ -327,7 +327,7 @@ The settings at a glance:
 - **Labels**: `Off`, `Always` or `On hover`; **Show on**: `All`, `Apps`, `App groups` or `Folders`.
 - **Font**: the theme font, `Sans`, or `Pixel` (bundled Silkscreen); **Size** and **Weight**.
 - **Color**: `Auto` (black or white for whatever is behind the icons, gradients included), `Theme` or `Accent`. A name without a background gets a faint outline so it reads on any fill.
-- **Background**: none, a `Pill` behind the name, or a `Plate` that joins icon and name like a button; **Corners**: `Dock` (follows the dock's own corners), `Pill`, `Rounded` or `Square`. With always-on plates, **Indicators** move the window marks into an upright column `Before icon` or `After name`, so every plate is the same height whatever runs (`Under icon` keeps them below).
+- **Background** (always-on labels): none, a `Pill` behind the name, or a `Plate` that joins icon and name like a button; **Corners**: `Dock` (follows the dock's own corners), `Pill`, `Rounded` or `Square`. With always-on plates, **Indicators** move the window marks into an upright column `Before icon` or `After name`, so every plate is the same height whatever runs (`Under icon` keeps them below).
 - **Reveal**: `Slide`, `Typewriter` or `Scramble`; **Effect**: `Glow` or `Outline`. Lift, glow and glitch hover effects carry the name along with the icon.
 - **Max width**: long names drop a subtitle ("Signal - Private Messenger" → "Signal"), then trailing words, and only then end in an ellipsis. Apps without a desktop entry get a readable name instead of their class id.
 - **Rename…** in the right-click menu of an app, an app group or a pinned folder edits its name in place (Enter saves, Escape cancels, blank restores the default). An app's name is its label text, also listed under **Names**; a folder's name replaces the directory name on the dock.

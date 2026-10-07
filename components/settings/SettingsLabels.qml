@@ -112,6 +112,7 @@ Column {
       key: "labelBackground"
       label: "Background"
       hint: "Plate puts icon and name on one surface, like a button."
+      visible: root ? root.labelMode !== "hover" : true
       options: [
         { value: "none", label: "None" },
         { value: "pill", label: "Pill" },
@@ -124,7 +125,7 @@ Column {
       key: "labelShape"
       label: "Corners"
       hint: "Dock follows the dock's own corners: square docks get square labels."
-      visible: root ? root.labelBackground !== "none" : true
+      visible: root ? (root.labelBackground !== "none" || root.labelMode === "hover") : true
       options: [
         { value: "dock", label: "Dock" },
         { value: "pill", label: "Pill" },
