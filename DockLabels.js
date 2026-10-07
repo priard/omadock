@@ -334,6 +334,28 @@ function gradientAt(base, cols, strength, w, h, x, y) {
   return col
 }
 
+// WCAG relative luminance and contrast of {r, g, b} colours in 0..1.
+function _lin(v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+function _lum(c) { return 0.2126 * _lin(c.r) + 0.7152 * _lin(c.g) + 0.0722 * _lin(c.b) }
+function contrast(a, b) {
+  var la = _lum(a), lb = _lum(b)
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+}
+
+// One ink for every label: of dark and light, the one whose weakest
+// contrast over the sampled backdrops is highest. Picking per label made
+// neighbours flip between light and dark plates on mid-tone gradients.
+function steadyInk(backdrops, dark, light) {
+  var list = backdrops || []
+  if (list.length === 0) return dark
+  var worstDark = Infinity, worstLight = Infinity
+  for (var i = 0; i < list.length; i++) {
+    worstDark = Math.min(worstDark, contrast(dark, list[i]))
+    worstLight = Math.min(worstLight, contrast(light, list[i]))
+  }
+  return worstDark >= worstLight ? dark : light
+}
+
 function writeLabelConfig(conf, state) {
   for (var i = 0; i < LABEL_CONFIG_KEYS.length; i++) conf[LABEL_CONFIG_KEYS[i]] = state[LABEL_CONFIG_KEYS[i]]
   for (var j = 0; j < LEGACY_LABEL_KEYS.length; j++) delete conf[LEGACY_LABEL_KEYS[j]]

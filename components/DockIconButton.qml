@@ -51,13 +51,8 @@ Item {
     readonly property real artTop: root ? btn.height - root.iconArtBottom - art : 0
     readonly property real vMargin: Style.space(4)
     property real level: area.containsMouse ? 1 : 0
-    // Ink and fill for what is behind the button (see DockLabel).
-    readonly property color ink: {
-      if (!root || !root.dockCard) return Color.bar.text
-      var _deps = [btn.x, btn.width, root.dockCard.width, root.dockCard.height]
-      var p = btn.mapToItem(root.dockCard, btn.width / 2, btn.height / 2)
-      return root.labelInkAt(p.x, p.y)
-    }
+    // The labels' ink, so the glyph reads on the plate (see DockLabel).
+    readonly property color ink: style ? style.ink : Color.bar.text
     Behavior on level { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
     visible: !!root && root.labelMode === "always" && root.labelBackground === "plate"
     x: 0

@@ -16,9 +16,9 @@ QtObject {
     var base = Style.font.caption
     // Silkscreen is drawn on an 8 px grid; other fonts follow the theme scale.
     var sizes = pixel ? { small: 8, medium: 12, large: 16 } : { small: base - 2, medium: base, large: base + 2 }
-    // Auto: black or white, whichever reads on what is actually behind the
-    // icons (a gradient's palette, a custom colour, the theme's bar).
-    var ink = root ? root.blackOrWhiteOn(root.iconBackdropColor) : Color.bar.text
+    // Auto: one black-or-white ink for every label, the one that reads best
+    // where the dock is hardest for it (steadyInk over the gradient).
+    var ink = root ? steadyInk(root) : Color.bar.text
     if (root && root.labelColor === "theme") ink = root.dockForeground
     else if (root && root.labelColor === "accent") ink = Color.accent
     var weights = { regular: Font.Normal, medium: Font.Medium, bold: Font.Bold }
@@ -59,11 +59,24 @@ QtObject {
     return Qt.rgba(g.r, g.g, g.b, 1)
   }
 
-  // A label's ink at card point (x, y): auto picks black or white for what
-  // is behind it there; theme and accent are the same everywhere.
-  function inkAt(root, x, y) {
-    if (root && root.labelColor === "auto") return root.blackOrWhiteOn(backdropAt(root, x, y))
-    return style(root, "app").ink
+  // Auto ink: of near-black and near-white (as blackOrWhiteOn), the one
+  // whose weakest contrast along the label row is highest. A gradient is
+  // sampled at nine points across the card; a flat fill is one backdrop.
+  function steadyInk(root) {
+    var dark = Qt.color("#141414"), light = Qt.color("#f2f2f2")
+    var samples = []
+    var card = root.dockCard
+    if (root.showBackground && root.bgFill === "gradient" && card && card.width > 0) {
+      for (var i = 0; i < 9; i++) {
+        var c = backdropAt(root, card.width * (i + 0.5) / 9, card.height / 2)
+        samples.push({ r: c.r, g: c.g, b: c.b })
+      }
+    } else {
+      var f = Qt.color(root.iconBackdropColor)
+      samples.push({ r: f.r, g: f.g, b: f.b })
+    }
+    var pick = DockLabels.steadyInk(samples, { r: dark.r, g: dark.g, b: dark.b }, { r: light.r, g: light.g, b: light.b })
+    return pick.r < 0.5 ? dark : light
   }
 
   // Background for a name or plate in that ink: the other end of the scale.

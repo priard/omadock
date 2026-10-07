@@ -1873,7 +1873,6 @@ Item {
 
   // Name labels: rendering policy and the per-slot width registry
   function labelStyle(kind) { return labelLogic.style(root, kind) }
-  function labelInkAt(x, y) { return labelLogic.inkAt(root, x, y) }
   function labelFillFor(ink, hover) { return labelLogic.fillFor(root, ink, hover) }
   function labelName(appId, name) { return labelLogic.displayName(root, appId, name) }
   function labelTooltipNeeded(kind, wins, hint, shortened) { return labelLogic.tooltipNeeded(root, kind, wins, hint, shortened) }

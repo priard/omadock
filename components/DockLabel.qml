@@ -32,16 +32,7 @@ Item {
   readonly property bool shown: !!label.style && label.style.show && label.fullText !== ""
   readonly property bool mirror: !!label.style && label.style.mirror
 
-  // Auto colour follows what is behind this label (a gradient changes
-  // along the dock), not the gradient's average.
-  readonly property point cardPos: {
-    var r = label.root
-    if (!r || !r.dockCard || !label.parent) return Qt.point(0, 0)
-    var _deps = [label.x, label.width, label.height, label.parent.x,
-      label.parent.parent ? label.parent.parent.x : 0, r.dockCard.width, r.dockCard.height]
-    return label.mapToItem(r.dockCard, label.width / 2, label.height / 2)
-  }
-  readonly property color ink: label.root ? label.root.labelInkAt(label.cardPos.x, label.cardPos.y) : Color.bar.text
+  readonly property color ink: label.style ? label.style.ink : Color.bar.text
   readonly property color fill: label.root ? label.root.labelFillFor(label.ink, label.overlay) : "transparent"
   readonly property color halo: (label.root && label.root.isLight(Qt.color(label.ink))) ? "#000000" : "#ffffff"
 
@@ -361,7 +352,7 @@ Item {
         styleColor: !label.style ? "transparent"
           : label.style.effect === "glow" ? Util.alpha(label.style.glow, 0.5 + 0.4 * label.glowLevel)
           : label.style.effect === "outline" ? Util.alpha(label.halo, 0.85)
-          : Util.alpha(label.halo, 0.35)
+          : Util.alpha(label.halo, 0.55)
       }
     }
   }
