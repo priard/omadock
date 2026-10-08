@@ -9,6 +9,7 @@ import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
 import "DockLabels.js" as DockLabels
+import "DockLayout.js" as DockLayout
 import "components"
 import "components/logic"
 
@@ -276,7 +277,7 @@ Item {
 
   // The card's own handler in dockCard-local coordinates.
   readonly property real pointerX: cardHover.hovered
-    ? cardHover.point.position.x
+    ? cardHover.point.position.x - dockCardComp.rowOffset
     : -1e6
 
   readonly property int appsSlots: root.showAppsButton ? 1 : 0
@@ -307,7 +308,7 @@ Item {
   // inside its own slot on each side. Squeezed against its neighbours, the
   // line made every difference in icon width show; with the full margin it
   // stood too far apart. Half sits between the two.
-  readonly property real separatorWidth: root.splitSections
+  readonly property real separatorWidth: root.placement.split
     ? Math.max(Style.space(1), root.sectionGap + 2 * root.baseRowLeft - 2 * root.gapWidth)
     : root.labelPlates ? root.plateSpacing.separator : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
   readonly property int groupSlots: (root.appGroups && DockModel.isList(root.appGroups)) ? root.appGroups.length : 0
@@ -318,38 +319,8 @@ Item {
   // get a section of their own instead of trailing the pinned folders.
   readonly property bool hasDriveSeparator: root.folderSlots > 0 && root.driveSlots > 0
 
-  // Minimized-window preview tiles (macOS-style section on the dock's right).
-  // In minimizeMode "all", a parked app's windows compress into ONE stacked
-  // group tile; in "active" mode every window keeps its own tile.
-  readonly property var tileModel: {
-    if (!root.showMinimizedTiles) return []
-    var list = root.minimizedWindows
-    if (root.minimizeMode !== "all") {
-      var singles = []
-      for (var s = 0; s < list.length; s++) singles.push({ type: "single", win: list[s] })
-      return singles
-    }
-    var groups = {}
-    var order = []
-    for (var i = 0; i < list.length; i++) {
-      var w = list[i]
-      var key = w.appId || w.address
-      if (!groups[key]) {
-        groups[key] = { type: "group", appId: key, title: w.title, windows: [] }
-        order.push(key)
-      }
-      groups[key].windows.push(w)
-    }
-    // Oldest member parks the group's slot in line.
-    order.sort(function (a, b) {
-      var ta = root.parkedAt[groups[a].windows[0].address] !== undefined ? root.parkedAt[groups[a].windows[0].address] : 0
-      var tb = root.parkedAt[groups[b].windows[0].address] !== undefined ? root.parkedAt[groups[b].windows[0].address] : 0
-      return ta - tb
-    })
-    var out = []
-    for (var g = 0; g < order.length; g++) out.push(groups[order[g]])
-    return out
-  }
+  // Minimized-window preview tiles (DockStyleLogic.tileModel).
+  readonly property var tileModel: styleLogic.tileModel(root)
   readonly property int tileCount: root.tileModel.length
   readonly property real tileWidth: Math.round(root.iconSlot * 1.5)
   readonly property real tileHeight: Math.round(root.iconSlot * 0.95)
@@ -407,6 +378,7 @@ Item {
     : root.autoRoundedRadius
   readonly property int effectiveCardRadius: {
     var h = root.cardRadiusHeight
+    if (root.placement.panel) return 0
     if (root.dockShape === "round" || root.dockShape === "pill") return Math.round(h / 2)
     if (root.dockShape === "square") return 0
     if (root.dockShape === "theme" || root.dockShape === "auto") {
@@ -458,7 +430,7 @@ Item {
   property int tooltipsAlive: 0
   readonly property real popupMaxHeight: Math.max(240,
     (root.dockScreen ? root.dockScreen.height : 1080) - Style.space(36)
-    - Style.gapsOut - (dockCardComp ? dockCardComp.dockCard.height : 0) - Style.space(16))
+    - root.edgeGap - (dockCardComp ? dockCardComp.dockCard.height : 0) - Style.space(16))
   // Live scan of parked windows for the preview-tile section. Built straight
   // off Hyprland's own toplevel list, so it cannot go stale the way cached
   // model primitives can.
@@ -633,7 +605,12 @@ Item {
 
   // ------------------------------------------------- configuration options
 
-  property string alignment: "center" // "center" | "left" | "right"
+  property string alignment: "center" // "center" | "left" | "right" | "spread"
+  property string layout: "dock"      // "dock" | "panel" (DockLayout.js)
+  // What the dock draws: { panel, split, align } (DockLayout.placement).
+  readonly property var placement: DockLayout.placement(root.layout, root.alignment, root.splitSections, root.folderSlots + root.driveSlots > 0)
+  // Margin between the card and the screen edge; the panel sits on it.
+  readonly property real edgeGap: root.placement.panel ? 0 : Style.gapsOut
 
   property bool autohide: true
   property bool intelligentAutohide: true
@@ -892,7 +869,7 @@ Item {
   property string labelShape: "dock"      // dock | pill | rounded | square
   property string labelIndicators: "before" // before | after | under (always-on plates)
   property string labelPlateHeight: "icon"  // icon | dock (always-on plates)
-  readonly property bool labelPlates: root.labelMode === "always" && root.labelBackground === "plate" && !root.splitSections
+  readonly property bool labelPlates: root.labelMode === "always" && root.labelBackground === "plate" && !root.placement.split
   readonly property var plateSpacing: labelLogic.plateSpacing(root)
   readonly property bool labelSideMarks: DockLabels.sideMarks(root.labelMode, root.labelBackground, root.labelIndicators)
   property string labelReveal: "slide"    // slide | typewriter | scramble
@@ -1046,14 +1023,14 @@ Item {
           ? (mon.height / scale)
           : (dockScreen ? dockScreen.height : 1080)
 
-        var cardW = (dockCard && dockCard.width > 0) ? (dockCard.width + Style.gapsOut * 2) : 320
-        var cardH = (dockCard && dockCard.height > 0) ? (dockCard.height + Style.gapsOut * 2) : 60
+        var cardW = (dockCard && dockCard.width > 0) ? (dockCard.width + root.edgeGap * 2) : 320
+        var cardH = (dockCard && dockCard.height > 0) ? (dockCard.height + root.edgeGap * 2) : 60
         var monX = (mon && typeof mon.x === "number") ? mon.x : 0
         var monY = (mon && typeof mon.y === "number") ? mon.y : 0
         var cardX = dockCardComp ? dockCardComp.x : ((screenLogicalW - cardW) / 2)
         var dockLeft = monX + cardX
         var dockRight = dockLeft + cardW
-        var dockTop = monY + screenLogicalH - cardH - Style.gapsOut
+        var dockTop = monY + screenLogicalH - cardH - root.edgeGap
         var dockBottom = monY + screenLogicalH
 
         var overlap = false
@@ -1199,6 +1176,7 @@ Item {
   function ejectDrive(dev, mountpoint, name) { return folderLogic.ejectDrive(root, dev, mountpoint, name) }
   function setDockAlignment(align) { return stateLogic.setDockAlignment(root, align) }
   function setDockPosition(pos) { return stateLogic.setDockPosition(root, pos) }
+  function setDockLayout(l) { return stateLogic.setDockLayout(root, l) }
 
   function openAppGroup(gdata, cx, cy) { return groupsLogic.openAppGroup(root, gdata, cx, cy) }
 
@@ -2239,7 +2217,7 @@ Item {
       ? WlrKeyboardFocus.OnDemand
       : WlrKeyboardFocus.None
     exclusionMode: (!root.autohide) ? ExclusionMode.Normal : ExclusionMode.Ignore
-    exclusiveZone: (!root.autohide) ? Math.round((dockCardComp ? dockCardComp.dockCard.height : 0) + Style.gapsOut * 2) : 0
+    exclusiveZone: (!root.autohide) ? Math.round((dockCardComp ? dockCardComp.dockCard.height : 0) + root.edgeGap * 2) : 0
     anchors {
       bottom: true
       left: true
@@ -2251,7 +2229,7 @@ Item {
     // at scale 1.5 (DockIndicator snaps to it).
     readonly property real dockHeadroom: Style.space(56)
     implicitHeight: {
-      var h = Math.ceil((dockCardComp ? dockCardComp.dockCard.height : 64) + Style.gapsOut + dockWindow.dockHeadroom)
+      var h = Math.ceil((dockCardComp ? dockCardComp.dockCard.height : 64) + root.edgeGap + dockWindow.dockHeadroom)
       return h + (h % 2)
     }
 
@@ -2283,13 +2261,15 @@ Item {
       id: revealStrip
       anchors.bottom: parent.bottom
       x: {
+        if (dockCardComp && dockCardComp.stretch) return 0
         var cardW = (dockCardComp && dockCardComp.dockCard.width > 0) ? dockCardComp.dockCard.width : Style.space(320)
         var targetW = Math.min(parent.width, cardW + Style.space(96))
-        if (root.alignment === "left") return Style.gapsOut
-        if (root.alignment === "right") return parent.width - targetW - Style.gapsOut
+        if (root.placement.align === "left") return Style.gapsOut
+        if (root.placement.align === "right") return parent.width - targetW - Style.gapsOut
         return Math.round((parent.width - targetW) / 2)
       }
       width: {
+        if (dockCardComp && dockCardComp.stretch) return parent.width
         var cardW = (dockCardComp && dockCardComp.dockCard.width > 0) ? dockCardComp.dockCard.width : Style.space(320)
         return Math.min(parent.width, cardW + Style.space(96))
       }

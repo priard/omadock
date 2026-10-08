@@ -193,3 +193,9 @@ test("settings search finds the labels page", () => {
   assert.ok(hits.some((h) => h.key === "labelReveal" && h.page === "labels"))
   assert.ok(!plain(M.SETTINGS_SEARCH).some((e) => e.key === "labelPlacement" || e.key === "showLabels"))
 })
+
+test("settings search finds the layout and both sides", () => {
+  assert.ok(M.searchSettings("panel").slice(0, 3).some((h) => h.key === "layout"))
+  assert.ok(M.searchSettings("taskbar").some((h) => h.key === "layout"))
+  assert.equal(M.searchSettings("both sides")[0].key, "alignment")
+})
