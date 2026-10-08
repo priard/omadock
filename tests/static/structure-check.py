@@ -13,6 +13,7 @@ Rules enforced:
 
 Exit codes: 0 = all rules hold; 1 = violations (printed one per line).
 """
+import os
 import re
 import sys
 from pathlib import Path
@@ -41,12 +42,24 @@ SKIP_DIRS = {".git", "node_modules", "__pycache__"}
 
 
 def source_files():
-    for path in sorted(ROOT.rglob("*")):
-        if not path.is_file() or path.suffix not in {".qml", ".js", ".mjs"}:
+    """This branch's QML and JS, walking around nested working trees.
+
+    The `experiment/` worktree lives inside the root directory, and its files
+    belong to the `experimental` branch: capping them against this branch's
+    ceilings reported the composition roots as violations whenever the check
+    ran from `main` (GitHub CI has no nested worktree, so CI never saw it).
+    A directory holding a `.git` entry is its own working tree - skip it.
+    """
+    for dirpath, dirnames, filenames in os.walk(ROOT):
+        here = Path(dirpath)
+        if here != ROOT and ".git" in dirnames + filenames:
+            dirnames[:] = []
             continue
-        if any(part in SKIP_DIRS for part in path.parts):
-            continue
-        yield path
+        dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
+        for name in sorted(filenames):
+            path = here / name
+            if path.suffix in {".qml", ".js", ".mjs"}:
+                yield path
 
 
 def main():
@@ -81,4 +94,5 @@ def main():
     return 0
 
 
-sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main())
