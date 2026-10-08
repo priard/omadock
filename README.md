@@ -623,8 +623,8 @@ omarchy plugin validate ~/Projects/omadock
 # Same manifest gate CI runs (a faithful mirror of the command above)
 ./tests/manifest-check.sh .
 
-# Test suites (Node: model, perf, hardening and DockModel behaviour; Python: script helpers, drop check, the CappedFileView read gate)
-node --check DockModel.js
+# Test suites (Node: model, perf, hardening, marks and DockModel behaviour; Python: script helpers, drop check, the QML rules and the CappedFileView read gate)
+node --check DockModel.js && node --check DockLabels.js && node --check DockLayout.js && node --check DockMarks.js && node --check DockMarkGeometry.js
 node --test tests/unit/*.test.js tests/unit/*.test.mjs
 python3 -m unittest discover -s tests/unit -p 'test_*.py'
 
@@ -701,8 +701,8 @@ Full release notes, historical changelogs, and upgrade guides across all version
 - **Presets keep their shape over time** (thanks [@priard](https://github.com/priard), #48) — a preset saved before a look key existed now carries that key's default, so applying an old preset no longer leaves the key at whatever the dock happens to hold.
 - **A parked window comes back to its workspace and its place** (thanks [@lordwotton29](https://github.com/lordwotton29), #50) — parking records the workspace's rectangles before the move and puts each window back on restore (exchanging windows when Hyprland rebuilt the tree differently), the restore target follows the **Restore on** setting (`Current workspace` or `Original workspace`), and the folder section can hold **command buttons** beside the pinned folders (`pinnedButtons`, bounded and shape-checked like the rest of the config).
 - **Dock internals** — `Dock.qml` handed its behaviour to `components/logic/` modules; app groups scroll-cycle their member preview on the wheel and focus a member on click; the manifest description leads with "Dock for Omarchy" so marketplace search finds it.
-- **Running marks sit dead-centre under their icon** — the marks row declared eight grid slots for at most five marks, and a grid reserves a gap for every slot it declares, so a lone dot or accent bar sat half a gap (2 px) left of the icon it belongs to; the row now settles its mark count in one place, which its dots, its grid and the overflow pill all read, and a live test measures the marks' ink against their icons in the four shapes they take (a lone accent bar, the bar beside a dot, the upright column on a plate, and the pill past five windows).
-- **Verification** — the live suite now runs against the desktop it is on: the layout test derives its panel/edge thresholds from the shell's own outer gap and row spacing (reported by `state`), and the place test pins the two settings it asserts. Verified on this desktop: 157 node + 92 python tests, `qmllint`, `omarchy plugin validate`, config fuzz, IPC round-trip, layout, place-restore and indicator live tests, dock smoke test, and 2–3 jiffies / 6 s idle across three steady-state windows.
+- **Running marks sit dead-centre under their icon** — the marks row declared eight grid slots for at most five marks, and a grid reserves a gap for every slot it declares, so a lone dot or accent bar sat half a gap (2 px) left of the icon it belongs to; the row now settles its mark count in one place (`DockMarks.js`), which its dots, its grid and the overflow pill all read, how big a mark is and how much room a label plate reserves have the same single owner (`DockMarkGeometry.js`), which the row, the indicators and the plate all read, and a live test measures the marks' ink against their icons in the four shapes they take (a lone accent bar, the bar beside a dot, the upright column on a plate, and the pill past five windows).
+- **Verification** — the live suite now runs against the desktop it is on: the layout test derives its panel/edge thresholds from the shell's own outer gap and row spacing (reported by `state`), and the place test pins the two settings it asserts. Verified on this desktop: 163 node + 95 python tests, `qmllint`, `omarchy plugin validate`, config fuzz, IPC round-trip, layout, place-restore and indicator live tests, dock smoke test, and 2–3 jiffies / 6 s idle across three steady-state windows.
 
 ### v4.0.3 — 2026-10-04
 
