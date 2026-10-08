@@ -108,7 +108,7 @@ Column {
   SliderRow {
     key: "itemSpacing"
     label: "Spacing"
-    hint: "Gap between icons."
+    hint: (root && root.labelPlates) ? "Gap between icons. Label plates keep it between 4 and 12 px." : "Gap between icons."
     minimum: 0
     maximum: 16
     step: 1

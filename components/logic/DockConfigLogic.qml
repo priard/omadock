@@ -1,5 +1,6 @@
 import QtQuick
 import "../../DockModel.js" as DockModel
+import "../../DockLabels.js" as DockLabels
 
 // Config and preset logic, extracted from Dock.qml so the root file only
 // declares state and wiring. Every function is stateless: the dock root is
@@ -17,6 +18,9 @@ QtObject {
       ? parsed.hoverEffect
       : ((parsed && parsed.magnification === false) ? "off" : "zoom")
     root.launchBounce = parsed && parsed.launchBounce !== false
+    // Label looks (a preset's, or the file's before readLabelConfig runs).
+    var labelLook = DockLabels.pickLabelLook(parsed, root)
+    for (var llk in labelLook) root[llk] = labelLook[llk]
     root.configuredIconSize = parsed && typeof parsed.iconSize === "number" && isFinite(parsed.iconSize) && parsed.iconSize > 0
       ? Math.max(16, Math.min(96, Math.round(parsed.iconSize))) : 0
     if (parsed && (parsed.opacity === "theme" || parsed.opacity === "auto" || parsed.opacity === -1)) {
@@ -137,12 +141,10 @@ QtObject {
     root.badgeStyle = (parsed && parsed.badgeStyle === "dot") ? "dot" : "count"
     root.badgePosition = (parsed && ["top-left", "top-right", "bottom-left", "bottom-right"].indexOf(parsed.badgePosition) >= 0) ? parsed.badgePosition : "top-right"
     root.badgeColor = (parsed && ["accent", "urgent", "neutral"].indexOf(parsed.badgeColor) >= 0) ? parsed.badgeColor : "accent"
-    // Name labels (DockLabelLogic): bounded spellings, labels off by default.
-    root.showLabels = !!(parsed && parsed.showLabels === true)
-    root.labelKind = (parsed && ["all", "apps", "groups", "folders"].indexOf(parsed.labelKind) >= 0) ? parsed.labelKind : "all"
-    root.labelPlacement = (parsed && parsed.labelPlacement === "above") ? "above" : "below"
-    root.labelSize = (parsed && ["small", "medium", "large"].indexOf(parsed.labelSize) >= 0) ? parsed.labelSize : "small"
-    root.labelContrast = (parsed && ["theme", "high", "pill"].indexOf(parsed.labelContrast) >= 0) ? parsed.labelContrast : "theme"
+    // Name labels (DockLabels.readLabelConfig), including the first release's
+    // showLabels / labelPlacement / labelContrast spellings.
+    var labels = DockLabels.readLabelConfig(parsed)
+    for (var lk in labels) root[lk] = labels[lk]
     root.urgentSound = parsed ? parsed.urgentSound !== false : true
     root.urgentSoundName = DockModel.cleanSoundName(parsed ? parsed.urgentSoundName : "bell")
     root.revealDelay = parsed && typeof parsed.revealDelay === "number"
@@ -233,11 +235,7 @@ QtObject {
     conf.badgeStyle = root.badgeStyle
     conf.badgePosition = root.badgePosition
     conf.badgeColor = root.badgeColor
-    conf.showLabels = root.showLabels
-    conf.labelKind = root.labelKind
-    conf.labelPlacement = root.labelPlacement
-    conf.labelSize = root.labelSize
-    conf.labelContrast = root.labelContrast
+    DockLabels.writeLabelConfig(conf, root)
     conf.urgentSound = root.urgentSound
     conf.urgentSoundName = root.urgentSoundName
     conf.revealDelay = root.revealDelay

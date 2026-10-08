@@ -40,9 +40,10 @@ Item {
 
   // Only the wave lets a slot grow; zoom keeps the layout still and simply
   // draws its icon larger.
-  width: root ? (root.iconSlot * (root.waveHover ? item.magnifyScale : 1)) : 0
+  width: (root ? (root.iconSlot * (root.waveHover ? item.magnifyScale : 1)) : 0) + item.labelExtra + item.dropGap
   height: root ? root.iconSlot : 0
-  z: Math.round(item.magnifyScale * 100)
+  // An open hover label is drawn over the neighbours.
+  z: Math.round(item.magnifyScale * 100) + (label.overlay && label.progress > 0.01 ? 1000 : 0)
 
   property bool isDragging: false
   property bool _dragJustEnded: false
@@ -50,6 +51,18 @@ Item {
   property real dragStartY: 0
   property real bounceY: 0
   property real homeCenter: 0
+  property int labelSlot: -1
+  readonly property real labelExtra: label.extra
+  // A drag in the dock lands before this tile: room opens ahead of it.
+  property bool dropLineHere: false
+  readonly property real dropGap: dropGapItem.width
+
+  DropGap {
+    id: dropGapItem
+    rootRef: item.rootRef
+    open: item.dropLineHere
+  }
+  readonly property real iconCenterX: iconBox.x + iconBox.width / 2
 
   Connections {
     target: root
@@ -113,12 +126,16 @@ Item {
 
   readonly property bool starting: (root && root.launchPending) ? (root.launchPending[item.appId] !== undefined) : false
 
+  // The one name the dock shows for this app, in the label, the tooltip and
+  // menus: the user's label name, else the desktop entry's, else a readable
+  // form of the class id (DockLabelLogic.displayName).
+  readonly property string displayName: root ? root.labelName(item.appId, item.name) : item.name
   readonly property string tooltipText: {
-    if (item.name === "") return ""
-    if (item.starting) return item.name + " [starting…]"
-    if (item.minimized) return item.name + " [minimized]"
-    if (item.workspaceHint !== "") return item.name + " [" + item.workspaceHint + "]"
-    return item.name
+    if (item.displayName === "") return ""
+    if (item.starting) return item.displayName + " [starting…]"
+    if (item.minimized) return item.displayName + " [minimized]"
+    if (item.workspaceHint !== "") return item.displayName + " [" + item.workspaceHint + "]"
+    return item.displayName
   }
 
   // The pulse carries both attention states: urgency, and a launch in
@@ -206,7 +223,9 @@ Item {
   // the slot is the running indicator underneath.
   Item {
     id: iconBox
-    anchors.fill: parent
+    x: item.dropGap + (label.mirror ? item.labelExtra - label.lead : label.lead)
+    width: item.width - item.labelExtra - item.dropGap
+    height: parent.height
 
     scale: area.pressed ? 0.92 : 1.0
     transformOrigin: Item.Bottom
@@ -253,7 +272,8 @@ Item {
       renderSize: root ? root.maxIconArt : 64
       opacity: item.starting ? (0.4 + 0.6 * item.pulse) : 1.0
       iconStyle: root ? root.iconStyle : "original"
-      tint: root ? root.iconTintColor : Color.bar.text
+      // On a label plate the mono/dots tint is chosen against the plate.
+      tint: (root && label.plate && label.shown) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
       grid: root ? root.iconGrid : 16
       outputScale: root ? root.outputScale : 1
       contrast: root ? root.iconContrast : 0
@@ -304,10 +324,10 @@ Item {
 
   DockIndicator {
     rootRef: item.rootRef
-    visible: item.backgroundMedia
-    anchors.horizontalCenter: parent.horizontalCenter
+    visible: item.backgroundMedia && !label.sideMarks
+    anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     kind: "background"
   }
 
@@ -315,9 +335,16 @@ Item {
   DockIndicatorRow {
     id: indicatorRow
     rootRef: item.rootRef
-    anchors.horizontalCenter: parent.horizontalCenter
+    // On a plate with side indicators the label draws these as a column;
+    // under the icon on a plate they take the plate's ink.
+    visible: item.running && !label.sideMarks
+    markInk: (label.plate && label.shown) ? label.ink : "transparent"
+    // On a plate the marks rise and bounce with it.
+    transform: Translate { y: (label.plate && label.shown) ? label.rise : 0 }
+    moveKey: (label.plate && label.shown) ? label.rise : 0
+    anchors.horizontalCenter: iconBox.horizontalCenter
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     z: 2
     windows: item.windowList
     running: item.running
@@ -330,12 +357,21 @@ Item {
   // Files dragged in from outside: opened with this app when it declares
   // their types (see Dock.beginAppDrop). Refusing the drag lets a folder
   // fall through to the dock's own drop area, which pins it.
-  // Name label (visibility/size/contrast decided in DockLabelLogic).
+  // Name beside the icon (DockLabel, policy in DockLabelLogic).
   DockLabel {
+    id: label
+    z: -1
     rootRef: item.rootRef
-    name: item.name
     kind: "app"
-    tile: item
+    appId: item.appId
+    name: item.name
+    hovered: area.containsMouse && !item.isDragging
+    iconBox: iconBox
+    tileLead: item.dropGap
+    slot: item.visible ? item.labelSlot : -1
+    marksFrom: indicatorRow
+    backgroundMarks: item.backgroundMedia
+    bounce: item.bounceY
   }
 
   DropArea {
@@ -448,8 +484,8 @@ Item {
       }
       if (mouse.button === Qt.RightButton) {
         var targetWin = root ? root.contentItemRef : null
-        var pt = targetWin ? item.mapToItem(targetWin, item.width / 2, 0) : null
-        var gx = pt ? pt.x : (item.width / 2)
+        var pt = targetWin ? item.mapToItem(targetWin, item.iconCenterX, 0) : null
+        var gx = pt ? pt.x : item.iconCenterX
         item.menuRequested(item.appId, gx, 0)
       } else if (mouse.button === Qt.MiddleButton) {
         item.newWindowRequested(item.appId)
@@ -504,6 +540,7 @@ Item {
     property bool tipShown: false
     readonly property bool wanted: area.containsMouse && !item.isDragging
       && item.name !== "" && (root ? (root.showTooltips && root.contextAppId === "") : true)
+      && (root ? root.labelTooltipNeeded("app", item.tooltipWindows.length > 0, item.tooltipText !== item.displayName, label.shortened) : true)
     readonly property bool showing: itemTooltip.tipShown && itemTooltip.wanted
 
     TooltipLife {
@@ -536,7 +573,7 @@ Item {
       active: itemTooltipLife.alive
 
       TooltipWindow {
-        target: item
+        target: iconBox
         gap: Style.space(10)
         shown: true
         level: itemTooltipLife.level
@@ -558,7 +595,7 @@ Item {
             spacing: Style.space(3)
 
             Text {
-              text: item.tooltipText !== "" ? item.tooltipText : item.name
+              text: item.tooltipText !== "" ? item.tooltipText : item.displayName
               textFormat: Text.PlainText
               color: Color.tooltip.text
               font.family: Style.font.family

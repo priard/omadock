@@ -5,6 +5,7 @@ import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
 import "../DockModel.js" as DockModel
+import "../DockLabels.js" as DockLabels
 
 BorderSurface {
   id: contextMenu
@@ -179,6 +180,19 @@ BorderSurface {
       ContextRow {
         text: (root ? root.contextFolderName : "") || "Folder"
         isHeader: true
+      }
+
+      // The folder's own name on the dock; blank goes back to the directory's.
+      ContextRenameRow {
+        dockRoot: root
+        current: root ? root.contextFolderName : ""
+        placeholder: root ? DockLabels.folderBaseName(root.contextFolderPath) : ""
+        maximumLength: DockLabels.MAX_FOLDER_LABEL
+        onCommitted: function(name) {
+          if (!root) return
+          root.renamePinnedFolder(root.contextFolderPath, name)
+          root.closeContext()
+        }
       }
 
       ContextRow {
@@ -429,6 +443,19 @@ BorderSurface {
       }
 
       MenuDivider {}
+
+      // A blank name keeps the current one: a group has no default name.
+      ContextRenameRow {
+        dockRoot: root
+        current: (root && root.contextAppGroupData) ? (root.contextAppGroupData.name || "") : ""
+        placeholder: "App Group"
+        maximumLength: 120
+        onCommitted: function(name) {
+          if (!root || !root.contextAppGroupData) return
+          if (name !== "") root.renameAppGroup(root.contextAppGroupData.id, name)
+          root.closeContext()
+        }
+      }
 
       ContextRow {
         text: "Open Group Grid"
@@ -692,6 +719,24 @@ BorderSurface {
               root.togglePin(canonicalId)
               root.closeContext()
             }
+          }
+        }
+
+        // The app's label text; blank goes back to its desktop name.
+        ContextRenameRow {
+          visible: root ? DockLabels.labelVisible(root.labelMode, root.labelKind, "app") : false
+          dockRoot: root
+          current: (root && Object.prototype.hasOwnProperty.call(root.labelNames, root.contextAppId)) ? root.labelNames[root.contextAppId] : ""
+          placeholder: {
+            if (!root) return ""
+            var e = DockModel.entryFor(root.appRows, root.contextAppId)
+            return (e && e.name && e.name !== root.contextAppId) ? e.name : DockLabels.prettyAppId(root.contextAppId)
+          }
+          maximumLength: DockLabels.MAX_LABEL_NAME
+          onCommitted: function(name) {
+            if (!root) return
+            root.setLabelName(root.contextAppId, name)
+            root.closeContext()
           }
         }
 

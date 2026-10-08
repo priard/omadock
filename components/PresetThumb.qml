@@ -28,7 +28,10 @@ Item {
   readonly property real bodyHeight: Math.round(thumb.height * 0.48)
   // Scale from the real dock (about 60 px tall) to this drawing.
   readonly property real k: thumb.bodyHeight / 60
-  readonly property real iconSize: Math.round(thumb.bodyHeight * 0.56)
+  // With labels, icons shrink so the six icons and their names still fit.
+  readonly property real iconSize: thumb.labels
+    ? Math.min(Math.round(thumb.bodyHeight * 0.56), Math.floor((thumb.width - Style.space(40)) / 6 / 2.1))
+    : Math.round(thumb.bodyHeight * 0.56)
   readonly property real iconGap: Style.space(3)
   readonly property real sectionPad: Style.space(4)
   // Indicator dot and its gap under the icon; icon, gap and dot are centred
@@ -45,6 +48,11 @@ Item {
   readonly property color fillColor: bg === "none" ? Qt.rgba(0, 0, 0, 0.25)
     : (bg.charAt(0) === "#" ? safeColor(bg, Color.bar.background) : Color.bar.background)
   readonly property color fg: bg.charAt(0) === "#" && dock ? dock.blackOrWhiteOn(fillColor) : Color.bar.text
+  // Always-on labels (the mode is the dock's, the look the preset's): a
+  // short text bar beside each icon, on a pill or a plate as the preset says.
+  readonly property bool labels: !!dock && dock.labelMode === "always"
+  readonly property string labelBg: String(val("labelBackground", "none"))
+  readonly property real labelW: thumb.labels ? Math.round(thumb.iconSize * 1.1) : 0
   readonly property bool showBg: val("showBackground", true) !== false
   readonly property bool gradient: showBg && val("bgFill", "solid") === "gradient"
   readonly property var gradientColors: {
@@ -207,7 +215,7 @@ Item {
         }
 
         Item {
-          width: sectionSlot.modelData.count * thumb.iconSize
+          width: sectionSlot.modelData.count * (thumb.iconSize + thumb.labelW)
             + (sectionSlot.modelData.count - 1) * thumb.iconGap + 2 * thumb.sectionPad
           height: parent.height
 
@@ -232,14 +240,35 @@ Item {
                 // colour as far as Strength leaves it.
                 readonly property color ink: thumb.mix(own, thumb.tint, thumb.effectStrength)
                 readonly property bool gridStyle: thumb.iconStyle === "pixel" || thumb.iconStyle === "dots"
-                width: thumb.iconSize
+                width: thumb.iconSize + thumb.labelW
                 height: thumb.iconSize
+
+                // Label: plate behind icon and text, or a pill behind the text.
+                Rectangle {
+                  visible: thumb.labels && thumb.labelBg !== "none"
+                  x: thumb.labelBg === "plate" ? -Style.space(2) : thumb.iconSize + Style.space(1)
+                  width: thumb.labelBg === "plate" ? parent.width + Style.space(3) : thumb.labelW - Style.space(1)
+                  y: thumb.labelBg === "plate" ? -Style.space(2) : parent.height * 0.3
+                  height: thumb.labelBg === "plate" ? parent.height + Style.space(4) : parent.height * 0.4
+                  radius: Math.min(height / 2, Style.space(3))
+                  color: Util.alpha(thumb.fg, 0.18)
+                }
+                Rectangle {
+                  visible: thumb.labels
+                  x: thumb.iconSize + Style.space(3)
+                  width: thumb.labelW - Style.space(5)
+                  anchors.verticalCenter: parent.verticalCenter
+                  height: Math.max(2, Style.space(2))
+                  radius: height / 2
+                  color: Util.alpha(thumb.fg, 0.75)
+                }
 
                 // Original: a coloured tile. Mono: a faint tile that Contrast
                 // fades out. Pixel and dot matrix draw their own cells.
                 Rectangle {
                   visible: !iconItem.gridStyle
-                  anchors.fill: parent
+                  width: thumb.iconSize
+                  height: thumb.iconSize
                   radius: width * 0.25
                   color: thumb.iconStyle === "mono"
                     ? Util.alpha(iconItem.ink, 0.22 * (1 - thumb.effectContrast))
@@ -249,10 +278,11 @@ Item {
                 Grid {
                   id: cells
                   readonly property int g: iconItem.gridStyle ? thumb.cellsAcross : 5
-                  readonly property real inset: iconItem.gridStyle ? 0 : parent.width * 0.2
-                  readonly property real gap: thumb.iconStyle === "dots" ? parent.width / g * 0.22 : 0
-                  readonly property real cell: (parent.width - 2 * inset - (g - 1) * gap) / g
-                  anchors.centerIn: parent
+                  readonly property real inset: iconItem.gridStyle ? 0 : thumb.iconSize * 0.2
+                  readonly property real gap: thumb.iconStyle === "dots" ? thumb.iconSize / g * 0.22 : 0
+                  readonly property real cell: (thumb.iconSize - 2 * inset - (g - 1) * gap) / g
+                  x: (thumb.iconSize - width) / 2
+                  anchors.verticalCenter: parent.verticalCenter
                   columns: g
                   spacing: gap
                   Repeater {
@@ -278,7 +308,7 @@ Item {
                 }
                 Rectangle {
                   visible: parent.n === 0 || parent.n === 3
-                  anchors.horizontalCenter: parent.horizontalCenter
+                  x: (thumb.iconSize - width) / 2
                   anchors.top: parent.bottom
                   anchors.topMargin: thumb.dotGap
                   width: thumb.dotSize

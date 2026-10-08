@@ -27,7 +27,9 @@ QtObject {
     for (var i = 0; i < n; i++) {
       var it = card.foldersRepeater.itemAt(i)
       if (!it) continue
-      var iconCenter = it.x + it.width - (root ? root.iconSlot : it.width) / 2
+      // The middle of the folder's tile (icon and any label), past the drop gap.
+      var gap = it.gapWidth || 0
+      var iconCenter = it.x + gap + (it.width - gap) / 2
       if (px < iconCenter) return i
     }
     return n
@@ -71,14 +73,19 @@ QtObject {
       var slot = card.pinnedRowRepeater.itemAt(i)
       var it = slot ? slot.item : null
       if (!it) continue
-      var centre = slot.x + slot.width / 2
+      // A tile with a label (or a plate) is one button: its whole width is
+      // the target, with the edges left for placing before or after it.
+      // Past the room an open drop gap adds before it.
+      var lead = it.dropGap || 0
+      var centre = slot.x + lead + (slot.width - lead) / 2
+      var span = slot.width - lead
       if (slot.isGroup) {
-        if (Math.abs(rx - centre) < slot.width * 0.45) {
+        if (Math.abs(rx - centre) < span * 0.45) {
           root.dropTargetGroupId = it.groupId
           root.dropRowIndex = -1
           return
         }
-      } else if (it.appId !== aid && Math.abs(rx - centre) < slot.width * 0.38) {
+      } else if (it.appId !== aid && Math.abs(rx - centre) < span * 0.38) {
         root.dropTargetAppId = it.appId
         root.dropRowIndex = -1
         return
@@ -96,7 +103,6 @@ QtObject {
     }
     root.dropRowIndex = idx
     if (idx < 0) return
-    root.dropIndicatorX = cardWrapper.rowIndicatorX(idx)
     // The first app at or after the drop, for moves that work in pin order.
     for (var j = idx; j < n; j++) {
       var s2 = card.pinnedRowRepeater.itemAt(j)
@@ -118,13 +124,6 @@ QtObject {
       if (slot && rx < slot.x + slot.width / 2) return i
     }
     return n
-  }
-
-  function rowIndicatorX(root, card, idx) {
-    var n = card.pinnedRowRepeater.count
-    if (idx < n) return card.row.x + card.pinnedRowRepeater.itemAt(idx).x - card.row.spacing / 2 - Style.space(1)
-    var last = card.pinnedRowRepeater.itemAt(n - 1)
-    return card.row.x + last.x + last.width + card.row.spacing / 2 - Style.space(1)
   }
 
   function handleDragDropped(root, card, aid) {
@@ -216,9 +215,6 @@ QtObject {
     }
     var idx = cardWrapper.folderInsertIndex(rx)
     root.dropFolderIndex = idx
-    root.dropIndicatorX = idx < n
-      ? card.row.x + card.foldersRepeater.itemAt(idx).x - card.row.spacing / 2 - Style.space(1)
-      : card.row.x + last.x + last.width + card.row.spacing / 2 - Style.space(1)
   }
 
   function handleFolderDragDropped(root, card, path) {

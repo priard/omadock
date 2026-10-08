@@ -5,6 +5,7 @@ import qs.Commons
 import qs.Ui
 import "logic"
 import "../DockModel.js" as DockModel
+import "../DockLabels.js" as DockLabels
 
 Item {
   id: cardWrapper
@@ -25,6 +26,12 @@ Item {
   property alias drivesRepeater: drivesRepeater
   property alias runningRepeater: runningRepeater
   readonly property bool folderDropActive: folderDrop.containsDrag
+  // Where the accent line of a drag inside the dock stands (DropGap): the
+  // insert index in the pinned run or among the folders, -1 for none.
+  readonly property int dropLineRow: (root && !root.dragRemoveArmed && root.dropRowIndex >= 0
+    && ((root.dragAppId !== "" && root.dropTargetAppId === "" && root.dropTargetGroupId === "") || root.dragGroupId !== ""))
+    ? root.dropRowIndex : -1
+  readonly property int dropLineFolder: (root && !root.dragRemoveArmed && root.dragFolderPath !== "") ? root.dropFolderIndex : -1
 
   DockDragLogic { id: dragLogic }
 
@@ -40,7 +47,6 @@ Item {
 
   function rowInsertIndex(rx) { return dragLogic.rowInsertIndex(root, cardWrapper, rx) }
 
-  function rowIndicatorX(idx) { return dragLogic.rowIndicatorX(root, cardWrapper, idx) }
 
   function handleDragDropped(aid) { return dragLogic.handleDragDropped(root, cardWrapper, aid) }
 
@@ -89,9 +95,9 @@ Item {
 
   x: {
     if (!parent) return 0
-    if (root && root.alignment === "left") return Style.gapsOut * 2
-    if (root && root.alignment === "right") return parent.width - width - (Style.gapsOut * 2)
-    return Math.round((parent.width - width) / 2)
+    var ax = DockLabels.anchoredX(parent.width, width, Style.gapsOut * 2, root ? root.alignment : "center", 0)
+    // Plate rows start on a whole device pixel, so every plate edge does.
+    return (root && root.labelPlates) ? DockLabels.gridRound(ax, root.outputScale) : ax
   }
 
   Behavior on anchors.bottomMargin {
@@ -289,6 +295,9 @@ Item {
       : Border.flat("transparent", dockCard.effectiveBorderWidth)
     radius: root ? root.cardRadius(height) : Style.cornerRadius
     padding: dockCard.devSnap(Style.space(5))
+    // With label plates the sides match the gap between plates.
+    leftPadding: (root && root.labelPlates) ? root.plateSpacing.edge : padding
+    rightPadding: (root && root.labelPlates) ? root.plateSpacing.edge : padding
     z: 1
 
     Repeater {
@@ -309,10 +318,7 @@ Item {
     }
 
     width: row.implicitWidth + contentLeftInset + contentRightInset
-    // While name labels show, the card grows by their band (DockLabelLogic),
-    // and the window height, autohide mask and exclusive zone all follow
-    // this height already. The row itself never changes size.
-    height: row.implicitHeight + contentTopInset + contentBottomInset + (root ? root.labelBandHeight() : 0)
+    height: row.implicitHeight + contentTopInset + contentBottomInset
 
     // Click on card padding dismisses context menu
     MouseArea {
@@ -346,11 +352,11 @@ Item {
     Row {
       id: row
       z: 1
-      spacing: Style.space(root ? root.itemSpacing : 4)
+      // Plate rows keep the spacing on the device-pixel grid.
+      spacing: root ? root.gapWidth : Style.space(4)
 
       x: dockCard.contentLeftInset
-      // Above-placement puts the label band over the icons' side of the card.
-      y: dockCard.contentTopInset + ((root && root.labelPlacement === "above") ? root.labelBandHeight() : 0)
+      y: dockCard.contentTopInset
 
       DockIconButton {
         rootRef: cardWrapper.rootRef
@@ -402,6 +408,8 @@ Item {
               windows: entry.windows || 0
               windowList: entry.windowList || []
               homeCenter: rowSlot.home
+              labelSlot: root ? root.appsSlots + rowSlot.index : -1
+              dropLineHere: cardWrapper.dropLineRow === rowSlot.index
               pinned: true
               active: root ? (entry.appId === root.activeId) : false
               onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -427,6 +435,8 @@ Item {
               rootRef: cardWrapper.rootRef
               groupData: rowSlot.modelData.group || ({})
               homeCenter: rowSlot.home
+              labelSlot: root ? root.appsSlots + rowSlot.index : -1
+              dropLineHere: cardWrapper.dropLineRow === rowSlot.index
               onOpenGroupRequested: function(gdata, cx, cy) {
                 if (root) root.openAppGroup(gdata, cx, cy)
               }
@@ -439,6 +449,13 @@ Item {
             }
           }
         }
+      }
+
+      // A drag landing after the last pinned app or group.
+      DropGap {
+        rootRef: cardWrapper.rootRef
+        spacer: true
+        open: cardWrapper.dropLineRow >= 0 && cardWrapper.dropLineRow === pinnedRowRepeater.count
       }
 
       // Divider between pinned apps and the minimized-tile section.
@@ -529,6 +546,7 @@ Item {
             root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx,
             (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0),
             root.tilesFixedWidth) : 0
+          labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx : -1
           pinned: false
           active: root ? (entry.appId === root.activeId) : false
           onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -587,11 +605,13 @@ Item {
           name: modelData.name || "Folder"
           icon: modelData.icon || DockModel.folderIconFor(modelData.path, "")
           slotIndex: index
+          dropLineHere: cardWrapper.dropLineFolder === index
           homeCenter: root ? root.slotHomeCenter(
             root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + index,
             root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index,
             (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0),
             root.tilesFixedWidth) : 0
+          labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index : -1
           onOpenStackRequested: function(fpath, fname, cx, cy) {
             if (root) root.openFolderStack(fpath, fname, cx)
           }
@@ -602,6 +622,13 @@ Item {
           onDragMoved: function(fpath, mx, my) { cardWrapper.handleFolderDragMoved(fpath, mx, my) }
           onDragDropped: function(fpath) { cardWrapper.handleFolderDragDropped(fpath) }
         }
+      }
+
+      // A folder dragged after the last one.
+      DropGap {
+        rootRef: cardWrapper.rootRef
+        spacer: true
+        open: cardWrapper.dropLineFolder >= 0 && cardWrapper.dropLineFolder === foldersRepeater.count
       }
 
       // Drop gap after the last pinned folder (see DockFolderItem.gapWidth).
@@ -672,21 +699,6 @@ Item {
       border.color: Color.accent
       border.width: 2
       z: 20
-    }
-
-    // Drop indicator line
-    Rectangle {
-      visible: root ? (!root.dragRemoveArmed
-        && ((root.dragAppId !== "" && root.dropTargetAppId === "" && root.dropTargetGroupId === "" && root.dropRowIndex >= 0)
-          || (root.dragFolderPath !== "" && root.dropFolderIndex >= 0)
-          || (root.dragGroupId !== "" && root.dropRowIndex >= 0))) : false
-      x: root ? root.dropIndicatorX : 0
-      anchors.verticalCenter: row.verticalCenter
-      width: Style.space(2)
-      height: root ? (root.iconSize + Style.space(4)) : 36
-      radius: 1
-      color: Color.accent
-      z: 10
     }
 
     // Over the pointer while a drag is pulled off the dock: letting go here

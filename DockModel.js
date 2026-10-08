@@ -817,7 +817,9 @@ var DEFAULT_LOOK = {
   dividerGeometry: "classic", dividerHeight: 70, dividerStyle: "simple", dividerWidth: 1.5, dividerOpacity: 0.4,
   iconStyle: "original", iconTint: "text", iconHoverOriginal: false, iconHoverReveal: false, iconContrast: 0, iconStrength: 1,
   iconGrid: 16, indicatorShape: "theme", hoverEffect: "zoom", launchBounce: true, groupStyle: "rounded",
-  groupIconEffects: "theme", folderColor: "theme", iconSize: 0, itemSpacing: 4, sectionSpacing: 18
+  groupIconEffects: "theme", folderColor: "theme", iconSize: 0, itemSpacing: 4, sectionSpacing: 18, labelMode: "off",
+  labelKind: "all", labelFont: "theme", labelSize: "medium", labelColor: "auto", labelBackground: "none", labelReveal: "slide",
+  labelEffect: "none", labelMaxWidth: 140, labelWeight: "medium", labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon"
 }
 var LOOK_KEYS = Object.keys(DEFAULT_LOOK)
 var MAX_PRESETS = 6

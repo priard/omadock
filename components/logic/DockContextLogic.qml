@@ -286,7 +286,7 @@ QtObject {
     var deskEntry = DockModel.entryFor(root.appRows, appId)
     if (!deskEntry && typeof DesktopEntries !== "undefined" && DesktopEntries)
       deskEntry = DesktopEntries.heuristicLookup(appId) || DesktopEntries.byId(appId)
-    root.contextTileName = (deskEntry && deskEntry.name) ? deskEntry.name : appId
+    root.contextTileName = root.labelName(appId, (deskEntry && deskEntry.name) ? deskEntry.name : appId)
     var canonicalId = (deskEntry && deskEntry.id) ? deskEntry.id : appId
     root.contextTilePinned = DockModel.isPinned(root.pinnedIds, appId)
       || (canonicalId !== appId && DockModel.isPinned(root.pinnedIds, canonicalId))

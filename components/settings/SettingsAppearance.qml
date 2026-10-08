@@ -343,69 +343,6 @@ Column {
     onPicked: function(v) { root.setOption("indicatorShape", v) }
   }
 
-  SectionLabel { text: "Labels" }
-
-  SwitchRow {
-    key: "showLabels"
-    label: "Name labels"
-    hint: "Show each app, app group and folder name on the dock, in a band over the icon row."
-    checked: root ? root.showLabels : false
-    onToggled: root.setOption("showLabels", !root.showLabels)
-  }
-
-  Column {
-    width: parent.width
-    visible: root ? root.showLabels : false
-
-    ChoiceRow {
-      key: "labelKind"
-      label: "Label targets"
-      hint: "Which dock items carry a name label."
-      options: [
-        { value: "all", label: "All" },
-        { value: "apps", label: "Apps" },
-        { value: "groups", label: "App groups" },
-        { value: "folders", label: "Folders" }
-      ]
-      value: root ? root.labelKind : "all"
-      onPicked: function(v) { root.setOption("labelKind", v) }
-    }
-    ChoiceRow {
-      key: "labelPlacement"
-      label: "Label placement"
-      hint: "Below the icons sits at the dock's edge, above keeps the indicators' side clear."
-      options: [
-        { value: "below", label: "Below" },
-        { value: "above", label: "Above" }
-      ]
-      value: root ? root.labelPlacement : "below"
-      onPicked: function(v) { root.setOption("labelPlacement", v) }
-    }
-    ChoiceRow {
-      key: "labelSize"
-      label: "Label size"
-      options: [
-        { value: "small", label: "Small" },
-        { value: "medium", label: "Medium" },
-        { value: "large", label: "Large" }
-      ]
-      value: root ? root.labelSize : "small"
-      onPicked: function(v) { root.setOption("labelSize", v) }
-    }
-    ChoiceRow {
-      key: "labelContrast"
-      label: "Label contrast"
-      hint: "Theme follows the dock's text colour, High picks black or white for the dock background, Pill puts the name on a small rounded plate."
-      options: [
-        { value: "theme", label: "Theme" },
-        { value: "high", label: "High" },
-        { value: "pill", label: "Pill" }
-      ]
-      value: root ? root.labelContrast : "theme"
-      onPicked: function(v) { root.setOption("labelContrast", v) }
-    }
-  }
-
   SectionLabel { text: "Dock Items" }
 
   SwitchRow {
