@@ -4,9 +4,12 @@ import qs.Ui
 
 // A context-menu row that turns into a name field in place: Enter saves,
 // Escape cancels, and a blank name restores the default (the owner decides
-// what that is; committed() gets ""). While the field is open the dock's
+// what that is; committed() gets ""). While the field is showing the dock's
 // layer surface takes the keyboard (dockRoot.contextRenaming), the same way
-// the app group popup does for its title.
+// the app group popup does for its title. The flag follows what is on screen:
+// the page above this row switches with View As / Sort By (and the row itself
+// is hidden over a command button), which hides the editor without ending the
+// edit - a field that is not showing must not hold the keyboard.
 Item {
   id: rename
 
@@ -19,13 +22,20 @@ Item {
   property bool editing: false
   signal committed(string name)
 
+  // The row's own gate (a command button hides it) and the page's, which
+  // hides while a sub-page is open. The popup's focus grab reads this: the
+  // keyboard is held only while the editor is actually on screen, and comes
+  // back with it when the page returns.
+  readonly property bool rowVisible: rename.visible && (!rename.parent || rename.parent.visible)
+  readonly property bool holdsKeyboard: rename.editing && rename.rowVisible
+  onHoldsKeyboardChanged: if (rename.dockRoot) rename.dockRoot.contextRenaming = rename.holdsKeyboard
+
   width: row.width
   implicitWidth: row.implicitWidth
   height: row.height
 
   function startEdit() {
     rename.editing = true
-    if (rename.dockRoot) rename.dockRoot.contextRenaming = true
     input.text = rename.current
     Qt.callLater(function() {
       input.forceActiveFocus()
@@ -36,7 +46,6 @@ Item {
   function finish(save) {
     if (!rename.editing) return
     rename.editing = false
-    if (rename.dockRoot) rename.dockRoot.contextRenaming = false
     if (save) rename.committed(input.text.trim())
   }
 
