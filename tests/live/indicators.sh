@@ -187,6 +187,10 @@ if lx + x <= cursor.get("x", -1) < lx + x + w and ly + y <= cursor.get("y", -1) 
 # against the item's leading edge, the label plate hanging off it: the marks are
 # the ink that starts in the strip there, and the icon art, the plate and the
 # label text all begin to the right of it.
+# Both windows are measurement slack on purpose, not values read from
+# DockMarkGeometry.js: how big the marks are is what is being checked, so a
+# window that grew with the policy would follow a wrong size instead of
+# catching it. They only have to hold the marks and stop short of the art.
 band = max(10, round(8 * scale))
 strip = max(12, round(14 * scale))
 cx, cy, cw, ch = (x, y + h - band, w, band) if mode == "row" else (x, y, w, h)

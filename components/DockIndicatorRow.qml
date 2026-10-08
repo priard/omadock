@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 import "../DockMarks.js" as DockMarks
+import "../DockMarkGeometry.js" as DockMarkGeometry
 
 // The running-indicator row under a dock item: one mark per window — the
 // focused window's mark turns into the accent bar, parked windows become
@@ -41,15 +42,16 @@ Item {
   // one shifted a lone dot (or accent bar) half a gap - 2 px - off the icon's
   // centre.
   readonly property var plan: DockMarks.plan(marks.windows, marks.running)
-  // Sizes on the output's pixel grid (see DockIndicator), so a dot and the
-  // accent bar share one centre line: each mark sits in a cell as wide
-  // across the row (or column) as the largest mark, centred by whole
-  // device pixels. Left to the Grid, the half-pixel offset rounded the bar
-  // against one side of the dots.
+  // How big a mark is, and how much room it needs, is policy too: it comes from
+  // DockMarkGeometry.js, which the unit tests pin, and the indicators and the
+  // label's reserved room read the same module. Sizes are on the output's pixel
+  // grid (see DockIndicator), so a dot and the accent bar share one centre
+  // line: each mark sits in a cell as wide across the row (or column) as the
+  // largest mark, centred by whole device pixels. Left to the Grid, the
+  // half-pixel offset rounded the bar against one side of the dots.
   readonly property real dpr: marks.root ? marks.root.outputScale : 1
-  function snap(v) { return Math.max(1, Math.round(v * marks.dpr)) / marks.dpr }
-  readonly property real cross: Math.max(marks.snap(Style.space((marks.plan.dense || marks.vertical) ? 4 : 5)), marks.snap(Style.space(4)))
-  readonly property real dynamicSpacing: marks.snap(marks.plan.dense ? Style.space(2) : Style.space(3))
+  readonly property real cross: DockMarkGeometry.cell(Style.space, marks.dpr, marks.plan.dense, marks.vertical)
+  readonly property real dynamicSpacing: DockMarkGeometry.rowSpacing(Style.space, marks.dpr, marks.plan.dense)
 
   visible: marks.running
   width: indicatorRow.width
@@ -106,8 +108,8 @@ Item {
     // Compact overflow pill when 6+ windows are open
     Rectangle {
       visible: marks.plan.overflow
-      width: overflowText.implicitWidth + Style.space(4)
-      height: Style.space(5)
+      width: DockMarkGeometry.pillWidth(Style.space, overflowText.implicitWidth)
+      height: DockMarkGeometry.pillHeight(Style.space)
       radius: (marks.root && marks.root.indicatorSquare) ? 0 : height / 2
       color: Util.alpha(marks.root ? marks.root.dockForeground : Color.bar.text, 0.20)
       border.color: Qt.rgba(0, 0, 0, 0.35)

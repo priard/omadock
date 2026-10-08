@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import "../DockMarkGeometry.js" as DockMarkGeometry
 
 // One running/open indicator under a dock item. Every item (apps, groups,
 // folder stacks, drives) draws its marks through this, so they share sizes,
@@ -44,15 +45,15 @@ Rectangle {
   // The output's pixel grid (see Dock.outputScale), not Qt's render ratio.
   readonly property real dpr: root ? root.outputScale : 1
   onDprChanged: Qt.callLater(mark.resnap)
-  function snap(v) { return Math.max(1, Math.round(v * mark.dpr)) / mark.dpr }
   readonly property real hairline: Math.max(1, Math.floor(mark.dpr)) / mark.dpr
-  // The dock's classic mark dimensions: 5px dots (4px dense) and a 12x4
-  // accent bar (9x4 dense). A fix for fractional-scale borders once thinned
-  // every mark a pixel with it; the sizes here are the look the dock ships.
-  // A side column on a plate uses the dense dot: beside a name the full
-  // dot read heavy.
-  readonly property real dotSize: Math.max(2 / mark.dpr, mark.snap(Style.space((dense || vertical) ? 4 : 5)))
-  readonly property real barHeight: Math.max(2 / mark.dpr, mark.snap(Style.space(4)))
+  // Where the mark's dimensions come from: DockMarkGeometry.js, which the unit
+  // tests pin - the dock's classic 5px dots (4px dense), 12x4 accent bars (9x4
+  // dense) and the room a plate reserves, all in one place. A fix for
+  // fractional-scale borders once thinned every mark a pixel with it; the sizes
+  // there are the look the dock ships, and a side column on a plate uses the
+  // dense dot: beside a name the full dot read heavy.
+  readonly property real dotSize: DockMarkGeometry.dot(Style.space, mark.dpr, dense, vertical)
+  readonly property real barHeight: DockMarkGeometry.barThickness(Style.space, mark.dpr)
 
   property real snapX: 0
   property real snapY: 0
@@ -97,7 +98,7 @@ Rectangle {
     ? Color.urgent
     : Util.alpha(mark.inkOverride.a > 0 ? mark.inkOverride : (root ? root.dockForeground : Color.bar.text), 0.88)
 
-  readonly property real barLength: mark.snap(Style.space(dense ? 9 : 12))
+  readonly property real barLength: DockMarkGeometry.barLength(Style.space, mark.dpr, dense)
   // Upright in a column the bar is as thick as a dot: the 1.5 output is
   // drawn at 2x and scaled down, so a thinner bar could not be centred on
   // the dots and leaned a pixel to one side.
