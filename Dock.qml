@@ -2386,6 +2386,9 @@ Item {
         open: true
         centerX: root.contextX
         body: contextMenuComp
+        // A name field in the menu (ContextRenameRow) needs the keyboard on
+        // this popup's surface, not on the dock's layer surface.
+        holdsKeyboard: root.contextRenaming
         onDismissed: root.closeContext()
 
         DockContextMenu {
