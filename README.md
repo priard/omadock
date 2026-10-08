@@ -14,7 +14,7 @@
 <br />
 
 <p align="center">
-  <img src="assets/preview-desktop.png" alt="omadock on an Omarchy desktop (Ristretto theme) with app, group and folder name labels below the icons" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
+  <img src="assets/preview-desktop.png" alt="omadock on an Omarchy desktop (Ristretto theme): pinned apps, app groups and folder stacks, each with the running marks under its icon" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
 </p>
 
 <p align="center">
@@ -68,7 +68,7 @@ To everyone who donates — really, truly, thank you. 🙏
 Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live window previews, app groups, multi-monitor docks. Beautiful, opinionated, and strictly **0.00% background CPU**.
 
 <p align="center">
-  <img src="assets/screenshot-transparent.png" alt="omadock close-up: name labels under the icons over the translucent gradient dock" width="700" />
+  <img src="assets/screenshot-transparent.png" alt="omadock close-up: the running marks - a dot per open window, the focused app's accent bar - dead-centre under their icons on the translucent gradient dock" width="700" />
 </p>
 
 ### ✨ Key Highlights
