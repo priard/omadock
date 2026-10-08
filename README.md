@@ -14,7 +14,7 @@
 <br />
 
 <p align="center">
-  <img src="assets/preview-desktop.png" alt="omadock on an Omarchy desktop (Ristretto theme): pinned apps, app groups and folder stacks, each with the running marks under its icon" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
+  <img src="assets/preview-desktop.png" alt="omadock on an Omarchy desktop (Ristretto theme) with a btop system monitor maximized above the dock: pinned apps, app groups and folder stacks along the bottom edge, the running marks under the icons whose apps have open windows" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
 </p>
 
 <p align="center">
@@ -636,6 +636,12 @@ python3 -m unittest discover -s tests/unit -p 'test_*.py'
 # neither break the dock nor get rewritten by a save
 ./tests/live/ipc-roundtrip.sh
 ./tests/live/config-fuzz.sh
+
+# Live check of the running marks: opens its own windows with a terminal
+# emulator this desktop is not already showing, screenshots the dock and
+# measures the ink of each mark against the centre line of the icon it
+# belongs to (exit 2: nothing was measured - a skip is never a pass)
+./tests/live/indicators.sh
 
 # Live check of the tiling-place bookkeeping: opens its own windows on a
 # borrowed workspace, parks and restores them through the dock's IPC, and
