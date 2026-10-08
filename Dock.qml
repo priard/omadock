@@ -137,6 +137,7 @@ Item {
   property bool _syncingShared: false
   onMinimizedOriginsChanged: root.pushSharedState()
   onParkedAtChanged: root.pushSharedState()
+  onParkSlotsChanged: root.pushSharedState()
   onSharedStateChanged: root.pullSharedState()
 
   function pushSharedState() { return screenLogic.pushSharedState(root) }
@@ -146,6 +147,7 @@ Item {
     target: root.sharedState
     function onMinimizedOriginsChanged() { root.pullSharedState() }
     function onParkedAtChanged() { root.pullSharedState() }
+    function onParkSlotsChanged() { root.pullSharedState() }
   }
 
   function screenForName(name) { return screenLogic.screenForName(root, name) }
@@ -182,6 +184,8 @@ Item {
   // ------------------------------------------------------ logic modules
   DockConfigLogic { id: configLogic }
   DockWindowLogic { id: windowLogic }
+  DockSlotLogic { id: slotLogic }
+  DockEventLogic { id: eventLogic }
   DockGroupsLogic { id: groupsLogic }
   DockNotifLogic { id: notifLogic }
   DockFolderLogic { id: folderLogic }
@@ -312,7 +316,9 @@ Item {
     ? Math.max(Style.space(1), root.sectionGap + 2 * root.baseRowLeft - 2 * root.gapWidth)
     : root.labelPlates ? root.plateSpacing.separator : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
   readonly property int groupSlots: (root.appGroups && DockModel.isList(root.appGroups)) ? root.appGroups.length : 0
-  readonly property int folderSlots: root.pinnedFolders ? root.pinnedFolders.length : 0
+  // Folders and buttons share the folder section, so they share its slot count.
+  readonly property int folderSlots: (root.pinnedFolders ? root.pinnedFolders.length : 0)
+    + (root.pinnedButtons ? root.pinnedButtons.length : 0)
   readonly property int driveSlots: (root.showRemovableDrives && root.mountedDrives) ? root.mountedDrives.length : 0
   readonly property bool hasFolderSeparator: (root.folderSlots > 0 || root.driveSlots > 0) && (root.pinnedSection.length > 0 || root.groupSlots > 0 || root.hasTiles || root.visibleRunningCount > 0)
   // Folders | drives divider: drives come and go with the hardware, so they
@@ -459,7 +465,13 @@ Item {
   // running, and foldered (grouped) apps alike.
   readonly property var notifEntries: root.pinnedSection.concat(root.runningSection).concat(root.groupedSection || [])
 
-  function refreshDock() { return stateLogic.refreshDock(root) }
+  // Model rebuilds are also the moment to re-read window rectangles: the tiling
+  // places are computed from them.
+  function refreshDock() {
+    var result = stateLogic.refreshDock(root)
+    root.refreshClientRects()
+    return result
+  }
   function rescanMinimizedWindows() { return stateLogic.rescanMinimizedWindows(root) }
 
   readonly property string activeId: {
@@ -501,6 +513,16 @@ Item {
   readonly property string minimizedWorkspace: "special:minimized"
   property var minimizedOrigins: ({})
   property var parkedAt: ({})
+  // Where each parked window sat, and the queue of windows still waiting to win
+  // their place back. See DockSlotLogic.
+  property var parkSlots: ({})
+  property var pendingSlotFixes: []
+  // The window the user restored: focus returns to it once the layout work is
+  // done, since reshaping has to focus other windows on the way.
+  property string slotFixFocus: ""
+  // Window rectangles, read from Hyprland in one shot: Quickshell's per-toplevel
+  // ipc object only carries at/size for windows that existed at shell start.
+  property var clientRects: ({})
   property var urgentMap: ({})
   // Counts urgency events (Hyprland urgent, app notifications) so items can
   // animate again for a new event while they are already marked urgent.
@@ -558,6 +580,9 @@ Item {
 
   // ------------------------------------------------- folder stacks state
 
+  // Pinned slots that run a command instead of opening a folder (Buttons.js):
+  // rendered by the folder section, after the folders.
+  property var pinnedButtons: []
   property var pinnedFolders: []
   property string activeStackFolder: ""
   property string activeStackName: ""
@@ -852,6 +877,11 @@ Item {
   property real dividerWidth: 1.5
   property real dividerOpacity: 0.4
   property string minimizeMode: "active"
+  // Where a parked window comes back: the workspace you are on, or the one it was
+  // parked from. Windows puts a minimized window back where it was.
+  property string restoreWorkspace: "current"
+  // Whether the window also wins back the place it held in the tiling layout.
+  property bool restoreSlot: false
   // Hyprland warps the pointer into a window it activates (and on workspace
   // switches); keepPointer suppresses that for focus changes the dock makes.
   property bool keepPointer: true
@@ -956,12 +986,42 @@ Item {
     }
   }
 
+  readonly property var modelSettleTimerRef: modelSettleTimer
+
   // One-shot deferred rebuild after park/restore moves and configreloaded events,
   // so model state is re-frozen once Hyprland handles settle.
   Timer {
     id: modelSettleTimer
     interval: 300
     onTriggered: root.refreshDock()
+  }
+
+  // Slot recovery after a restore: Hyprland inserts the window home as a new tiling
+  // window, so its recorded place is won back with a swap. The layout settles a beat
+  // after the move, hence the delay; every window gets a few passes, then the dock
+  // stops rather than fight a layout the user changed while the window was parked.
+  Timer {
+    id: slotFixTimer
+    interval: 180
+    repeat: false
+    onTriggered: {
+      if (slotLogic.runSlotFixes(root) > 0) restart()
+    }
+  }
+
+  // One shot, on demand: window rectangles for the tiling-place bookkeeping.
+  Process {
+    id: clientRectsProc
+    command: ["hyprctl", "-j", "clients"]
+    running: false
+    stdout: StdioCollector {
+      onStreamFinished: root.clientRects = slotLogic.parseClientRects(root, this.text)
+    }
+  }
+
+  function refreshClientRects() {
+    if (clientRectsProc.running) return
+    clientRectsProc.running = true
   }
 
   Timer {
@@ -1425,118 +1485,7 @@ Item {
       debounceOverlapTimer.restart()
     }
     function onRawEvent(event) {
-      var n = String((event && event.name) || "")
-      // A config reload drops runtime layer rules along with the Lua state.
-      if (n === "configreloaded") {
-        root.applyBlurRule(true)
-        modelSettleTimer.restart()
-        terminalHostDebounce.restart()
-        return
-      }
-      if (n === "windowtitlev2") {
-        terminalHostDebounce.restart()
-        modelTimer.restart()
-      }
-      if (n === "openwindow") {
-        var rawAddr = String(event.data || "").split(",")[0].trim()
-        if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
-        var fullAddr = "0x" + rawAddr
-        var rec = DockModel.copyMap(root.recentOpenedWindowAddrs)
-        rec[fullAddr] = Date.now() + 3000
-        root.recentOpenedWindowAddrs = rec
-      }
-      if (n === "urgent") {
-        var rawAddr = String(event.data || "").trim()
-        if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
-        var fullAddr = "0x" + rawAddr
-
-        // Foreground Suppression Rule: If the window is ALREADY active and focused, suppress urgency
-        var activeAddr = root.windowAddress(root.hyprToplevelFor(ToplevelManager.activeToplevel))
-        if (activeAddr && activeAddr === fullAddr) {
-          return
-        }
-
-        // Suppress initial window startup / opening urgency
-        if (root.recentOpenedWindowAddrs && root.recentOpenedWindowAddrs[fullAddr] && Date.now() < root.recentOpenedWindowAddrs[fullAddr]) {
-          return
-        }
-
-        // Suppress if the app was recently launched by user
-        var allEntries = root.pinnedSection.concat(root.runningSection)
-        for (var e = 0; e < allEntries.length; e++) {
-          var entry = allEntries[e]
-          if (!entry) continue
-          if (root.launchPending && root.launchPending[entry.id]) {
-            var wins = entry.windowList || []
-            for (var w = 0; w < wins.length; w++) {
-              var wa = wins[w] ? wins[w].address : ""
-              if (wa && wa === fullAddr) {
-                return
-              }
-            }
-          }
-        }
-
-        var map = DockModel.copyMap(root.urgentMap)
-        map[fullAddr] = true
-        root.urgentMap = map
-        root.urgentEventKeys = [fullAddr]
-        root.urgentEvents++
-        modelTimer.restart()
-      }
-      if (n === "activewindow" || n === "activewindowv2") {
-        var eventData = String(event.data || "").trim()
-        if (n === "activewindowv2") {
-          var rawAddr = eventData.split(",")[0].trim()
-          if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
-          var fullAddr = "0x" + rawAddr
-          root.clearUrgentApp("", fullAddr)
-        } else {
-          var winClass = eventData.split(",")[0].trim()
-          if (winClass) root.clearUrgentApp(winClass, "")
-        }
-      }
-      if (n === "closewindow") {
-        var rawAddr = String(event.data || "").trim()
-        if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
-        var fullAddr = "0x" + rawAddr
-        if (root.recentOpenedWindowAddrs && root.recentOpenedWindowAddrs[fullAddr]) {
-          var rec = DockModel.copyMap(root.recentOpenedWindowAddrs)
-          delete rec[fullAddr]
-          root.recentOpenedWindowAddrs = rec
-        }
-        if (root.urgentMap) {
-          root.clearUrgentApp("", fullAddr)
-        }
-        if (root.minimizedOrigins && root.minimizedOrigins[fullAddr]) {
-          var mo = DockModel.copyMap(root.minimizedOrigins)
-          delete mo[fullAddr]
-          root.minimizedOrigins = mo
-        }
-      }
-      if (n === "workspace" || n === "workspacev2" || n === "openwindow" || n === "closewindow" ||
-          n === "movewindow" || n === "movewindowv2" || n === "resizewindow" || n === "resizewindowv2" ||
-          n === "activewindow" || n === "activewindowv2" || n === "changefloatingmode" ||
-          n === "fullscreen" || n === "pin" || n === "focusedmon" ||
-          n === "monitoradded" || n === "monitorremoved") {
-        debounceOverlapTimer.restart()
-      }
-      if (n === "openwindow" || n === "closewindow" || n === "urgent"
-          || n === "movewindow" || n === "movewindowv2"
-          || n === "workspace" || n === "workspacev2") modelTimer.restart()
-      // Per-monitor docks: a workspace (and its windows) changing monitor
-      // moves those apps to another dock.
-      if (root.filterByMonitor && (n === "moveworkspace" || n === "moveworkspacev2"
-          || n === "monitoradded" || n === "monitorremoved")) modelSettleTimer.restart()
-      // Park/restore moves get one deferred rebuild: the 40ms rebuild can land
-      // inside Quickshell's Hyprland-handle lag and freeze pre-move state into
-      // the model (stale isMinimized kept the running icon beside its tile).
-      // Event-driven single shot — self-terminating, no polling.
-      if (n === "movewindow" || n === "movewindowv2") modelSettleTimer.restart()
-      // configreloaded fires Quickshell refreshWorkspaces + refreshToplevels
-      // which destroy/recreate workspace objects and re-assign toplevel handles.
-      // Settle handles cleanly via modelSettleTimer.
-      if (n === "configreloaded") modelSettleTimer.restart()
+      return eventLogic.handleRawEvent(root, event)
     }
   }
 
@@ -1896,9 +1845,35 @@ Item {
 
   function standingWindowAfterPark(exceptAddress) { return windowLogic.standingWindowAfterPark(root, exceptAddress) }
 
-  function handoffFocusAfterPark(address, focusNext, appId) { return windowLogic.handoffFocusAfterPark(root, address, focusNext, appId) }
+  function handoffFocusAfterPark(address, focusNext, appId) { return slotLogic.handoffFocusAfterPark(root, address, focusNext, appId) }
 
   function restoreWindow(targetRef, appId, useOrigin) { return windowLogic.restoreWindow(root, targetRef, appId, useOrigin) }
+
+  // One specific parked window: the minimize toggle's second press restores exactly
+  // what its first press parked. Always the recorded origin.
+  function restoreAddress(address) { return windowLogic.restoreWindow(root, address, "", true) }
+
+  // Recorded-place bookkeeping: the queue and the timer stay here, the logic in
+  // DockSlotLogic (which other modules reach through these).
+  function scheduleSlotFix(address) {
+    if (!address) return
+    var queue = root.pendingSlotFixes ? root.pendingSlotFixes.slice() : []
+    if (queue.indexOf(address) < 0) queue.push(address)
+    root.pendingSlotFixes = queue
+    root.slotFixFocus = address
+    slotFixTimer.restart()
+  }
+
+  function dropParkSlot(address) {
+    if (!address || !root.parkSlots || root.parkSlots[address] === undefined) return
+    var slots = {}
+    for (var k in root.parkSlots) slots[k] = root.parkSlots[k]
+    delete slots[address]
+    root.parkSlots = slots
+    root.pendingSlotFixes = (root.pendingSlotFixes || []).filter(function(a) { return a !== address })
+  }
+
+  function recordParkSlot(address, origin) { return slotLogic.recordParkSlot(root, address, origin) }
 
   function restoreWindowBatch(wins, primaryAddress, useOrigin) { return windowLogic.restoreWindowBatch(root, wins, primaryAddress, useOrigin) }
 
@@ -1964,6 +1939,13 @@ Item {
 
     function restoreLast(): void {
       root.restoreLast()
+    }
+
+    // Brings back one specific parked window: the minimize/restore key toggle
+    // restores exactly the window its first press parked. Always the recorded
+    // origin, so the window also wins its tiling place back.
+    function restoreAddress(address: string): void {
+      root.restoreAddress(address)
     }
 
     function toggleVisibility(): void {

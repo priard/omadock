@@ -637,12 +637,14 @@ Item {
 
         Repeater {
           id: foldersRepeater
-          model: root ? root.pinnedFolders : []
+          // Folders first, then the command buttons: the section keeps one row.
+          model: root ? root.pinnedFolders.concat(root.pinnedButtons) : []
           delegate: DockFolderItem {
             rootRef: cardWrapper.rootRef
-            folderPath: modelData.path
+            folderPath: modelData.path || ""
+            command: modelData.command || ""
             name: modelData.name || "Folder"
-            icon: modelData.icon || DockModel.folderIconFor(modelData.path, "")
+            icon: modelData.icon || (modelData.command ? "application-x-executable" : DockModel.folderIconFor(modelData.path, ""))
             slotIndex: index
             dropLineHere: cardWrapper.dropLineFolder === index
             homeCenter: root ? root.slotHomeCenter(

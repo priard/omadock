@@ -78,6 +78,7 @@ Item {
     id: sharedStore
     property var minimizedOrigins: ({})
     property var parkedAt: ({})
+    property var parkSlots: ({})
   }
 
   Variants {
@@ -145,6 +146,12 @@ Item {
       var d = host.orderedDocks()
       for (var i = 0; i < d.length; i++)
         if (d[i].restoreLast()) return
+    }
+
+    function restoreAddress(address: string): void {
+      var d = host.orderedDocks()
+      for (var i = 0; i < d.length; i++)
+        if (d[i].restoreAddress(address)) return
     }
 
     function toggleVisibility(): void {

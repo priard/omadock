@@ -637,6 +637,11 @@ python3 -m unittest discover -s tests/unit -p 'test_*.py'
 ./tests/live/ipc-roundtrip.sh
 ./tests/live/config-fuzz.sh
 
+# Live check of the tiling-place bookkeeping: opens its own windows on a
+# borrowed workspace, parks and restores them through the dock's IPC, and
+# closes exactly those on the way out
+./tests/live/place-restore.sh
+
 # Performance: CPU, RAM and VRAM in fixed scenarios, dock on/off cost,
 # comparisons and long soak runs (see tests/bench/README.md)
 python3 tests/bench/bench.py run

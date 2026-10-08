@@ -7,6 +7,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
+import "../../Plan.js" as Plan
 
 // Logic extracted from Dock.qml: stateless functions, the dock root
 // is passed in and owns all state. Bodies are verbatim.
@@ -20,14 +21,11 @@ QtObject {
     return null
   }
 
-  // Accepts a toplevel handle or a raw address string; every address-keyed
-  // lookup goes through here so "574e…" and "0x574e…" can never diverge.
+  // Accepts a toplevel handle or a raw address string; every address-keyed lookup goes
+  // through here (and through Plan.normalizeAddress, its pure twin) so "574e…" and
+  // "0x574e…" can never diverge.
   function windowAddress(root, handle) {
-    var raw = (handle && handle.address !== undefined && handle.address !== null) ? handle.address : handle
-    var value = String(raw == null ? "" : raw).trim()
-    if (!value) return ""
-    if (value.slice(0, 2) === "0x" || value.slice(0, 2) === "0X") value = value.slice(2)
-    return "0x" + value.toLowerCase()
+    return Plan.normalizeAddress(handle && handle.address !== undefined ? handle.address : handle)
   }
 
   function luaString(root, value) {
@@ -44,6 +42,18 @@ QtObject {
     if (!workspace) return ""
     var name = String(workspace.name || "")
     return name !== "" ? name : String(workspace.id)
+  }
+
+  // What a *move* dispatch needs. Hyprland reaches a named workspace as "name:foo"
+  // while its IPC reports the bare name (and a negative id), so a move written with the
+  // bare name goes to a workspace that does not exist and the window stays parked.
+  // Recorded values and every comparison stay bare: only the dispatch is named.
+  // Found by tests/live/place-restore.sh.
+  function workspaceDispatch(root, target) {
+    var value = String(target == null ? "" : target)
+    if (value === "" || value.indexOf("special:") === 0) return value
+    if (/^[0-9]+$/.test(value)) return value
+    return "name:" + value
   }
 
   function liveToplevelForAddress(root, addr) {
@@ -168,6 +178,10 @@ QtObject {
     parkedTimes[address] = Date.now()
     root.parkedAt = parkedTimes
 
+    // Where the window sat, recorded before the move: Hyprland has no memory of
+    // it and re-inserts a parked window as a new tiling window, so the place
+    // has to be won back on restore.
+    root.recordParkSlot(address, origin)
 
     root.hyprDispatch(
       'hl.dsp.window.move({ window = "address:' + address + '", workspace = "'
@@ -197,32 +211,74 @@ QtObject {
     return null
   }
 
-  // Parking must never leave the keyboard inside the parking lot. The click
-  // contract says parking one of several windows "hands focus straight to a
-  // sibling"; with no sibling it goes to the window used before this one
-  // rather than any particular app. Focus is dispatched, not Wayland-
+  // Window rectangles, keyed by address, read from hyprctl (see clientRects on
+  // the root). Quickshell's per-toplevel ipc object only carries at/size for
+  // windows that existed when the shell started, so the geometry of windows
+  // opened since has to come from Hyprland itself.
+
+  // Windows on a workspace in visual order — left to right, then top to bottom,
+  // which is the order dwindle tiles them in.
+
+  // Badge-proof geometry helpers: a tiling rectangle is only ever "the same"
+  // within a couple of pixels (gaps, rounding, an odd pixel of the bar).
+
+  // The window standing in a recorded rectangle right now. Overlap, not
+  // equality: whatever shape the tree took while the window was parked, the
+  // window covering that rectangle is the one to trade places with.
+
+  // The state of a workspace as one string, to notice a swap that undoes a
+  // previous one (a cycle) instead of getting closer.
+
+  // The first window of the workspace (in visual order) that is not back in the
+  // rectangle it was parked in.
+
+  // Focus a window and flip its split. This is the only dispatch that changes
+  // the *shape* of the tree instead of the order of its leaves, and a changed
+  // shape is what parking a master leaves behind.
+
+  // The window whose recorded rectangle is this one. Tiling rectangles are
+  // distinct, so a rectangle identifies exactly one window.
+
+  // The swaps that put every window back into the rectangle it was parked in.
+  // Measured on Hyprland 0.56.2: parking and restoring is a permutation of the
+  // same rectangles in every case but one — the tree assigns the wrong window to
+  // each slot, but the set of slots is unchanged. A permutation is sorted with
+  // n-1 exchanges, computed once: no searching, and no way to cycle. Returns []
+  // when some rectangle has no owner, i.e. the tree really did change shape.
+
+  // One pass for one window: at most one action, then the caller looks again once
+  // the layout has settled. Returns true when the window is done with.
+
+  // Runs the queue the dock root owns: returns how many windows are still
+  // waiting, so the caller can come back for one more look at the layout.
+
+
+  // Getting rid of the keyboard without moving the user. A parked window still
+  // accepts typing (measured with wtype on Hyprland 0.56.2), so the keyboard
+  // must be let go of — but handing it to a window on another workspace is what
+  // made a minimize look like a workspace jump. Focusing the now empty
+  // workspace is not enough either: the parked window keeps the keyboard. Two
+  // focus dispatches in one Lua statement are: the empty workspace, then the
+  // origin one. Both land in the same compositor frame, so the desktop never
+  // visibly changes and no window holds the keyboard.
+
+  // A window of the same workspace, most recently focused first.
+
+  // Parking must never leave the keyboard inside the parking lot, and must
+  // never move the user. The click contract says parking one of several windows
+  // "hands focus straight to a sibling"; Windows keeps that sibling on the
+  // workspace you are on, and so does this. Focus is dispatched, not Wayland-
   // activated: dispatchers queue in the compositor behind the park move, so
   // this deterministically beats the compositor's own handoff (an activation
   // arrived out of order and lost that race on busy workspaces).
-  function handoffFocusAfterPark(root, address, focusNext, appId) {
-    var target = ""
-    if (focusNext && focusNext.address && root.windowAddress(focusNext) !== address)
-      target = root.windowAddress(focusNext)
-    if (!target) {
-      var prev = root.standingWindowAfterPark(address)
-      if (prev) target = root.windowAddress(prev)
-    }
-    if (!target) return
-    root.withoutPointerWarp(function() {
-      root.hyprDispatch('hl.dsp.focus({ window = "address:' + root.luaString(target) + '" })',
-                        "focuswindow address:" + target)
-    })
-  }
 
   function restoreWindow(root, targetRef, appId, useOrigin) {
     var address = root.windowAddress(targetRef)
     if (!address) return false
 
+    // The config decides where a plain restore lands (Windows: where the window
+    // came from). Call sites that mean something specific pass it explicitly.
+    if (useOrigin === undefined) useOrigin = root.restoreWorkspace === "origin"
 
     // Default restore target is the workspace the user is on right now;
     // useOrigin=true sends the window back to where it was parked from.
@@ -245,7 +301,7 @@ QtObject {
     // and leave the cursor exactly where the user left it.
     root.hyprDispatch(
       'hl.dsp.window.move({ window = "address:' + address + '", workspace = "'
-        + root.luaString(target) + '", follow = false })',
+        + root.luaString(workspaceDispatch(root, target)) + '", follow = false })',
       "movetoworkspacesilent " + target + ",address:" + address)
     root.withoutPointerWarp(function() {
       root.hyprDispatch('hl.dsp.focus({ workspace = "' + root.luaString(target) + '" })',
@@ -256,6 +312,12 @@ QtObject {
         DockModel.focusWindow(top)
       }
     })
+
+    // Win the recorded place back once the layout has settled — only when the
+    // window actually went home; a "restore here" has no place to win back.
+    var slot = (root.parkSlots || {})[address]
+    if (slot && root.restoreSlot && String(slot.workspace) === String(target)) root.scheduleSlotFix(address)
+    else root.dropParkSlot(address)
     return true
   }
 
@@ -274,9 +336,14 @@ QtObject {
   function restoreWindowBatch(root, wins, primaryAddress, useOrigin) {
     if (!wins || wins.length === 0) return
 
+    if (useOrigin === undefined) useOrigin = root.restoreWorkspace === "origin"
+
     // Single-copy the maps — O(n) instead of O(n²) individual copies.
     var origins = DockModel.copyMap(root.minimizedOrigins)
     var parkedTimes = DockModel.copyMap(root.parkedAt)
+    // Where each window was actually sent, collected while the maps are still
+    // populated (they are emptied as we go).
+    var targets = {}
 
     var focusAddr = null
     var focusTarget = null
@@ -293,13 +360,14 @@ QtObject {
       if (!target) continue
 
       var t = parkedTimes[address] !== undefined ? parkedTimes[address] : 0
+      targets[address] = String(target)
       delete origins[address]
       delete parkedTimes[address]
 
       // Silent move only — no workspace switch or window focus per iteration.
       root.hyprDispatch(
         'hl.dsp.window.move({ window = "address:' + address + '", workspace = "'
-          + root.luaString(target) + '", follow = false })',
+          + root.luaString(workspaceDispatch(root, target)) + '", follow = false })',
         "movetoworkspacesilent " + target + ",address:" + address)
 
       // Track which window to focus: explicit override first, then most-recently-parked.
@@ -317,6 +385,18 @@ QtObject {
     // Commit map mutations once.
     root.minimizedOrigins = origins
     root.parkedAt = parkedTimes
+
+    // Same deal as a single restore: recorded places are won back, and
+    // windows that went somewhere else drop their record.
+    for (var j = 0; j < wins.length; j++) {
+      var wj = wins[j]
+      if (!wj || !wj.address) continue
+      var slot2 = (root.parkSlots || {})[wj.address]
+      if (!slot2) continue
+      var want = targets[wj.address] || ""
+      if (want && root.restoreSlot && String(slot2.workspace) === want) root.scheduleSlotFix(wj.address)
+      else root.dropParkSlot(wj.address)
+    }
 
     // Single workspace switch + single window activation after all moves.
     if (focusTarget) {
