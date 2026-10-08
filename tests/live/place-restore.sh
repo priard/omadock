@@ -29,6 +29,19 @@ wait_ready || exit 1
 TOLERANCE=4
 TITLE="omadock-live-place"
 
+# Both halves of what this test asserts are settings: a restore goes to its
+# origin workspace, and the recorded place is won back. Pin them for the run and
+# put the file back on exit (the dock re-reads omadock.json as it changes).
+CFG=$HOME/.config/omarchy/omadock.json
+bak=$(mktemp); cp "$CFG" "$bak"
+python3 - "$CFG" <<'EOF'
+import json, sys
+c = json.load(open(sys.argv[1]))
+c["restoreWorkspace"], c["restoreSlot"] = "origin", True
+json.dump(c, open(sys.argv[1], "w"), indent=2)
+EOF
+sleep 1.5
+
 TERM_APP=""
 for candidate in alacritty kitty foot ghostty; do
   if command -v "$candidate" >/dev/null 2>&1; then TERM_APP="$candidate"; break; fi
@@ -161,7 +174,10 @@ open_workspace() {
   done
 }
 
-trap cleanup EXIT
+# cleanup also runs mid-test (section 3 borrows another workspace), so the
+# config comes back only when the script is done.
+finish() { cleanup; cp "$bak" "$CFG"; rm -f "$bak"; }
+trap finish EXIT
 
 # ---------------------------------------------------------------- 1. last window
 open_workspace 3

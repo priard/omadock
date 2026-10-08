@@ -636,6 +636,10 @@ Item {
   readonly property var placement: DockLayout.placement(root.layout, root.alignment, root.splitSections, root.folderSlots + root.driveSlots > 0)
   // Margin between the card and the screen edge; the panel sits on it.
   readonly property real edgeGap: root.placement.panel ? 0 : Style.gapsOut
+  // The shell's own gap to the screen edge (Hyprland's gaps_out / 2), 0 on a
+  // desktop that runs edge to edge. Read-only, reported by `state` so the live
+  // tests can tell what the panel had to gain over the dock.
+  readonly property real outerGap: Style.gapsOut
 
   property bool autohide: true
   property bool intelligentAutohide: true

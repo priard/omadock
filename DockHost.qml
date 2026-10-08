@@ -232,6 +232,8 @@ Item {
         activePreset: d[0].activePresetId || "",
         layout: d[0].layout,
         align: d[0].placement.align,
+        gapsOut: d[0].outerGap,
+        itemGap: d[0].gapWidth,
         items: JSON.parse(d[0].itemGeometry()).length,
         docks: d.length
       })
