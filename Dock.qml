@@ -2363,6 +2363,10 @@ Item {
         open: true
         centerX: root.activeAppGroupX
         body: appGroupPopupComp
+        // The opened group's inline name field (its title row) edits on this
+        // popup's surface, so it needs the keyboard there, like the menu's
+        // name field does.
+        holdsKeyboard: appGroupPopupComp.isEditingName
         onDismissed: root.closeAppGroup()
 
         AppGroupPopup {
