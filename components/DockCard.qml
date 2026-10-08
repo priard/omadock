@@ -656,8 +656,8 @@ Item {
             onOpenStackRequested: function(fpath, fname, cx, cy) {
               if (root) root.openFolderStack(fpath, fname, cx)
             }
-            onMenuRequested: function(fpath, fname, cx, cy) {
-              if (root) root.openFolderContext(fpath, fname, cx, cy)
+            onMenuRequested: function(fpath, fname, cx, cy, cmd) {
+              if (root) root.openFolderContext(fpath, fname, cx, cy, cmd)
             }
             onDragStarted: function(fpath) { cardWrapper.handleFolderDragStarted(fpath) }
             onDragMoved: function(fpath, mx, my) { cardWrapper.handleFolderDragMoved(fpath, mx, my) }
@@ -717,8 +717,8 @@ Item {
             fstype: modelData.fstype || ""
             icon: modelData.icon || "drive-removable-media"
             homeCenter: root ? root.slotHomeCenter(
-              root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + root.pinnedFolders.length + (root.hasDriveSeparator ? 1 : 0) + index,
-              root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + root.pinnedFolders.length + index,
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + root.folderSlots + (root.hasDriveSeparator ? 1 : 0) + index,
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + root.folderSlots + index,
               (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0) + (root.hasDriveSeparator ? 1 : 0),
               root.tilesFixedWidth + cardWrapper.spreadShift) : 0
             onOpenStackRequested: function(fpath, fname, cx, cy) {

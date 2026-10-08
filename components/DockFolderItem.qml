@@ -45,7 +45,8 @@ Item {
   }
 
   signal openStackRequested(string path, string name, real cx, real cy)
-  signal menuRequested(string path, string name, real cx, real cy)
+  // command: "" for a folder, the button's own command for a button slot.
+  signal menuRequested(string path, string name, real cx, real cy, string command)
   signal dragStarted(string path)
   signal dragMoved(string path, real x, real y)
   signal dragDropped(string path)
@@ -194,7 +195,7 @@ Item {
       if (mouse.button === Qt.RightButton) {
         var mappedPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!mappedPos) return
-        fitem.menuRequested(fitem.folderPath, fitem.name, mappedPos.x, 0)
+        fitem.menuRequested(fitem.folderPath, fitem.name, mappedPos.x, 0, fitem.command)
       } else {
         var centerPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!centerPos) return

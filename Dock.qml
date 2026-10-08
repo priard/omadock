@@ -609,6 +609,10 @@ Item {
   property real activeStackX: 0
   property string contextFolderPath: ""
   property string contextFolderName: ""
+  // The folder-section menu opened from a command button: a button has no path
+  // to rename, list or open, so the menu keeps only the rows that apply.
+  property bool contextIsButton: false
+  property string contextButtonCommand: ""
 
   // ------------------------------------------------- removable drives state
   property bool showRemovableDrives: true
@@ -2132,7 +2136,7 @@ Item {
 
   function closeFolderStack() { return folderLogic.closeFolderStack(root) }
 
-  function openFolderContext(path, name, cx, cy) { return folderLogic.openFolderContext(root, path, name, cx, cy) }
+  function openFolderContext(path, name, cx, cy, command) { return folderLogic.openFolderContext(root, path, name, cx, cy, command) }
 
   // Per-folder stack order, stored on the pinned entry (see list-folder.py).
   readonly property var folderSortLabels: ({
@@ -2157,6 +2161,8 @@ Item {
 
   function toggleFolderPin(path, name, icon) { return folderLogic.toggleFolderPin(root, path, name, icon) }
   function renamePinnedFolder(path, name) { folderLogic.renamePinnedFolder(root, path, name) }
+
+  function unpinButton(name, command) { return folderLogic.unpinButton(root, name, command) }
 
   function moveAppGroup(groupId, insertIndex) { return groupsLogic.moveAppGroup(root, groupId, insertIndex) }
 

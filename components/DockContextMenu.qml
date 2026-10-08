@@ -183,7 +183,10 @@ BorderSurface {
       }
 
       // The folder's own name on the dock; blank goes back to the directory's.
+      // A command button's rows: it has no path to rename, list or open, so
+      // only Unpin below applies to it.
       ContextRenameRow {
+        visible: root ? !root.contextIsButton : false
         dockRoot: root
         current: root ? root.contextFolderName : ""
         placeholder: root ? DockLabels.folderBaseName(root.contextFolderPath) : ""
@@ -197,18 +200,21 @@ BorderSurface {
 
       ContextRow {
         text: "View As: " + (root && root.folderViewFor(root.contextFolderPath) === "grid" ? "Folder" : "Stack") + " ›"
+        visible: root ? !root.contextIsButton : false
         onTriggered: contextMenu.folderPage = "view"
       }
 
       ContextRow {
         text: "Sort By: " + (root ? (root.folderSortLabels[root.folderSortFor(root.contextFolderPath)] || "Date Modified") : "Date Modified") + " ›"
+        visible: root ? !root.contextIsButton : false
         onTriggered: contextMenu.folderPage = "sort"
       }
 
-      MenuDivider {}
+      MenuDivider { visible: root ? !root.contextIsButton : false }
 
       ContextRow {
         text: "Open in File Manager"
+        visible: root ? !root.contextIsButton : false
         onTriggered: {
           if (root) {
             Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote(root.contextFolderPath.replace(/^~/, Quickshell.env("HOME"))))
@@ -219,6 +225,7 @@ BorderSurface {
 
       ContextRow {
         text: "Open in Terminal"
+        visible: root ? !root.contextIsButton : false
         onTriggered: {
           if (root) {
             Util.execDetached("uwsm-app -- xdg-terminal-exec --dir=" + Util.shellQuote(root.contextFolderPath.replace(/^~/, Quickshell.env("HOME"))))
@@ -227,14 +234,15 @@ BorderSurface {
         }
       }
 
-      MenuDivider {}
+      MenuDivider { visible: root ? !root.contextIsButton : false }
 
       ContextRow {
         text: "Unpin from Dock"
         danger: true
         onTriggered: {
           if (root) {
-            root.toggleFolderPin(root.contextFolderPath, root.contextFolderName, "")
+            if (root.contextIsButton) root.unpinButton(root.contextFolderName, root.contextButtonCommand)
+            else root.toggleFolderPin(root.contextFolderPath, root.contextFolderName, "")
             root.closeContext()
           }
         }
