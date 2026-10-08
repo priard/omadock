@@ -20,6 +20,11 @@
 #
 # Keep the pointer off the item being measured: hovering scales it and lifts its
 # label, and the marks move with the icon.
+#
+# Exit: 0 the marks are centred; 1 the dock did not answer, or a mark is
+# off-centre / the row drew the wrong count; 2 nothing was measured, because
+# there was no terminal emulator left to open a window with. Never 0 without
+# measuring: a skip that exits 0 is a guard that cannot fail.
 set -u
 cd "$(dirname "$0")/../.."
 . tests/live/common.sh
@@ -278,8 +283,9 @@ for candidate in alacritty kitty foot ghostty wezterm; do
   break
 done
 if [ -z "$TERM_APP" ]; then
-  echo "skip: every terminal emulator is already showing a window"
-  exit 0
+  echo "INDICATORS SKIPPED: every terminal emulator is already showing a window," \
+    "so this run would have measured nothing - close one and re-run." >&2
+  exit 2
 fi
 
 counts > /tmp/omadock-ind-before
