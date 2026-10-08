@@ -60,8 +60,11 @@ test("spacing and the overflow pill", () => {
 test("a plate reserves exactly the cell the row draws the column in", () => {
   // The pair that used to disagree: the label sized the column from its own copy
   // of the number. A side column draws the dense dot, which is a bar's width, so
-  // the reserved room is one cell at every scale and density.
-  for (const scale of [1, 1.25, 1.5, 3]) {
+  // the reserved room is one cell at every scale and density. The compact end of
+  // the range matters: below a spacing scale of about 0.4 Style.space floors a
+  // 4 px mark at 1 px while the hairline floor keeps the mark at 2 px, which is
+  // where the reserved room and the mark came apart.
+  for (const scale of [0.2, 0.3, 0.375, 0.5, 1, 1.25, 1.5, 3]) {
     for (const dpr of [1, 1.25, 1.5, 2, 3]) {
       for (const dense of [false, true]) {
         const col = plain(G.column(space(scale), dpr))
@@ -72,4 +75,36 @@ test("a plate reserves exactly the cell the row draws the column in", () => {
   }
   // ...and it is the room plus the plate's own padding that a label measures.
   assert.deepEqual(plain(G.column(space(1), 1)), { edge: 1, width: 4, gap: 5 })
+})
+
+test("a mark is never bigger than the cell reserved for it", () => {
+  // The hairline floor has one owner and every drawn mark applies it, so the
+  // cell - which is the widest of those marks - follows the floor too. It used
+  // to be built from Style.space alone: at a compact scale (0.3 here) Style.space
+  // floors a 4 px mark at 1 px while the mark stayed 2 px, leaving the row's cell
+  // and a plate's column half a pixel narrower than the mark they centre.
+  const dense = space(0.3)
+  assert.equal(G.dot(dense, 1, true, true), 2)
+  assert.equal(G.barThickness(dense, 1), 2)
+  assert.equal(G.cell(dense, 1, true, true), 2)      // 1 before the floor had one owner
+  assert.equal(G.cell(dense, 1, false, true), 2)
+  assert.equal(plain(G.column(dense, 1)).width, 2)   // the plate's room holds the mark
+  // At 2x the same compact theme the hairline is a whole pixel, so the floor no
+  // longer binds and the cell is the spacing floor again.
+  assert.equal(G.cell(dense, 2, true, true), 1)
+  for (const scale of [0.2, 0.3, 0.375, 0.5, 1, 1.25, 1.5, 3]) {
+    for (const dpr of [1, 1.25, 1.5, 2, 3]) {
+      for (const dense of [false, true]) {
+        for (const vertical of [false, true]) {
+          assert.ok(G.cell(space(scale), dpr, dense, vertical) >= G.dot(space(scale), dpr, dense, vertical),
+            `cell vs dot at scale ${scale}, dpr ${dpr}, dense ${dense}, vertical ${vertical}`)
+          assert.ok(G.cell(space(scale), dpr, dense, vertical) >= G.barThickness(space(scale), dpr),
+            `cell vs bar at scale ${scale}, dpr ${dpr}, dense ${dense}, vertical ${vertical}`)
+        }
+      }
+    }
+  }
+  // ...and the floor rule the cell derives from has one owner.
+  assert.equal(G.hairline(1), 2)
+  assert.equal(G.hairline(2), 1)
 })
