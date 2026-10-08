@@ -34,6 +34,10 @@ Item {
 
   readonly property int totalWindowCount: (marks.windows && marks.windows.length > 0) ? marks.windows.length : (marks.running ? 1 : 0)
   readonly property int maxVisibleDots: marks.totalWindowCount > 5 ? 4 : Math.min(marks.totalWindowCount, 5)
+  // Visible children (dots plus the overflow pill). The Grid must have exactly
+  // this many columns or rows: any spare slot makes it reserve a phantom gap,
+  // which shifted a lone running bar off the icon's centre.
+  readonly property int slotCount: Math.max(1, marks.maxVisibleDots + (marks.totalWindowCount > 5 ? 1 : 0))
   readonly property bool dense: marks.totalWindowCount >= 5
   // Sizes on the output's pixel grid (see DockIndicator), so a dot and the
   // accent bar share one centre line: each mark sits in a cell as wide
@@ -62,8 +66,8 @@ Item {
   Grid {
     id: indicatorRow
     spacing: marks.dynamicSpacing
-    columns: marks.vertical ? 1 : 8
-    rows: marks.vertical ? 8 : 1
+    columns: marks.vertical ? 1 : marks.slotCount
+    rows: marks.vertical ? marks.slotCount : 1
     flow: marks.vertical ? Grid.TopToBottom : Grid.LeftToRight
     horizontalItemAlignment: Grid.AlignHCenter
     verticalItemAlignment: Grid.AlignVCenter
