@@ -33,12 +33,19 @@ Item {
   property real moveKey: 0
 
   readonly property int totalWindowCount: (marks.windows && marks.windows.length > 0) ? marks.windows.length : (marks.running ? 1 : 0)
-  readonly property int maxVisibleDots: marks.totalWindowCount > 5 ? 4 : Math.min(marks.totalWindowCount, 5)
-  // Visible children (dots plus the overflow pill). The Grid must have exactly
-  // this many columns or rows: any spare slot makes it reserve a phantom gap,
-  // which shifted a lone running bar off the icon's centre.
-  readonly property int slotCount: Math.max(1, marks.maxVisibleDots + (marks.totalWindowCount > 5 ? 1 : 0))
+  // Dense past five windows: the marks shrink and the count moves into the
+  // overflow pill.
   readonly property bool dense: marks.totalWindowCount >= 5
+  // What the row draws, in the order it draws it: the pill appears past five
+  // windows and takes the last slot. This is the one place the row decides how
+  // many marks it has - the dots it repeats, the slots its Grid declares and
+  // the pill's own visibility all read it, so a declared slot can never
+  // outnumber a drawn mark: a Grid reserves a gap for every slot it declares,
+  // and a spare one shifted a lone dot (or accent bar) half a gap - 2 px - off
+  // the icon's centre.
+  readonly property bool overflow: marks.totalWindowCount > 5
+  readonly property int visibleDots: marks.overflow ? 4 : Math.min(marks.totalWindowCount, 5)
+  readonly property int slotCount: Math.max(1, marks.visibleDots + (marks.overflow ? 1 : 0))
   // Sizes on the output's pixel grid (see DockIndicator), so a dot and the
   // accent bar share one centre line: each mark sits in a cell as wide
   // across the row (or column) as the largest mark, centred by whole
@@ -73,7 +80,7 @@ Item {
     verticalItemAlignment: Grid.AlignVCenter
 
     Repeater {
-      model: marks.maxVisibleDots
+      model: marks.visibleDots
       // Active window: accent bar; open window: dot; minimized: hollow dot.
       delegate: Item {
         id: cell
@@ -103,7 +110,7 @@ Item {
 
     // Compact overflow pill when 6+ windows are open
     Rectangle {
-      visible: marks.totalWindowCount > 5
+      visible: marks.overflow
       width: overflowText.implicitWidth + Style.space(4)
       height: Style.space(5)
       radius: (marks.root && marks.root.indicatorSquare) ? 0 : height / 2
@@ -114,7 +121,7 @@ Item {
       Text {
         id: overflowText
         anchors.centerIn: parent
-        text: "+" + (marks.totalWindowCount - marks.maxVisibleDots)
+        text: "+" + (marks.totalWindowCount - marks.visibleDots)
         textFormat: Text.PlainText
         color: marks.markInk.a > 0 ? marks.markInk : (marks.root ? marks.root.dockForeground : Color.bar.text)
         font.family: Style.font.family
