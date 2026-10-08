@@ -184,9 +184,11 @@ if lx + x <= cursor.get("x", -1) < lx + x + w and ly + y <= cursor.get("y", -1) 
 
 # A row of marks sits in the item's bottom band, and the icon art above reaches
 # that band's top edge, so ink touching the top row is not a mark. A column sits
-# against the plate's leading edge: the plate is the largest ink blob and the
-# marks are the ink to its left.
+# against the item's leading edge, the label plate hanging off it: the marks are
+# the ink that starts in the strip there, and the icon art, the plate and the
+# label text all begin to the right of it.
 band = max(10, round(8 * scale))
+strip = max(12, round(14 * scale))
 cx, cy, cw, ch = (x, y + h - band, w, band) if mode == "row" else (x, y, w, h)
 raw = {}
 for line in out("magick", shot, "-crop", f"{cw}x{ch}+{cx}+{cy}", "+repage", "txt:-").splitlines()[1:]:
@@ -233,9 +235,11 @@ def is_mark(group):
 if mode == "row":
     marks = [g for g in groups(ink) if min(p[1] for p in g) > 0 and is_mark(g)]
 else:
-    blobs = sorted((g for g in groups(ink) if is_mark(g)), key=len, reverse=True)
-    plate = box(blobs[0]) if blobs else None
-    marks = [g for g in blobs[1:] if plate and max(p[0] for p in g) < plate[0]]
+    # What is a mark is decided by where the ink starts, not by how large it
+    # is: past five windows the "+N" pill's glyphs are wider than the icon's
+    # own, so the largest blob in the item is as often a mark as it is the
+    # plate, and reading one as the plate hid the marks behind it.
+    marks = [g for g in groups(ink) if is_mark(g) and min(p[0] for p in g) < strip]
 if not marks:
     report(f"no marks under {item_id} (is anything running there?)", False)
 
