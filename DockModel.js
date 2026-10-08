@@ -806,44 +806,44 @@ function boundPinnedFolders(arr) {
 
 // ---------------------------------------------------------------- presets
 // A preset is a named copy of the dock's look: the config keys below, as
-// saveConfig writes them. Values reach the dock only through
-// Dock.applyLook, the same parsing as the config file, so a preset can hold
-// nothing the file could not.
-var LOOK_KEYS = [
-  "showBackground", "bgColor", "bgFill", "gradientPreset", "gradientStrength",
-  "grain", "opacity", "blur", "showShadow", "shadowStrength", "showBorder",
-  "borderWidth", "borderOpacity", "shape", "cornerRadius", "splitSections",
-  "dividerGeometry", "dividerHeight", "dividerStyle", "dividerWidth", "dividerOpacity",
-  "iconStyle", "iconTint", "iconHoverOriginal", "iconHoverReveal", "iconContrast", "iconStrength",
-  "iconGrid", "indicatorShape", "hoverEffect", "launchBounce", "groupStyle",
-  "groupIconEffects", "folderColor", "iconSize", "itemSpacing", "sectionSpacing"
-]
+// saveConfig writes them, each with the value it takes when the config lacks
+// it (Dock.applyLook's fallbacks). Values reach the dock only through
+// applyLook, so a preset can hold nothing the file could not; a key added
+// after a preset was saved gets its default, as the dock then looked.
+var DEFAULT_LOOK = {
+  showBackground: true, bgColor: "theme", bgFill: "solid", gradientPreset: "theme", gradientStrength: 0.6,
+  grain: 0, opacity: 1, blur: "system", showShadow: true, shadowStrength: 0.4, showBorder: true,
+  borderWidth: 1.5, borderOpacity: "theme", shape: "rounded", cornerRadius: -1, splitSections: false,
+  dividerGeometry: "classic", dividerHeight: 70, dividerStyle: "simple", dividerWidth: 1.5, dividerOpacity: 0.4,
+  iconStyle: "original", iconTint: "text", iconHoverOriginal: false, iconHoverReveal: false, iconContrast: 0, iconStrength: 1,
+  iconGrid: 16, indicatorShape: "theme", hoverEffect: "zoom", launchBounce: true, groupStyle: "rounded",
+  groupIconEffects: "theme", folderColor: "theme", iconSize: 0, itemSpacing: 4, sectionSpacing: 18, labelMode: "off",
+  labelKind: "all", labelFont: "theme", labelSize: "medium", labelColor: "auto", labelBackground: "none", labelReveal: "slide",
+  labelEffect: "none", labelMaxWidth: 140, labelWeight: "medium", labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon"
+}
+var LOOK_KEYS = Object.keys(DEFAULT_LOOK)
 var MAX_PRESETS = 6
 var MAX_PRESET_NAME = 40
 var MAX_PRESET_ID = 64
 var MAX_LOOK_STRING = 64
 
-// Exactly the look keys of a config-shaped object, scalars only, strings
-// capped. Values the config writes as a missing key are written out:
-// iconSize 0 (automatic) and cornerRadius -1 (follow the shape).
+// Every look key of a config-shaped object, scalars only, strings capped;
+// a missing or non-scalar one gets its DEFAULT_LOOK value.
 function pickLook(conf) {
   var src = (conf && typeof conf === "object") ? conf : {}
   var out = {}
   for (var i = 0; i < LOOK_KEYS.length; i++) {
     var k = LOOK_KEYS[i]
-    if (!Object.prototype.hasOwnProperty.call(src, k)) continue
-    var v = src[k]
+    var v = Object.prototype.hasOwnProperty.call(src, k) ? src[k] : undefined
     if (typeof v === "string") out[k] = v.slice(0, MAX_LOOK_STRING)
-    else if (typeof v === "boolean") out[k] = v
-    else if (typeof v === "number" && isFinite(v)) out[k] = v
+    else if (typeof v === "boolean" || (typeof v === "number" && isFinite(v))) out[k] = v
+    else out[k] = DEFAULT_LOOK[k]
   }
-  if (!Object.prototype.hasOwnProperty.call(out, "iconSize")) out.iconSize = 0
-  if (!Object.prototype.hasOwnProperty.call(out, "cornerRadius")) out.cornerRadius = -1
   return out
 }
 
-// Every look key the preset holds has the same value in cur. A preset
-// saved before a key existed still matches on the keys it has.
+// Every look key the preset holds has the same value in cur. (Presets are
+// read through pickLook, so they hold every key.)
 function lookIncludes(cur, look) {
   var x = cur || {}
   var y = look || {}

@@ -5,6 +5,8 @@ import qs.Commons
 import qs.Ui
 import "logic"
 import "../DockModel.js" as DockModel
+import "../DockLabels.js" as DockLabels
+import "../DockLayout.js" as DockLayout
 
 Item {
   id: cardWrapper
@@ -13,6 +15,7 @@ Item {
   readonly property var root: rootRef
   readonly property var folderSeparatorRef: folderSeparator
   readonly property var separatorRef: separator
+  readonly property var rightRowRef: rightRow
 
   property alias dockCard: dockCard
   property alias cardHover: cardHover
@@ -25,6 +28,25 @@ Item {
   property alias drivesRepeater: drivesRepeater
   property alias runningRepeater: runningRepeater
   readonly property bool folderDropActive: folderDrop.containsDrag
+  // The card's box when it spans the window (panel, or a spread dock); null
+  // while it hugs its icons. innerWidth is the room for the row inside it.
+  readonly property var stretch: (root && parent) ? DockLayout.stretchedBox(root.placement, parent.width, Style.gapsOut * 2) : null
+  readonly property real innerWidth: dockCard.width - dockCard.contentLeftInset - dockCard.contentRightInset
+  // Label plates keep their edges on whole device pixels (the floating card
+  // snaps its x for them).
+  readonly property real plateDpr: (root && root.labelPlates) ? root.outputScale : 0
+  readonly property real rowOffset: (root && stretch) ? DockLayout.rowOffset(root.placement.align, innerWidth, row.implicitWidth, plateDpr) : 0
+  // Both sides: how far the right group rests past a packed row, from the
+  // resting widths, so the magnification wave never measures itself. The
+  // trailing drop ghost is a zero-width item the row still spaces.
+  readonly property real spreadShift: (root && root.placement.align === "spread")
+    ? DockLayout.spreadHomeShift(innerWidth, root.baseRowWidth + DockLabels.extrasTotal(root.labelExtras) + row.spacing) : 0
+  // Where the accent line of a drag inside the dock stands (DropGap): the
+  // insert index in the pinned run or among the folders, -1 for none.
+  readonly property int dropLineRow: (root && !root.dragRemoveArmed && root.dropRowIndex >= 0
+    && ((root.dragAppId !== "" && root.dropTargetAppId === "" && root.dropTargetGroupId === "") || root.dragGroupId !== ""))
+    ? root.dropRowIndex : -1
+  readonly property int dropLineFolder: (root && !root.dragRemoveArmed && root.dragFolderPath !== "") ? root.dropFolderIndex : -1
 
   DockDragLogic { id: dragLogic }
 
@@ -40,7 +62,6 @@ Item {
 
   function rowInsertIndex(rx) { return dragLogic.rowInsertIndex(root, cardWrapper, rx) }
 
-  function rowIndicatorX(idx) { return dragLogic.rowIndicatorX(root, cardWrapper, idx) }
 
   function handleDragDropped(aid) { return dragLogic.handleDragDropped(root, cardWrapper, aid) }
 
@@ -83,15 +104,16 @@ Item {
   // it (the gapsOut margin the layout already models); without one it sits
   // where it always has. The window's height and the reserved screen space
   // do not change — the shadow only overlaps what is underneath.
-  readonly property real shadowRoom: (root && root.showShadow && root.showBackground && root.shadowStrength > 0) ? Style.space(5) : 0
+  readonly property real shadowRoom: (root && !root.placement.panel && root.showShadow && root.showBackground && root.shadowStrength > 0) ? Style.space(5) : 0
   anchors.bottom: parent ? parent.bottom : undefined
-  anchors.bottomMargin: (root && root.dockVisible) ? Style.gapsOut + cardWrapper.shadowRoom : -(dockCard.height + Style.gapsOut + cardWrapper.shadowRoom + 10)
+  anchors.bottomMargin: (root && root.dockVisible) ? root.edgeGap + cardWrapper.shadowRoom : -(dockCard.height + (root ? root.edgeGap : 0) + cardWrapper.shadowRoom + 10)
 
   x: {
     if (!parent) return 0
-    if (root && root.alignment === "left") return Style.gapsOut * 2
-    if (root && root.alignment === "right") return parent.width - width - (Style.gapsOut * 2)
-    return Math.round((parent.width - width) / 2)
+    if (cardWrapper.stretch) return cardWrapper.stretch.x
+    var ax = DockLabels.anchoredX(parent.width, width, Style.gapsOut * 2, root ? root.placement.align : "center", 0)
+    // Plate rows start on a whole device pixel, so every plate edge does.
+    return (root && root.labelPlates) ? DockLabels.gridRound(ax, root.outputScale) : ax
   }
 
   Behavior on anchors.bottomMargin {
@@ -112,10 +134,10 @@ Item {
   // Expanded interactive hitbox: eliminates dead gaps below dockCard and adds generous hysteresis
   Item {
     id: dockHitbox
-    x: -Style.space(24)
+    x: (root && root.placement.panel) ? 0 : -Style.space(24)
     y: (root && root.dockVisible) ? -Style.space(18) : 0
-    width: dockCard.width + Style.space(48)
-    height: dockCard.height + ((root && root.dockVisible) ? (Style.gapsOut + Style.space(18)) : 0)
+    width: dockCard.width + ((root && root.placement.panel) ? 0 : Style.space(48))
+    height: dockCard.height + ((root && root.dockVisible) ? (root.edgeGap + Style.space(18)) : 0)
     z: -1
 
     HoverHandler {
@@ -192,20 +214,26 @@ Item {
   // let neighbouring gaps differ by a pixel.
   readonly property var segments: {
     var full = [{ x: 0, width: dockCard.width }]
-    if (!root || !root.splitSections) return full
+    if (!root || !root.placement.split) return full
     var dpr = dockCard.dpr
     var origin = cardWrapper.x + dockCard.x
     var inset = dockCard.contentLeftInset
     var gap = Math.max(1, Math.round(root.sectionGap * dpr)) / dpr
-    var seps = [leftTileSeparator, separator, folderSeparator, driveSeparator]
+    var snap = function(v) { return Math.round((v + origin) * dpr) / dpr - origin }
+    // Each cut: the row x of the item the panel before it ends at and, for
+    // the Both sides gap, where the next panel starts.
+    var cuts = []
+    if (leftTileSeparator.visible) cuts.push({ at: leftTileSeparator.x })
+    if (separator.visible) cuts.push({ at: separator.x })
+    if (spreadGap.visible) cuts.push({ at: spreadGap.x, next: rightRow.x + (folderSeparator.visible ? folderSeparator.x + folderSeparator.width + row.spacing : 0) })
+    else if (folderSeparator.visible) cuts.push({ at: rightRow.x + folderSeparator.x })
+    if (driveSeparator.visible) cuts.push({ at: rightRow.x + driveSeparator.x })
     var out = []
     var start = 0
-    for (var i = 0; i < seps.length; i++) {
-      var sep = seps[i]
-      if (!sep.visible) continue
-      var end = Math.round((row.x + sep.x - row.spacing + inset + origin) * dpr) / dpr - origin
+    for (var i = 0; i < cuts.length; i++) {
+      var end = snap(row.x + cuts[i].at - row.spacing + inset)
       out.push({ x: start, width: Math.max(0, end - start) })
-      start = end + gap
+      start = cuts[i].next !== undefined ? snap(row.x + cuts[i].next - inset) : end + gap
     }
     out.push({ x: start, width: Math.max(0, dockCard.width - start) })
     return out
@@ -233,7 +261,7 @@ Item {
       readonly property var segment: cardWrapper.segments[index] || { x: 0, width: 0 }
       readonly property real pad: Style.space(30)
       readonly property real drop: Style.space(2)
-      readonly property real padBottom: Math.max(0, Style.gapsOut + cardWrapper.shadowRoom - cardShadow.drop)
+      readonly property real padBottom: Math.max(0, (root ? root.edgeGap : 0) + cardWrapper.shadowRoom - cardShadow.drop)
       visible: root ? (root.showShadow && root.showBackground && root.shadowStrength > 0) : true
       // Follows the card out of view; a blur left behind would hang on screen
       // after the dock has gone.
@@ -286,9 +314,12 @@ Item {
     color: "transparent"
     borderSpec: (root && !root.showBorder)
       ? Border.none()
-      : Border.flat("transparent", dockCard.effectiveBorderWidth)
+      : Border.flat("transparent", (root && root.placement.panel) ? dockCard.effectiveBorderWidth + " 0 0 0" : dockCard.effectiveBorderWidth)
     radius: root ? root.cardRadius(height) : Style.cornerRadius
     padding: dockCard.devSnap(Style.space(5))
+    // With label plates the sides match the gap between plates.
+    leftPadding: (root && root.labelPlates) ? root.plateSpacing.edge : padding
+    rightPadding: (root && root.labelPlates) ? root.plateSpacing.edge : padding
     z: 1
 
     Repeater {
@@ -308,11 +339,8 @@ Item {
       onHoveredChanged: if (root) root.syncVisibility()
     }
 
-    width: row.implicitWidth + contentLeftInset + contentRightInset
-    // While name labels show, the card grows by their band (DockLabelLogic),
-    // and the window height, autohide mask and exclusive zone all follow
-    // this height already. The row itself never changes size.
-    height: row.implicitHeight + contentTopInset + contentBottomInset + (root ? root.labelBandHeight() : 0)
+    width: cardWrapper.stretch ? cardWrapper.stretch.width : row.implicitWidth + contentLeftInset + contentRightInset
+    height: row.implicitHeight + contentTopInset + contentBottomInset
 
     // Click on card padding dismisses context menu
     MouseArea {
@@ -346,11 +374,11 @@ Item {
     Row {
       id: row
       z: 1
-      spacing: Style.space(root ? root.itemSpacing : 4)
+      // Plate rows keep the spacing on the device-pixel grid.
+      spacing: root ? root.gapWidth : Style.space(4)
 
-      x: dockCard.contentLeftInset
-      // Above-placement puts the label band over the icons' side of the card.
-      y: dockCard.contentTopInset + ((root && root.labelPlacement === "above") ? root.labelBandHeight() : 0)
+      x: dockCard.contentLeftInset + cardWrapper.rowOffset
+      y: dockCard.contentTopInset
 
       DockIconButton {
         rootRef: cardWrapper.rootRef
@@ -402,6 +430,8 @@ Item {
               windows: entry.windows || 0
               windowList: entry.windowList || []
               homeCenter: rowSlot.home
+              labelSlot: root ? root.appsSlots + rowSlot.index : -1
+              dropLineHere: cardWrapper.dropLineRow === rowSlot.index
               pinned: true
               active: root ? (entry.appId === root.activeId) : false
               onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -427,6 +457,8 @@ Item {
               rootRef: cardWrapper.rootRef
               groupData: rowSlot.modelData.group || ({})
               homeCenter: rowSlot.home
+              labelSlot: root ? root.appsSlots + rowSlot.index : -1
+              dropLineHere: cardWrapper.dropLineRow === rowSlot.index
               onOpenGroupRequested: function(gdata, cx, cy) {
                 if (root) root.openAppGroup(gdata, cx, cy)
               }
@@ -439,6 +471,13 @@ Item {
             }
           }
         }
+      }
+
+      // A drag landing after the last pinned app or group.
+      DropGap {
+        rootRef: cardWrapper.rootRef
+        spacer: true
+        open: cardWrapper.dropLineRow >= 0 && cardWrapper.dropLineRow === pinnedRowRepeater.count
       }
 
       // Divider between pinned apps and the minimized-tile section.
@@ -454,7 +493,7 @@ Item {
         // split sections the slot is the gap between two panels and no line
         // is drawn.
         Rectangle {
-          visible: !(root && root.splitSections)
+          visible: !(root && root.placement.split)
           anchors.horizontalCenter: parent.horizontalCenter
           y: root && root.dividerGeometry === "long"
             ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
@@ -490,7 +529,7 @@ Item {
         // split sections the slot is the gap between two panels and no line
         // is drawn.
         Rectangle {
-          visible: !(root && root.splitSections)
+          visible: !(root && root.placement.split)
           anchors.horizontalCenter: parent.horizontalCenter
           y: root && root.dividerGeometry === "long"
             ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
@@ -529,6 +568,7 @@ Item {
             root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx,
             (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0),
             root.tilesFixedWidth) : 0
+          labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx : -1
           pinned: false
           active: root ? (entry.appId === root.activeId) : false
           onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -556,108 +596,137 @@ Item {
         }
       }
 
+      // Both sides: the free width between the groups.
       Item {
-        id: folderSeparator
-        visible: root ? root.hasFolderSeparator : false
+        id: spreadGap
+        visible: root ? root.placement.align === "spread" : false
+        width: visible ? DockLayout.spreadGap(cardWrapper.innerWidth, spreadGap.x, rightRow.implicitWidth, row.spacing, cardWrapper.plateDpr) : 0
+        height: 1
+      }
+
+      // Folders and drives: the right group of the Both sides alignment.
+      // Its own Row so the gap before it can be sized from its width
+      // without the outer row measuring itself.
+      Row {
+        id: rightRow
+        spacing: row.spacing
         anchors.verticalCenter: parent.verticalCenter
-        width: root ? root.separatorWidth : Style.space(1)
-        height: root ? (root.iconSize * 0.7) : 24
+        visible: root ? (root.hasFolderSeparator || root.folderSlots > 0 || root.driveSlots > 0 || trailingDropGap.open) : true
 
-        // The line, placed by dockCard (70% of its height by default, as on
-        // macOS). It overflows the slot, so it does not grow the row. With
-        // split sections the slot is the gap between two panels and no line
-        // is drawn.
-        Rectangle {
-          visible: !(root && root.splitSections)
-          anchors.horizontalCenter: parent.horizontalCenter
-          y: root && root.dividerGeometry === "long"
-            ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
-          width: dockCard.dividerWidth
-          height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
-          color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
+        Item {
+          id: folderSeparator
+          visible: root ? root.hasFolderSeparator : false
+          anchors.verticalCenter: parent.verticalCenter
+          width: root ? root.separatorWidth : Style.space(1)
+          height: root ? (root.iconSize * 0.7) : 24
+
+          // The line, placed by dockCard (70% of its height by default, as on
+          // macOS). It overflows the slot, so it does not grow the row. With
+          // split sections the slot is the gap between two panels and no line
+          // is drawn.
+          Rectangle {
+            visible: !(root && (root.placement.split || root.placement.align === "spread"))
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: root && root.dividerGeometry === "long"
+              ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
+            width: dockCard.dividerWidth
+            height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
+            color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
+          }
         }
-      }
 
-      Repeater {
-        id: foldersRepeater
-        model: root ? root.pinnedFolders : []
-        delegate: DockFolderItem {
+        Repeater {
+          id: foldersRepeater
+          // Folders first, then the command buttons: the section keeps one row.
+          model: root ? root.pinnedFolders.concat(root.pinnedButtons) : []
+          delegate: DockFolderItem {
+            rootRef: cardWrapper.rootRef
+            folderPath: modelData.path || ""
+            command: modelData.command || ""
+            name: modelData.name || "Folder"
+            icon: modelData.icon || (modelData.command ? "application-x-executable" : DockModel.folderIconFor(modelData.path, ""))
+            slotIndex: index
+            dropLineHere: cardWrapper.dropLineFolder === index
+            homeCenter: root ? root.slotHomeCenter(
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + index,
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index,
+              (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0),
+              root.tilesFixedWidth + cardWrapper.spreadShift) : 0
+            labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index : -1
+            onOpenStackRequested: function(fpath, fname, cx, cy) {
+              if (root) root.openFolderStack(fpath, fname, cx)
+            }
+            onMenuRequested: function(fpath, fname, cx, cy, cmd) {
+              if (root) root.openFolderContext(fpath, fname, cx, cy, cmd)
+            }
+            onDragStarted: function(fpath) { cardWrapper.handleFolderDragStarted(fpath) }
+            onDragMoved: function(fpath, mx, my) { cardWrapper.handleFolderDragMoved(fpath, mx, my) }
+            onDragDropped: function(fpath) { cardWrapper.handleFolderDragDropped(fpath) }
+          }
+        }
+
+        // A folder dragged after the last one.
+        DropGap {
           rootRef: cardWrapper.rootRef
-          folderPath: modelData.path
-          name: modelData.name || "Folder"
-          icon: modelData.icon || DockModel.folderIconFor(modelData.path, "")
-          slotIndex: index
-          homeCenter: root ? root.slotHomeCenter(
-            root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + index,
-            root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index,
-            (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0),
-            root.tilesFixedWidth) : 0
-          onOpenStackRequested: function(fpath, fname, cx, cy) {
-            if (root) root.openFolderStack(fpath, fname, cx)
-          }
-          onMenuRequested: function(fpath, fname, cx, cy) {
-            if (root) root.openFolderContext(fpath, fname, cx, cy)
-          }
-          onDragStarted: function(fpath) { cardWrapper.handleFolderDragStarted(fpath) }
-          onDragMoved: function(fpath, mx, my) { cardWrapper.handleFolderDragMoved(fpath, mx, my) }
-          onDragDropped: function(fpath) { cardWrapper.handleFolderDragDropped(fpath) }
+          spacer: true
+          open: cardWrapper.dropLineFolder >= 0 && cardWrapper.dropLineFolder === foldersRepeater.count
         }
-      }
 
-      // Drop gap after the last pinned folder (see DockFolderItem.gapWidth).
-      DropGhost {
-        id: trailingDropGap
-        rootRef: cardWrapper.rootRef
-        readonly property bool open: root ? (root.dropPreviewPath !== "" && root.dropInsertIndex >= foldersRepeater.count) : false
-        width: open && root ? root.iconSlot : 0
-        height: root ? root.iconSlot : 0
-        Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-      }
-
-      Item {
-        id: driveSeparator
-        visible: root ? root.hasDriveSeparator : false
-        anchors.verticalCenter: parent.verticalCenter
-        width: root ? root.separatorWidth : Style.space(1)
-        height: root ? (root.iconSize * 0.7) : 24
-
-        // The line, placed by dockCard (70% of its height by default, as on
-        // macOS). It overflows the slot, so it does not grow the row. With
-        // split sections the slot is the gap between two panels and no line
-        // is drawn.
-        Rectangle {
-          visible: !(root && root.splitSections)
-          anchors.horizontalCenter: parent.horizontalCenter
-          y: root && root.dividerGeometry === "long"
-            ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
-          width: dockCard.dividerWidth
-          height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
-          color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
-        }
-      }
-
-      Repeater {
-        id: drivesRepeater
-        model: (root && root.showRemovableDrives) ? root.mountedDrives : []
-        delegate: DockDriveItem {
+        // Drop gap after the last pinned folder (see DockFolderItem.gapWidth).
+        DropGhost {
+          id: trailingDropGap
           rootRef: cardWrapper.rootRef
-          dev: modelData.dev || ""
-          mountpoint: modelData.mountpoint || ""
-          name: modelData.name || "USB Drive"
-          size: modelData.size || ""
-          space: modelData.space || ""
-          fstype: modelData.fstype || ""
-          icon: modelData.icon || "drive-removable-media"
-          homeCenter: root ? root.slotHomeCenter(
-            root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + root.pinnedFolders.length + (root.hasDriveSeparator ? 1 : 0) + index,
-            root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + root.pinnedFolders.length + index,
-            (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0) + (root.hasDriveSeparator ? 1 : 0),
-            root.tilesFixedWidth) : 0
-          onOpenStackRequested: function(fpath, fname, cx, cy) {
-            if (root) root.openFolderStack(fpath, fname, cx)
+          readonly property bool open: root ? (root.dropPreviewPath !== "" && root.dropInsertIndex >= foldersRepeater.count) : false
+          width: open && root ? root.iconSlot : 0
+          height: root ? root.iconSlot : 0
+          Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        }
+
+        Item {
+          id: driveSeparator
+          visible: root ? root.hasDriveSeparator : false
+          anchors.verticalCenter: parent.verticalCenter
+          width: root ? root.separatorWidth : Style.space(1)
+          height: root ? (root.iconSize * 0.7) : 24
+
+          // The line, placed by dockCard (70% of its height by default, as on
+          // macOS). It overflows the slot, so it does not grow the row. With
+          // split sections the slot is the gap between two panels and no line
+          // is drawn.
+          Rectangle {
+            visible: !(root && root.placement.split)
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: root && root.dividerGeometry === "long"
+              ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
+            width: dockCard.dividerWidth
+            height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
+            color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
           }
-          onMenuRequested: function(d, mp, n, s, cx, cy) {
-            if (root) root.openDriveContext(d, mp, n, s, cx, cy)
+        }
+
+        Repeater {
+          id: drivesRepeater
+          model: (root && root.showRemovableDrives) ? root.mountedDrives : []
+          delegate: DockDriveItem {
+            rootRef: cardWrapper.rootRef
+            dev: modelData.dev || ""
+            mountpoint: modelData.mountpoint || ""
+            name: modelData.name || "USB Drive"
+            size: modelData.size || ""
+            space: modelData.space || ""
+            fstype: modelData.fstype || ""
+            icon: modelData.icon || "drive-removable-media"
+            homeCenter: root ? root.slotHomeCenter(
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + root.folderSlots + (root.hasDriveSeparator ? 1 : 0) + index,
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + root.folderSlots + index,
+              (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0) + (root.hasDriveSeparator ? 1 : 0),
+              root.tilesFixedWidth + cardWrapper.spreadShift) : 0
+            onOpenStackRequested: function(fpath, fname, cx, cy) {
+              if (root) root.openFolderStack(fpath, fname, cx)
+            }
+            onMenuRequested: function(d, mp, n, s, cx, cy) {
+              if (root) root.openDriveContext(d, mp, n, s, cx, cy)
+            }
           }
         }
       }
@@ -674,21 +743,6 @@ Item {
       z: 20
     }
 
-    // Drop indicator line
-    Rectangle {
-      visible: root ? (!root.dragRemoveArmed
-        && ((root.dragAppId !== "" && root.dropTargetAppId === "" && root.dropTargetGroupId === "" && root.dropRowIndex >= 0)
-          || (root.dragFolderPath !== "" && root.dropFolderIndex >= 0)
-          || (root.dragGroupId !== "" && root.dropRowIndex >= 0))) : false
-      x: root ? root.dropIndicatorX : 0
-      anchors.verticalCenter: row.verticalCenter
-      width: Style.space(2)
-      height: root ? (root.iconSize + Style.space(4)) : 36
-      radius: 1
-      color: Color.accent
-      z: 10
-    }
-
     // Over the pointer while a drag is pulled off the dock: letting go here
     // takes the item away. Styled like the hover tooltips.
     BorderSurface {
@@ -702,7 +756,7 @@ Item {
       height: removeLabel.implicitHeight + contentTopInset + contentBottomInset
       x: Math.round((root ? root.dragPointerX : 0) - width / 2)
       // The layer is short now: keep the bubble below its top edge.
-      readonly property real windowTop: -((root && root.dockWindowRef ? root.dockWindowRef.height : 0) - Style.gapsOut - dockCard.height)
+      readonly property real windowTop: -((root && root.dockWindowRef ? root.dockWindowRef.height : 0) - (root ? root.edgeGap : Style.gapsOut) - dockCard.height)
       y: Math.max(windowTop + Style.space(2), Math.round((root ? root.dragPointerY : 0) - height - Style.space(16)))
 
       Text {

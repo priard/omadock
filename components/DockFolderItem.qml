@@ -12,18 +12,41 @@ Item {
   readonly property var root: rootRef
 
   property string folderPath: ""
+  // A pinned slot with a command is a button, not a folder: the click runs the
+  // command and no file listing is built for it.
+  property string command: ""
+  readonly property bool isButton: fitem.command !== ""
+  // What this slot opens: a button opens nothing.
+  readonly property string activeFolderPath: fitem.isButton ? "" : fitem.folderPath
   property string name: ""
   property string icon: "folder"
   property real homeCenter: 0
+  property int labelSlot: -1
+  // An open hover label is drawn over the neighbours.
+  z: label.overlay && label.progress > 0.01 ? 1000 : 0
+  readonly property real labelExtra: label.extra
+  readonly property real iconCenterX: iconSlot.x + iconSlot.width / 2
   // Position among the pinned folders; a folder dragged in from outside and
   // headed for this index opens a gap before this item.
   property int slotIndex: -1
   readonly property bool gapOpen: root ? (root.dropPreviewPath !== "" && root.dropInsertIndex === fitem.slotIndex) : false
-  property real gapWidth: gapOpen && root ? root.iconSlot + root.gapWidth : 0
-  Behavior on gapWidth { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  property real ghostWidth: gapOpen && root ? root.iconSlot + root.gapWidth : 0
+  Behavior on ghostWidth { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  // A pinned folder dragged in the dock lands before this one.
+  property bool dropLineHere: false
+  // All the room ahead of the folder's tile: the ghost's, or the drag's.
+  readonly property real gapWidth: fitem.ghostWidth + dropGapItem.width
+  readonly property real dropGap: dropGapItem.width
+
+  DropGap {
+    id: dropGapItem
+    rootRef: fitem.rootRef
+    open: fitem.dropLineHere
+  }
 
   signal openStackRequested(string path, string name, real cx, real cy)
-  signal menuRequested(string path, string name, real cx, real cy)
+  // command: "" for a folder, the button's own command for a button slot.
+  signal menuRequested(string path, string name, real cx, real cy, string command)
   signal dragStarted(string path)
   signal dragMoved(string path, real x, real y)
   signal dragDropped(string path)
@@ -31,16 +54,18 @@ Item {
   // Faded while dragged, fainter still once pulled off the dock.
   opacity: area.dragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
 
-  width: (root ? (root.iconSlot * (root.waveHover ? fitem.magnifyScale : 1)) : 0) + fitem.gapWidth
+  width: (root ? (root.iconSlot * (root.waveHover ? fitem.magnifyScale : 1)) : 0) + fitem.gapWidth + fitem.labelExtra
   height: root ? root.iconSlot : 0
 
   DropGhost {
     rootRef: fitem.rootRef
-    width: fitem.gapWidth
+    width: fitem.ghostWidth
     height: parent.height
   }
 
-  readonly property bool isOpen: root ? root.activeStackFolder === fitem.folderPath : false
+  // A button never opens a stack, and two empty strings must not count as
+  // a match (that lit the "open" indicator under every button).
+  readonly property bool isOpen: root ? (fitem.activeFolderPath !== "" && root.activeStackFolder === fitem.activeFolderPath) : false
 
   property real magnifyScale: {
     if (!root) return 1
@@ -54,7 +79,8 @@ Item {
     return DockModel.resolveThemedFolderIcon(fitem.icon, root ? root.currentIconThemeName : "Yaru", root ? root.folderColor : "theme", root ? root.appLibrary : null)
   }
   readonly property bool isSymbolic: resolvedSource.indexOf("-symbolic.svg") >= 0 || resolvedSource.indexOf("symbolic") >= 0
-  readonly property color symbolicColor: root ? root.symbolicIconColor : "#ffffff"
+  // On a label plate a symbolic icon takes the label's ink, which reads on the plate.
+  readonly property color symbolicColor: (label.plate && label.shown) ? label.ink : (root ? root.symbolicIconColor : "#ffffff")
 
   Behavior on magnifyScale {
     NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
@@ -65,7 +91,7 @@ Item {
     width: root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
     // Centred in the part of the item the drop gap leaves.
-    x: fitem.gapWidth + Math.round((fitem.width - fitem.gapWidth - width) / 2)
+    x: fitem.gapWidth + (label.mirror ? fitem.labelExtra - label.lead : label.lead) + Math.round((fitem.width - fitem.gapWidth - fitem.labelExtra - width) / 2)
     anchors.verticalCenter: parent.verticalCenter
 
     Item {
@@ -90,7 +116,9 @@ Item {
         renderSize: root ? root.maxIconArt : 64
         visible: !iconContainer.themedSymbolic
         iconStyle: root ? root.iconStyle : "original"
-        tint: root ? root.iconTintColor : Color.bar.text
+        tint: (root && label.plate && label.shown) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
+        toneInvert: fitem.isSymbolic ? 1 : -1
+        allowReveal: !fitem.isSymbolic
         grid: root ? root.iconGrid : 16
         outputScale: root ? root.outputScale : 1
         contrast: root ? root.iconContrast : 0
@@ -136,9 +164,9 @@ Item {
   // Open stack: the same accent bar an app with focus shows.
   DockIndicator {
     rootRef: fitem.rootRef
-    visible: fitem.isOpen
+    visible: fitem.isOpen && !label.sideMarks
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     anchors.horizontalCenter: iconSlot.horizontalCenter
     kind: "active"
   }
@@ -151,38 +179,52 @@ Item {
     cursorShape: dragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
     mapTarget: root ? root.dockCard : null
 
-    onDragStarted: fitem.dragStarted(fitem.folderPath)
-    onDragMoved: function(x, y) { fitem.dragMoved(fitem.folderPath, x, y) }
-    onDragFinished: fitem.dragDropped(fitem.folderPath)
+    // A button is not a folder: it is not dragged around the folder row.
+    onDragStarted: if (!fitem.isButton) fitem.dragStarted(fitem.folderPath)
+    onDragMoved: function(x, y) { if (!fitem.isButton) fitem.dragMoved(fitem.folderPath, x, y) }
+    onDragFinished: if (!fitem.isButton) fitem.dragDropped(fitem.folderPath)
 
     onTapped: function(mouse) {
       var targetWin = root ? root.contentItemRef : null
+      if (mouse.button === Qt.LeftButton && fitem.isButton) {
+        // argv form, as the folder popup does with xdg-open; the command comes
+        // from the user's own config and is length-bounded in DockModel.
+        Quickshell.execDetached(["sh", "-c", fitem.command])
+        return
+      }
       if (mouse.button === Qt.RightButton) {
-        var mappedPos = targetWin ? fitem.mapToItem(targetWin, fitem.width / 2, 0) : null
+        var mappedPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!mappedPos) return
-        fitem.menuRequested(fitem.folderPath, fitem.name, mappedPos.x, 0)
+        fitem.menuRequested(fitem.folderPath, fitem.name, mappedPos.x, 0, fitem.command)
       } else {
-        var centerPos = targetWin ? fitem.mapToItem(targetWin, fitem.width / 2, 0) : null
+        var centerPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!centerPos) return
         fitem.openStackRequested(fitem.folderPath, fitem.name, centerPos.x, centerPos.y)
       }
     }
   }
 
-  // Name label (visibility/size/contrast decided in DockLabelLogic).
+  // Name beside the folder (DockLabel, policy in DockLabelLogic).
   DockLabel {
+    id: label
+    z: -1
     rootRef: fitem.rootRef
-    name: fitem.name
     kind: "folder"
-    tile: fitem
+    name: fitem.name
+    hovered: area.containsMouse && !area.dragging
+    iconBox: iconSlot
+    tileLead: fitem.gapWidth
+    slot: fitem.labelSlot
   }
 
   // Hover tooltip — uses our own HoverTooltip so textFormat: Text.PlainText is enforced.
   HoverTooltip {
     dockRoot: root
-    text: fitem.name + " (Folder)"
+    text: fitem.isButton ? fitem.name : (fitem.name + " (Folder)")
     hovered: area.containsMouse
     blocked: (!root || !root.showTooltips || root.activeStackFolder !== "")
+      || (root && !root.labelTooltipNeeded("folder", false, false, label.shortened))
+    target: iconSlot
     showTooltips: root ? root.showTooltips : true
     tooltipDelay: root ? root.tooltipDelay : 450
     contextAppId: root ? root.contextAppId : ""

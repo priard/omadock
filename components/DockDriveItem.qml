@@ -75,6 +75,8 @@ Item {
       visible: String(source) !== "" && !iconSlot.themedSymbolic
       iconStyle: root ? root.iconStyle : "original"
       tint: root ? root.iconTintColor : Color.bar.text
+      toneInvert: ditem.isSymbolic ? 1 : -1
+      allowReveal: !ditem.isSymbolic
       grid: root ? root.iconGrid : 16
       outputScale: root ? root.outputScale : 1
       contrast: root ? root.iconContrast : 0
@@ -121,7 +123,7 @@ Item {
     rootRef: ditem.rootRef
     visible: ditem.isOpen
     anchors.bottom: parent.bottom
-    anchors.bottomMargin: Style.space(1)
+    anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     anchors.horizontalCenter: parent.horizontalCenter
     kind: "active"
   }

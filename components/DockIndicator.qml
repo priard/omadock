@@ -23,8 +23,17 @@ Rectangle {
   property bool urgent: false
   // Smaller marks when many sit side by side.
   property bool dense: false
+  // Stacked in a column (side indicators on a label plate): the accent bar
+  // stands upright.
+  property bool vertical: false
+  // Ink for marks standing on a label plate (transparent: the dock's own).
+  property color inkOverride: "transparent"
   // 0..1 breathing for urgent marks, driven by the item.
   property real pulse: 1.0
+  // Anything that moves the mark without changing its own x or y (a plate
+  // lifting it on hover, say): the owner binds it so the mark re-snaps.
+  property real moveKey: 0
+  onMoveKeyChanged: Qt.callLater(mark.resnap)
 
   // Marks are unsmoothed rectangles, so at a fractional scale (1.5) they lost
   // or gained a row of pixels depending on where they landed, and anything
@@ -40,7 +49,9 @@ Rectangle {
   // The dock's classic mark dimensions: 5px dots (4px dense) and a 12x4
   // accent bar (9x4 dense). A fix for fractional-scale borders once thinned
   // every mark a pixel with it; the sizes here are the look the dock ships.
-  readonly property real dotSize: Math.max(2 / mark.dpr, mark.snap(Style.space(dense ? 4 : 5)))
+  // A side column on a plate uses the dense dot: beside a name the full
+  // dot read heavy.
+  readonly property real dotSize: Math.max(2 / mark.dpr, mark.snap(Style.space((dense || vertical) ? 4 : 5)))
   readonly property real barHeight: Math.max(2 / mark.dpr, mark.snap(Style.space(4)))
 
   property real snapX: 0
@@ -75,13 +86,24 @@ Rectangle {
     function onIconSizeChanged() { Qt.callLater(mark.resnap) }
     function onDockVisibleChanged() { settleSnap.restart() }
   }
+  // The card re-centres as tiles come and go or a drop gap opens.
+  Connections {
+    target: mark.root ? mark.root.dockCard : null
+    ignoreUnknownSignals: true
+    function onXChanged() { Qt.callLater(mark.resnap) }
+    function onWidthChanged() { Qt.callLater(mark.resnap) }
+  }
   readonly property color ink: urgent
     ? Color.urgent
-    : Util.alpha(root ? root.dockForeground : Color.bar.text, 0.88)
+    : Util.alpha(mark.inkOverride.a > 0 ? mark.inkOverride : (root ? root.dockForeground : Color.bar.text), 0.88)
 
-  width: kind === "active" ? mark.snap(Style.space(dense ? 9 : 12)) : dotSize
-  height: kind === "active" ? mark.barHeight : dotSize
-  radius: (root && root.indicatorSquare) ? 0 : height / 2
+  readonly property real barLength: mark.snap(Style.space(dense ? 9 : 12))
+  // Upright in a column the bar is as thick as a dot: the 1.5 output is
+  // drawn at 2x and scaled down, so a thinner bar could not be centred on
+  // the dots and leaned a pixel to one side.
+  width: kind === "active" ? (mark.vertical ? mark.dotSize : mark.barLength) : dotSize
+  height: kind === "active" ? (mark.vertical ? mark.barLength : mark.barHeight) : dotSize
+  radius: (root && root.indicatorSquare) ? 0 : Math.min(width, height) / 2
 
   color: kind === "active" ? Color.accent
     : kind === "minimized" ? "transparent"
@@ -95,6 +117,7 @@ Rectangle {
   opacity: urgent ? (0.4 + 0.6 * pulse) : 1.0
 
   Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+  Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
   Behavior on color { ColorAnimation { duration: 120 } }
   Behavior on border.color { ColorAnimation { duration: 120 } }
 }

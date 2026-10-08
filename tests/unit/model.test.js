@@ -256,7 +256,7 @@ test('presets include classic/long divider geometry and reject nonscalar look va
   const look = plain(model.pickLook({ dividerGeometry: 'long', hoverEffect: 'glow', bgColor: {}, iconSize: Infinity }))
   assert.equal(look.dividerGeometry, 'long')
   assert.equal(look.hoverEffect, 'glow')
-  assert.equal(look.bgColor, undefined)
+  assert.equal(look.bgColor, 'theme')
   assert.equal(look.iconSize, 0)
   assert.deepEqual(plain(model.boundPresets({ length: 1e9 })), [])
 })

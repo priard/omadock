@@ -37,11 +37,19 @@ Item {
   property bool hovered: false
   property var hoverFx: null
   // The styled shader draws the original itself, dithering it in.
-  readonly property bool revealMode: (art.hoverFx ? art.hoverFx.reveal === true : false)
+  // Off for symbolic icons: their "original" is drawn recoloured by the
+  // owner, and revealing the raw dark-grey template flashed black.
+  property bool allowReveal: true
+  readonly property bool revealMode: art.allowReveal && (art.hoverFx ? art.hoverFx.reveal === true : false)
     && (art.iconStyle === "dots" || (art.iconStyle === "mono" && !art.hasCustom))
   property real revealLevel: art.showOriginal ? 1 : 0
   Behavior on revealLevel { NumberAnimation { duration: 450; easing.type: Easing.InOutQuad } }
   property color tint: Color.bar.text
+  // Which tone carries the ink in mono/dots: -1 follows the tint (its
+  // brightness for a light tint, darkness for a dark one); 1 reads the
+  // icon's dark parts, as for symbolic icons, which are dark grey templates
+  // whatever the tint.
+  property real toneInvert: -1
   // Cells across the icon for the pixel and dots styles.
   property int grid: 16
   // The output's device-pixel grid (see Dock.outputScale), which the pixel
@@ -211,7 +219,7 @@ Item {
           property real grid: art.cells
           property real dotFill: 0.72
           property real dimLevel: art.iconStyle === "dots" ? 0.22 : 0.35
-          property real invert: art.tint.hslLightness < 0.5 ? 1.0 : 0.0
+          property real invert: art.toneInvert >= 0 ? art.toneInvert : (art.tint.hslLightness < 0.5 ? 1.0 : 0.0)
           property real dots: art.iconStyle === "dots" ? 1.0 : 0.0
           // Thin glyph strokes cover only part of a cell; count them in.
           property real alphaCut: art.hasCustom ? 0.12 : 0.35

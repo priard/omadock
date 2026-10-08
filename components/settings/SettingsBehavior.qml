@@ -61,6 +61,24 @@ Column {
     checked: root ? root.keepPointer : true
     onToggled: root.setOption("keepPointer", !root.keepPointer)
   }
+  ChoiceRow {
+    key: "restoreWorkspace"
+    label: "Restore on"
+    hint: "Where a minimized window comes back to. Windows restores it to the workspace it was minimized from."
+    options: [
+      { value: "current", label: "Current workspace" },
+      { value: "origin", label: "Original workspace" }
+    ]
+    value: root ? root.restoreWorkspace : "current"
+    onPicked: function(v) { root.setOption("restoreWorkspace", v) }
+  }
+  SwitchRow {
+    key: "restoreSlot"
+    label: "Restore original slot"
+    hint: "Put the window back in the place it held in the tiling layout, not at the end. Only when the layout has not changed in the meantime."
+    checked: root ? root.restoreSlot : false
+    onToggled: root.setOption("restoreSlot", !root.restoreSlot)
+  }
   SliderRow {
     key: "wheelStepDelay"
     label: "Wheel step delay"

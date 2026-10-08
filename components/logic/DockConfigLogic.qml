@@ -1,5 +1,8 @@
 import QtQuick
 import "../../DockModel.js" as DockModel
+import "../../Buttons.js" as Buttons
+import "../../DockLabels.js" as DockLabels
+import "../../DockLayout.js" as DockLayout
 
 // Config and preset logic, extracted from Dock.qml so the root file only
 // declares state and wiring. Every function is stateless: the dock root is
@@ -17,6 +20,9 @@ QtObject {
       ? parsed.hoverEffect
       : ((parsed && parsed.magnification === false) ? "off" : "zoom")
     root.launchBounce = parsed && parsed.launchBounce !== false
+    // Label looks (a preset's, or the file's before readLabelConfig runs).
+    var labelLook = DockLabels.pickLabelLook(parsed, root)
+    for (var llk in labelLook) root[llk] = labelLook[llk]
     root.configuredIconSize = parsed && typeof parsed.iconSize === "number" && isFinite(parsed.iconSize) && parsed.iconSize > 0
       ? Math.max(16, Math.min(96, Math.round(parsed.iconSize))) : 0
     if (parsed && (parsed.opacity === "theme" || parsed.opacity === "auto" || parsed.opacity === -1)) {
@@ -97,8 +103,8 @@ QtObject {
         parsed = {}
       }
     }
-    root.alignment = (parsed && (parsed.alignment || parsed.position)) ? String(parsed.alignment || parsed.position).toLowerCase() : "center"
-    if (root.alignment !== "left" && root.alignment !== "right") root.alignment = "center"
+    root.alignment = DockLayout.normalizeAlignment(parsed ? (parsed.alignment || parsed.position) : "")
+    root.layout = DockLayout.normalizeLayout(parsed ? parsed.layout : "")
     root.showRemovableDrives = parsed ? parsed.showRemovableDrives !== false : true
     root.warnUnsafeRemoval = parsed ? parsed.warnUnsafeRemoval !== false : true
     if (parsed && DockModel.isList(parsed.appGroups)) {
@@ -129,6 +135,8 @@ QtObject {
     } else {
       root.minimizeMode = "active"
     }
+    root.restoreWorkspace = (parsed && parsed.restoreWorkspace === "origin") ? "origin" : "current"
+    root.restoreSlot = !!(parsed && parsed.restoreSlot === true)
     root.keepPointer = parsed ? parsed.keepPointer !== false : true
     root.showUrgentHint = parsed ? parsed.showUrgentHint !== false : true
     root.urgentOnNotification = parsed ? parsed.urgentOnNotification !== false : true
@@ -137,12 +145,10 @@ QtObject {
     root.badgeStyle = (parsed && parsed.badgeStyle === "dot") ? "dot" : "count"
     root.badgePosition = (parsed && ["top-left", "top-right", "bottom-left", "bottom-right"].indexOf(parsed.badgePosition) >= 0) ? parsed.badgePosition : "top-right"
     root.badgeColor = (parsed && ["accent", "urgent", "neutral"].indexOf(parsed.badgeColor) >= 0) ? parsed.badgeColor : "accent"
-    // Name labels (DockLabelLogic): bounded spellings, labels off by default.
-    root.showLabels = !!(parsed && parsed.showLabels === true)
-    root.labelKind = (parsed && ["all", "apps", "groups", "folders"].indexOf(parsed.labelKind) >= 0) ? parsed.labelKind : "all"
-    root.labelPlacement = (parsed && parsed.labelPlacement === "above") ? "above" : "below"
-    root.labelSize = (parsed && ["small", "medium", "large"].indexOf(parsed.labelSize) >= 0) ? parsed.labelSize : "small"
-    root.labelContrast = (parsed && ["theme", "high", "pill"].indexOf(parsed.labelContrast) >= 0) ? parsed.labelContrast : "theme"
+    // Name labels (DockLabels.readLabelConfig), including the first release's
+    // showLabels / labelPlacement / labelContrast spellings.
+    var labels = DockLabels.readLabelConfig(parsed)
+    for (var lk in labels) root[lk] = labels[lk]
     root.urgentSound = parsed ? parsed.urgentSound !== false : true
     root.urgentSoundName = DockModel.cleanSoundName(parsed ? parsed.urgentSoundName : "bell")
     root.revealDelay = parsed && typeof parsed.revealDelay === "number"
@@ -154,6 +160,7 @@ QtObject {
     root.wheelStepDelay = parsed && typeof parsed.wheelStepDelay === "number"
       ? Math.max(0, Math.min(1000, Math.round(parsed.wheelStepDelay)))
       : 150
+    root.pinnedButtons = parsed ? Buttons.boundPinnedButtons(parsed.pinnedButtons) : []
     if (parsed && DockModel.isList(parsed.pinnedFolders)) {
       root.pinnedFolders = DockModel.boundPinnedFolders(parsed.pinnedFolders)
     } else {
@@ -167,6 +174,7 @@ QtObject {
   function buildConfig(root, base) {
     var conf = base && typeof base === "object" && !Array.isArray(base) ? base : {}
     conf.alignment = root.alignment || "center"
+    conf.layout = root.layout
     delete conf.position
     conf.showRemovableDrives = root.showRemovableDrives
     conf.warnUnsafeRemoval = root.warnUnsafeRemoval
@@ -226,6 +234,8 @@ QtObject {
     conf.dividerOpacity = root.dividerOpacity
     conf.minimizeMode = root.minimizeMode
     conf.clickToMinimize = root.minimizeMode !== "off"
+    conf.restoreWorkspace = root.restoreWorkspace
+    conf.restoreSlot = root.restoreSlot
     conf.keepPointer = root.keepPointer
     conf.showUrgentHint = root.showUrgentHint
     conf.urgentOnNotification = root.urgentOnNotification
@@ -233,17 +243,14 @@ QtObject {
     conf.badgeStyle = root.badgeStyle
     conf.badgePosition = root.badgePosition
     conf.badgeColor = root.badgeColor
-    conf.showLabels = root.showLabels
-    conf.labelKind = root.labelKind
-    conf.labelPlacement = root.labelPlacement
-    conf.labelSize = root.labelSize
-    conf.labelContrast = root.labelContrast
+    DockLabels.writeLabelConfig(conf, root)
     conf.urgentSound = root.urgentSound
     conf.urgentSoundName = root.urgentSoundName
     conf.revealDelay = root.revealDelay
     conf.tooltipDelay = root.tooltipDelay
     conf.wheelStepDelay = root.wheelStepDelay
     conf.pinnedFolders = DockModel.boundPinnedFolders(root.pinnedFolders)
+    conf.pinnedButtons = Buttons.boundPinnedButtons(root.pinnedButtons)
     conf.presets = DockModel.boundPresets(root.presets)
     return conf
   }
@@ -329,11 +336,13 @@ QtObject {
     return true
   }
 
-  // Keys a preset lacks (saved before they existed) keep their current value.
+  // A preset holds every look key: those it was saved without (they did not
+  // exist yet) were filled with their defaults when it was read
+  // (DockModel.pickLook), so applying it sets them back too.
   function applyPreset(root, id) {
     var i = presetIndex(root, id)
     if (i < 0) return false
-    applyLook(root, Object.assign({}, root.currentLook, root.presets[i].look))
+    applyLook(root, root.presets[i].look)
     root.applyBlurRule(false)
     root.saveConfig()
     return true

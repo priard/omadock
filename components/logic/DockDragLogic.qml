@@ -13,22 +13,28 @@ QtObject {
   // The folder section of the row: from the folder divider on, or, with no
   // divider (no folders or drives yet, or nothing before them), the last
   // three quarters of a slot at the end of the row and beyond.
+  // Folders and drives sit in their own row (card.rightRowRef); px is in
+  // the outer row's coordinates.
   function inPinZone(root, card, px) {
-    if (card.folderSeparatorRef.visible) return px >= card.folderSeparatorRef.x - (root ? root.gapWidth : 0)
+    var rx = px - card.rightRowRef.x
+    if (card.folderSeparatorRef.visible) return rx >= card.folderSeparatorRef.x - (root ? root.gapWidth : 0)
     if (card.foldersRepeater.count > 0) {
       var first = card.foldersRepeater.itemAt(0)
-      if (first) return px >= first.x
+      if (first) return rx >= first.x
     }
     return px >= card.row.width - (root ? root.iconSlot * 0.75 : 0)
   }
 
   function folderInsertIndex(root, card, px) {
+    var rx = px - card.rightRowRef.x
     var n = card.foldersRepeater ? card.foldersRepeater.count : 0
     for (var i = 0; i < n; i++) {
       var it = card.foldersRepeater.itemAt(i)
       if (!it) continue
-      var iconCenter = it.x + it.width - (root ? root.iconSlot : it.width) / 2
-      if (px < iconCenter) return i
+      // The middle of the folder's tile (icon and any label), past the drop gap.
+      var gap = it.gapWidth || 0
+      var iconCenter = it.x + gap + (it.width - gap) / 2
+      if (rx < iconCenter) return i
     }
     return n
   }
@@ -71,14 +77,19 @@ QtObject {
       var slot = card.pinnedRowRepeater.itemAt(i)
       var it = slot ? slot.item : null
       if (!it) continue
-      var centre = slot.x + slot.width / 2
+      // A tile with a label (or a plate) is one button: its whole width is
+      // the target, with the edges left for placing before or after it.
+      // Past the room an open drop gap adds before it.
+      var lead = it.dropGap || 0
+      var centre = slot.x + lead + (slot.width - lead) / 2
+      var span = slot.width - lead
       if (slot.isGroup) {
-        if (Math.abs(rx - centre) < slot.width * 0.45) {
+        if (Math.abs(rx - centre) < span * 0.45) {
           root.dropTargetGroupId = it.groupId
           root.dropRowIndex = -1
           return
         }
-      } else if (it.appId !== aid && Math.abs(rx - centre) < slot.width * 0.38) {
+      } else if (it.appId !== aid && Math.abs(rx - centre) < span * 0.38) {
         root.dropTargetAppId = it.appId
         root.dropRowIndex = -1
         return
@@ -96,7 +107,6 @@ QtObject {
     }
     root.dropRowIndex = idx
     if (idx < 0) return
-    root.dropIndicatorX = cardWrapper.rowIndicatorX(idx)
     // The first app at or after the drop, for moves that work in pin order.
     for (var j = idx; j < n; j++) {
       var s2 = card.pinnedRowRepeater.itemAt(j)
@@ -118,13 +128,6 @@ QtObject {
       if (slot && rx < slot.x + slot.width / 2) return i
     }
     return n
-  }
-
-  function rowIndicatorX(root, card, idx) {
-    var n = card.pinnedRowRepeater.count
-    if (idx < n) return card.row.x + card.pinnedRowRepeater.itemAt(idx).x - card.row.spacing / 2 - Style.space(1)
-    var last = card.pinnedRowRepeater.itemAt(n - 1)
-    return card.row.x + last.x + last.width + card.row.spacing / 2 - Style.space(1)
   }
 
   function handleDragDropped(root, card, aid) {
@@ -209,16 +212,14 @@ QtObject {
     var first = n > 0 ? card.foldersRepeater.itemAt(0) : null
     var last = n > 0 ? card.foldersRepeater.itemAt(n - 1) : null
     var rx = mx - card.row.x
+    var fx = rx - card.rightRowRef.x
     if (root.dragRemoveArmed || !first || !last
-        || rx < first.x - card.row.spacing || rx > last.x + last.width + card.row.spacing) {
+        || fx < first.x - card.row.spacing || fx > last.x + last.width + card.row.spacing) {
       root.dropFolderIndex = -1
       return
     }
     var idx = cardWrapper.folderInsertIndex(rx)
     root.dropFolderIndex = idx
-    root.dropIndicatorX = idx < n
-      ? card.row.x + card.foldersRepeater.itemAt(idx).x - card.row.spacing / 2 - Style.space(1)
-      : card.row.x + last.x + last.width + card.row.spacing / 2 - Style.space(1)
   }
 
   function handleFolderDragDropped(root, card, path) {

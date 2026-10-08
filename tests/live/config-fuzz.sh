@@ -25,7 +25,9 @@ cases = {
     "array-like": '{"appGroups": {"length": 1000000}, "pinnedFolders": {"length": 1000000}}',
     "bad-sound": '{"urgentSoundName": "../../../etc/passwd", "urgentSound": true}',
     "relative-folder": '{"pinnedFolders": [{"path": "-x"}, {"path": "rel"}]}',
-    "oversize": json.dumps({"pad": "x" * (2 * 1024 * 1024)}),
+    "bad-layout": '{"layout": 5, "alignment": ["x"]}',
+    "pinned-buttons": '{"pinnedButtons": [{"command": "/usr/bin/true"}, {"name": "no command"}, {"command": 42}, {"command": "x"}]}',
+    "buttons-array-like": '{"pinnedButtons": {"length": 1000000}}',    "oversize": json.dumps({"pad": "x" * (2 * 1024 * 1024)}),
 }
 for name, text in cases.items():
     (w / name).write_text(text)
@@ -58,6 +60,9 @@ if not 0 <= d.get("systemBlurSize", 0) <= 100:
     sys.exit(f"FAIL {name}: systemBlurSize {d['systemBlurSize']} saved unbounded")
 if d.get("urgentSoundName", "bell") != "bell" and name == "bad-sound":
     sys.exit(f"FAIL {name}: urgentSoundName {d['urgentSoundName']!r} saved")
+if any(not str(b.get("command", "")).strip() for b in d.get("pinnedButtons", [])):
+    print("pinned button without a command")
+    sys.exit(1)
 if any(not str(f.get("path", "")).startswith(("/", "~")) for f in d.get("pinnedFolders", [])):
     sys.exit(f"FAIL {name}: relative pinned folder saved")
 PY

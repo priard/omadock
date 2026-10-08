@@ -124,9 +124,17 @@ test("cleanPresetName strips bidi/control characters and caps length", () => {
 test("pickLook keeps look keys only, scalars, capped strings", () => {
   const look = plain(M.pickLook({ bgColor: "x".repeat(100), foo: 1, iconSize: Infinity, shape: { a: 1 } }))
   assert.equal(look.bgColor.length, 64)
-  assert.ok(!("foo" in look) && !("shape" in look))
+  assert.ok(!("foo" in look))
+  assert.equal(look.shape, "rounded")
   assert.equal(look.iconSize, 0)
   assert.equal(look.cornerRadius, -1)
+})
+
+test("every look key has a default, and pickLook fills the missing ones", () => {
+  assert.deepEqual(Object.keys(M.DEFAULT_LOOK).sort(), [...M.LOOK_KEYS].sort())
+  const look = plain(M.pickLook({ iconStyle: "dots" }))
+  assert.equal(look.iconStyle, "dots")
+  for (const k of M.LOOK_KEYS) if (k !== "iconStyle") assert.deepEqual(look[k], M.DEFAULT_LOOK[k], k)
 })
 
 test("boundPresets validates ids, drops duplicates, caps at six", () => {

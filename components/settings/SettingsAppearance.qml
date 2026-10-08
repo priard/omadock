@@ -227,7 +227,7 @@ Column {
     key: "dividerLength"
     label: "Divider length style"
     hint: "Classic preserves the original icon-height lines. Long uses an adjustable share of the dock height."
-    visible: root ? !root.splitSections : true
+    visible: root ? !root.placement.split : true
     options: [{ value: "classic", label: "Classic" }, { value: "long", label: "Long" }]
     value: root ? root.dividerGeometry : "classic"
     onPicked: function(v) { root.setOption("dividerGeometry", v) }
@@ -236,7 +236,7 @@ Column {
     key: "dividerStyle"
     label: "Divider style"
     hint: "Theme draws the lines like the border, in its colour, opacity and width. Custom sets the width and opacity by hand."
-    visible: root ? !root.splitSections : true
+    visible: root ? !root.placement.split : true
     options: (root && !root.showBorder)
       ? [{ value: "simple", label: "Simple" }, { value: "custom", label: "Custom" }]
       : [{ value: "simple", label: "Simple" }, { value: "theme", label: "Theme" }, { value: "custom", label: "Custom" }]
@@ -246,7 +246,7 @@ Column {
   SliderRow {
     key: "dividerWidth"
     label: "Divider width"
-    visible: root ? (!root.splitSections && root.dividerStyle === "custom") : false
+    visible: root ? (!root.placement.split && root.dividerStyle === "custom") : false
     minimum: 1
     maximum: 6
     step: 0.5
@@ -258,7 +258,7 @@ Column {
   SliderRow {
     key: "dividerOpacity"
     label: "Divider opacity"
-    visible: root ? (!root.splitSections && root.dividerStyle === "custom") : false
+    visible: root ? (!root.placement.split && root.dividerStyle === "custom") : false
     minimum: 0
     maximum: 1
     step: 0.05
@@ -271,7 +271,7 @@ Column {
     key: "dividerHeight"
     label: "Divider height"
     hint: "Length of the lines between sections, as a share of the dock's height."
-    visible: root ? (!root.splitSections && root.dividerGeometry === "long") : false
+    visible: root ? (!root.placement.split && root.dividerGeometry === "long") : false
     minimum: 20
     maximum: 100
     step: 5
@@ -285,6 +285,7 @@ Column {
   ChoiceRow {
     key: "corners"
     label: "Corners"
+    visible: root ? !root.placement.panel : true
     options: [
       { value: "theme", label: "Theme" },
       { value: "rounded", label: "Rounded" },
@@ -303,7 +304,7 @@ Column {
   SliderRow {
     key: "cornerRadius"
     label: "Corner radius"
-    visible: root ? root.dockShape === "rounded" : false
+    visible: root ? (!root.placement.panel && root.dockShape === "rounded") : false
     minimum: 2
     maximum: root ? root.maxRoundedRadius : 24
     step: 1
@@ -314,6 +315,7 @@ Column {
   SwitchRow {
     key: "splitSections"
     label: "Split sections"
+    visible: root ? !root.placement.panel : true
     hint: "Each part between the dividers becomes its own panel, with a gap in place of the divider."
     checked: root ? root.splitSections : false
     onToggled: root.setOption("splitSections", !root.splitSections)
@@ -322,7 +324,7 @@ Column {
     key: "panelSpacing"
     label: "Panel spacing"
     hint: "Gap between the panels when sections are split."
-    visible: root ? root.splitSections : false
+    visible: root ? root.placement.split : false
     minimum: 0
     maximum: 48
     step: 1
@@ -341,69 +343,6 @@ Column {
     ]
     value: root ? root.indicatorShape : "theme"
     onPicked: function(v) { root.setOption("indicatorShape", v) }
-  }
-
-  SectionLabel { text: "Labels" }
-
-  SwitchRow {
-    key: "showLabels"
-    label: "Name labels"
-    hint: "Show each app, app group and folder name on the dock, in a band over the icon row."
-    checked: root ? root.showLabels : false
-    onToggled: root.setOption("showLabels", !root.showLabels)
-  }
-
-  Column {
-    width: parent.width
-    visible: root ? root.showLabels : false
-
-    ChoiceRow {
-      key: "labelKind"
-      label: "Label targets"
-      hint: "Which dock items carry a name label."
-      options: [
-        { value: "all", label: "All" },
-        { value: "apps", label: "Apps" },
-        { value: "groups", label: "App groups" },
-        { value: "folders", label: "Folders" }
-      ]
-      value: root ? root.labelKind : "all"
-      onPicked: function(v) { root.setOption("labelKind", v) }
-    }
-    ChoiceRow {
-      key: "labelPlacement"
-      label: "Label placement"
-      hint: "Below the icons sits at the dock's edge, above keeps the indicators' side clear."
-      options: [
-        { value: "below", label: "Below" },
-        { value: "above", label: "Above" }
-      ]
-      value: root ? root.labelPlacement : "below"
-      onPicked: function(v) { root.setOption("labelPlacement", v) }
-    }
-    ChoiceRow {
-      key: "labelSize"
-      label: "Label size"
-      options: [
-        { value: "small", label: "Small" },
-        { value: "medium", label: "Medium" },
-        { value: "large", label: "Large" }
-      ]
-      value: root ? root.labelSize : "small"
-      onPicked: function(v) { root.setOption("labelSize", v) }
-    }
-    ChoiceRow {
-      key: "labelContrast"
-      label: "Label contrast"
-      hint: "Theme follows the dock's text colour, High picks black or white for the dock background, Pill puts the name on a small rounded plate."
-      options: [
-        { value: "theme", label: "Theme" },
-        { value: "high", label: "High" },
-        { value: "pill", label: "Pill" }
-      ]
-      value: root ? root.labelContrast : "theme"
-      onPicked: function(v) { root.setOption("labelContrast", v) }
-    }
   }
 
   SectionLabel { text: "Dock Items" }

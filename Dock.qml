@@ -8,6 +8,8 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
+import "DockLabels.js" as DockLabels
+import "DockLayout.js" as DockLayout
 import "components"
 import "components/logic"
 
@@ -84,7 +86,6 @@ Item {
   onDockScreenChanged: root.recheckOutputScale()
 
   function lookupOutputScale(_rev) { return screenLogic.lookupOutputScale(root, _rev) }
-
   function recheckOutputScale() { return screenLogic.recheckOutputScale(root) }
 
   // Bounded burst, not a poll: stops on its own after two seconds.
@@ -127,11 +128,8 @@ Item {
   readonly property bool filterByMonitor: root.perMonitorApps && root.forcedScreenName !== ""
 
   function monitorNameForWorkspace(target) { return screenLogic.monitorNameForWorkspace(root, target) }
-
   function monitorNameForHypr(h) { return screenLogic.monitorNameForHypr(root, h) }
-
   function isHyprOnThisMonitor(h) { return screenLogic.isHyprOnThisMonitor(root, h) }
-
   function isToplevelOnThisMonitor(top) { return screenLogic.isToplevelOnThisMonitor(root, top) }
 
   onFilterByMonitorChanged: modelTimer.restart()
@@ -139,16 +137,17 @@ Item {
   property bool _syncingShared: false
   onMinimizedOriginsChanged: root.pushSharedState()
   onParkedAtChanged: root.pushSharedState()
+  onParkSlotsChanged: root.pushSharedState()
   onSharedStateChanged: root.pullSharedState()
 
   function pushSharedState() { return screenLogic.pushSharedState(root) }
-
   function pullSharedState() { return screenLogic.pullSharedState(root) }
 
   Connections {
     target: root.sharedState
     function onMinimizedOriginsChanged() { root.pullSharedState() }
     function onParkedAtChanged() { root.pullSharedState() }
+    function onParkSlotsChanged() { root.pullSharedState() }
   }
 
   function screenForName(name) { return screenLogic.screenForName(root, name) }
@@ -185,6 +184,8 @@ Item {
   // ------------------------------------------------------ logic modules
   DockConfigLogic { id: configLogic }
   DockWindowLogic { id: windowLogic }
+  DockSlotLogic { id: slotLogic }
+  DockEventLogic { id: eventLogic }
   DockGroupsLogic { id: groupsLogic }
   DockNotifLogic { id: notifLogic }
   DockFolderLogic { id: folderLogic }
@@ -254,7 +255,8 @@ Item {
   // window coordinates. Nothing that magnification changes feeds back into
   // those numbers, so the wave cannot chase itself.
   readonly property real magnifyPeak: 1.4
-  readonly property real zoomPeak: 1.22
+  // On always-on label plates the zoom stays inside the plate's margin.
+  readonly property real zoomPeak: root.labelPlates ? 1.1 : 1.22
   readonly property real magnifyRange: root.iconSlot * 2.2
   readonly property real baseIconArt: root.iconSize - Style.space(4)
   // Largest size an icon reaches under either hover effect; icons decode at
@@ -266,15 +268,20 @@ Item {
   // the part of the slot above a fixed indicator band. The box never moves with
   // running state, so icons stay level whether or not they carry dots.
   readonly property real indicatorBand: Style.space(6)
+  // Art and indicators sit this much above the band's centring, so the
+  // art's top margin matches the room under the indicators.
+  readonly property real indicatorLift: Style.spaceReal(1.5)
   // Distance from the slot's bottom edge to the bottom of the artwork.
-  readonly property real iconArtBottom: Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2)
+  // With indicators beside the art on label plates, the art is centred.
+  readonly property real iconArtBottom: root.labelSideMarks ? Math.round((root.iconSlot - root.baseIconArt) / 2)
+    : Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2) + root.indicatorLift
   // Vertical offset of the artwork's centre from the slot's centre, for
   // things centred on the row (separators, preview tiles).
   readonly property real iconCenterOffset: -root.indicatorBand / 2
 
   // The card's own handler in dockCard-local coordinates.
   readonly property real pointerX: cardHover.hovered
-    ? cardHover.point.position.x
+    ? cardHover.point.position.x - dockCardComp.rowOffset
     : -1e6
 
   readonly property int appsSlots: root.showAppsButton ? 1 : 0
@@ -296,7 +303,7 @@ Item {
   // Pinned-group | running divider. Sits after the tile section when tiles
   // exist, so it doubles as the right tile divider.
   readonly property bool hasSeparator: (root.pinnedSection.length > 0 || root.hasTiles) && root.visibleRunningCount > 0
-  readonly property real gapWidth: Style.space(root.itemSpacing)
+  readonly property real gapWidth: root.labelPlates ? root.plateSpacing.gap : Style.space(root.itemSpacing)
   // Split sections turn each separator into the gap between two panels. Each
   // panel reaches the card padding past its outer icons, so the separator
   // slot is sized to leave the chosen visible gap between the panels.
@@ -305,49 +312,21 @@ Item {
   // inside its own slot on each side. Squeezed against its neighbours, the
   // line made every difference in icon width show; with the full margin it
   // stood too far apart. Half sits between the two.
-  readonly property real separatorWidth: root.splitSections
+  readonly property real separatorWidth: root.placement.split
     ? Math.max(Style.space(1), root.sectionGap + 2 * root.baseRowLeft - 2 * root.gapWidth)
-    : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
+    : root.labelPlates ? root.plateSpacing.separator : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
   readonly property int groupSlots: (root.appGroups && DockModel.isList(root.appGroups)) ? root.appGroups.length : 0
-  readonly property int folderSlots: root.pinnedFolders ? root.pinnedFolders.length : 0
+  // Folders and buttons share the folder section, so they share its slot count.
+  readonly property int folderSlots: (root.pinnedFolders ? root.pinnedFolders.length : 0)
+    + (root.pinnedButtons ? root.pinnedButtons.length : 0)
   readonly property int driveSlots: (root.showRemovableDrives && root.mountedDrives) ? root.mountedDrives.length : 0
   readonly property bool hasFolderSeparator: (root.folderSlots > 0 || root.driveSlots > 0) && (root.pinnedSection.length > 0 || root.groupSlots > 0 || root.hasTiles || root.visibleRunningCount > 0)
   // Folders | drives divider: drives come and go with the hardware, so they
   // get a section of their own instead of trailing the pinned folders.
   readonly property bool hasDriveSeparator: root.folderSlots > 0 && root.driveSlots > 0
 
-  // Minimized-window preview tiles (macOS-style section on the dock's right).
-  // In minimizeMode "all", a parked app's windows compress into ONE stacked
-  // group tile; in "active" mode every window keeps its own tile.
-  readonly property var tileModel: {
-    if (!root.showMinimizedTiles) return []
-    var list = root.minimizedWindows
-    if (root.minimizeMode !== "all") {
-      var singles = []
-      for (var s = 0; s < list.length; s++) singles.push({ type: "single", win: list[s] })
-      return singles
-    }
-    var groups = {}
-    var order = []
-    for (var i = 0; i < list.length; i++) {
-      var w = list[i]
-      var key = w.appId || w.address
-      if (!groups[key]) {
-        groups[key] = { type: "group", appId: key, title: w.title, windows: [] }
-        order.push(key)
-      }
-      groups[key].windows.push(w)
-    }
-    // Oldest member parks the group's slot in line.
-    order.sort(function (a, b) {
-      var ta = root.parkedAt[groups[a].windows[0].address] !== undefined ? root.parkedAt[groups[a].windows[0].address] : 0
-      var tb = root.parkedAt[groups[b].windows[0].address] !== undefined ? root.parkedAt[groups[b].windows[0].address] : 0
-      return ta - tb
-    })
-    var out = []
-    for (var g = 0; g < order.length; g++) out.push(groups[order[g]])
-    return out
-  }
+  // Minimized-window preview tiles (DockStyleLogic.tileModel).
+  readonly property var tileModel: styleLogic.tileModel(root)
   readonly property int tileCount: root.tileModel.length
   readonly property real tileWidth: Math.round(root.iconSlot * 1.5)
   readonly property real tileHeight: Math.round(root.iconSlot * 0.95)
@@ -376,7 +355,7 @@ Item {
   // Where the row starts within the card (card-local coordinates).
   readonly property real baseRowLeft: dockCard ? dockCard.contentLeftInset : Style.space(5)
 
-  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth) { return styleLogic.slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth) }
+  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) { return styleLogic.slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) }
 
   // Width the tile section consumes ahead of elements that follow it,
   // including its left divider.
@@ -386,9 +365,7 @@ Item {
   readonly property int tileElements: root.hasTiles ? root.tileCount : 0
 
   function magnifyAt(homeCenter) { return styleLogic.magnifyAt(root, homeCenter) }
-
   function magnifyScaleAt(homeCenter) { return styleLogic.magnifyScaleAt(root, homeCenter) }
-
   function waveOffsetAt(homeCenter) { return styleLogic.waveOffsetAt(root, homeCenter) }
 
   // ------------------------------------------------- contrast
@@ -407,6 +384,7 @@ Item {
     : root.autoRoundedRadius
   readonly property int effectiveCardRadius: {
     var h = root.cardRadiusHeight
+    if (root.placement.panel) return 0
     if (root.dockShape === "round" || root.dockShape === "pill") return Math.round(h / 2)
     if (root.dockShape === "square") return 0
     if (root.dockShape === "theme" || root.dockShape === "auto") {
@@ -443,7 +421,7 @@ Item {
   readonly property int iconSize: root.configuredIconSize > 0
     ? root.configuredIconSize
     : Math.max(28, Math.round(Style.bar.sizeHorizontal * 0.9))
-  readonly property int iconSlot: root.iconSize + Style.space(10)
+  readonly property int iconSlot: root.labelPlates ? DockLabels.gridInt(root.iconSize + Style.space(10), root.outputScale) : root.iconSize + Style.space(10)
 
   // ------------------------------------------------- model
 
@@ -458,7 +436,7 @@ Item {
   property int tooltipsAlive: 0
   readonly property real popupMaxHeight: Math.max(240,
     (root.dockScreen ? root.dockScreen.height : 1080) - Style.space(36)
-    - Style.gapsOut - (dockCardComp ? dockCardComp.dockCard.height : 0) - Style.space(16))
+    - root.edgeGap - (dockCardComp ? dockCardComp.dockCard.height : 0) - Style.space(16))
   // Live scan of parked windows for the preview-tile section. Built straight
   // off Hyprland's own toplevel list, so it cannot go stale the way cached
   // model primitives can.
@@ -487,8 +465,13 @@ Item {
   // running, and foldered (grouped) apps alike.
   readonly property var notifEntries: root.pinnedSection.concat(root.runningSection).concat(root.groupedSection || [])
 
-  function refreshDock() { return stateLogic.refreshDock(root) }
-
+  // Model rebuilds are also the moment to re-read window rectangles: the tiling
+  // places are computed from them.
+  function refreshDock() {
+    var result = stateLogic.refreshDock(root)
+    root.refreshClientRects()
+    return result
+  }
   function rescanMinimizedWindows() { return stateLogic.rescanMinimizedWindows(root) }
 
   readonly property string activeId: {
@@ -530,6 +513,16 @@ Item {
   readonly property string minimizedWorkspace: "special:minimized"
   property var minimizedOrigins: ({})
   property var parkedAt: ({})
+  // Where each parked window sat, and the queue of windows still waiting to win
+  // their place back. See DockSlotLogic.
+  property var parkSlots: ({})
+  property var pendingSlotFixes: []
+  // The window the user restored: focus returns to it once the layout work is
+  // done, since reshaping has to focus other windows on the way.
+  property string slotFixFocus: ""
+  // Window rectangles, read from Hyprland in one shot: Quickshell's per-toplevel
+  // ipc object only carries at/size for windows that existed at shell start.
+  property var clientRects: ({})
   property var urgentMap: ({})
   // Counts urgency events (Hyprland urgent, app notifications) so items can
   // animate again for a new event while they are already marked urgent.
@@ -557,7 +550,6 @@ Item {
   property string dropTargetAppId: ""
   property string dropTargetGroupId: ""
   property string dragSourceGroupId: ""
-  property real dropIndicatorX: 0
   // Pinned folders and app groups are dragged too: folders to reorder them,
   // and either one off the dock to take it away.
   property string dragFolderPath: ""
@@ -588,6 +580,9 @@ Item {
 
   // ------------------------------------------------- folder stacks state
 
+  // Pinned slots that run a command instead of opening a folder (Buttons.js):
+  // rendered by the folder section, after the folders.
+  property var pinnedButtons: []
   property var pinnedFolders: []
   property string activeStackFolder: ""
   property string activeStackName: ""
@@ -614,6 +609,10 @@ Item {
   property real activeStackX: 0
   property string contextFolderPath: ""
   property string contextFolderName: ""
+  // The folder-section menu opened from a command button: a button has no path
+  // to rename, list or open, so the menu keeps only the rows that apply.
+  property bool contextIsButton: false
+  property string contextButtonCommand: ""
 
   // ------------------------------------------------- removable drives state
   property bool showRemovableDrives: true
@@ -631,10 +630,20 @@ Item {
   property var activeAppGroupData: null
   property real activeAppGroupX: 0
   property var contextAppGroupData: null
+  property bool contextRenaming: false     // a context-menu name field has the keyboard
 
   // ------------------------------------------------- configuration options
 
-  property string alignment: "center" // "center" | "left" | "right"
+  property string alignment: "center" // "center" | "left" | "right" | "spread"
+  property string layout: "dock"      // "dock" | "panel" (DockLayout.js)
+  // What the dock draws: { panel, split, align } (DockLayout.placement).
+  readonly property var placement: DockLayout.placement(root.layout, root.alignment, root.splitSections, root.folderSlots + root.driveSlots > 0)
+  // Margin between the card and the screen edge; the panel sits on it.
+  readonly property real edgeGap: root.placement.panel ? 0 : Style.gapsOut
+  // The shell's own gap to the screen edge (Hyprland's gaps_out / 2), 0 on a
+  // desktop that runs edge to edge. Read-only, reported by `state` so the live
+  // tests can tell what the panel had to gain over the dock.
+  readonly property real outerGap: Style.gapsOut
 
   property bool autohide: true
   property bool intelligentAutohide: true
@@ -763,11 +772,11 @@ Item {
   property bool iconHoverReveal: false
   // The mono / dots ink, kept readable against what sits behind the icons
   // (see readableOn): an accent tint over a theme gradient built from that
-  // same accent would otherwise vanish into it.
+  // same accent would otherwise vanish into it. On a label plate: the same against the plate.
   readonly property color iconTintColor: root.tintFor(root.iconTint, root.dockForeground, root.iconBackdropColor)
+  readonly property color plateIconTintColor: labelLogic.plateIconTint(root)
 
   function tintFor(mode, textColor, backdrop) { return styleLogic.tintFor(root, mode, textColor, backdrop) }
-
   function blackOrWhiteOn(backdrop) { return styleLogic.blackOrWhiteOn(root, backdrop) }
 
   // Best guess at the colour behind the icons: the card's fill (for a
@@ -832,7 +841,6 @@ Item {
 
   function luminance(c) { return styleLogic.luminance(root, c) }
   function contrastRatio(a, b) { return styleLogic.contrastRatio(root, a, b) }
-
   function readableOn(color, backdrop) { return styleLogic.readableOn(root, color, backdrop) }
   // Without a card to cast one, each icon casts its own shadow.
   readonly property bool iconShadow: root.showShadow && !root.showBackground && root.shadowStrength > 0
@@ -877,18 +885,37 @@ Item {
   property real dividerWidth: 1.5
   property real dividerOpacity: 0.4
   property string minimizeMode: "active"
+  // Where a parked window comes back: the workspace you are on, or the one it was
+  // parked from. Windows puts a minimized window back where it was.
+  property string restoreWorkspace: "current"
+  // Whether the window also wins back the place it held in the tiling layout.
+  property bool restoreSlot: false
   // Hyprland warps the pointer into a window it activates (and on workspace
   // switches); keepPointer suppresses that for focus changes the dock makes.
   property bool keepPointer: true
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
   property bool urgentOnNotification: true
-  // ---- name labels on the tiles (policy in DockLabelLogic)
-  property bool showLabels: false
+  // ---- name labels beside the icons (DockLabelLogic, DockLabels.js)
+  property string labelMode: "off"        // off | always | hover
   property string labelKind: "all"        // all | apps | groups | folders
-  property string labelPlacement: "below" // below | above
-  property string labelSize: "small"      // small | medium | large
-  property string labelContrast: "theme"  // theme | high | pill
+  property string labelFont: "theme"      // theme | sans | pixel
+  property string labelSize: "medium"     // small | medium | large
+  property string labelWeight: "medium"   // regular | medium | bold
+  property string labelColor: "auto"      // auto | theme | accent
+  property string labelBackground: "none" // none | pill | plate
+  property string labelShape: "dock"      // dock | pill | rounded | square
+  property string labelIndicators: "before" // before | after | under (always-on plates)
+  property string labelPlateHeight: "icon"  // icon | dock (always-on plates)
+  readonly property bool labelPlates: root.labelMode === "always" && root.labelBackground === "plate" && !root.placement.split
+  readonly property var plateSpacing: labelLogic.plateSpacing(root)
+  readonly property bool labelSideMarks: DockLabels.sideMarks(root.labelMode, root.labelBackground, root.labelIndicators)
+  property string labelReveal: "slide"    // slide | typewriter | scramble
+  property string labelEffect: "none"     // none | glow | outline
+  property int labelMaxWidth: 140
+  property var labelNames: ({})           // appId -> the user's label text
+  property var labelExtras: ({})          // slot -> { owner, width } (DockLabels.withExtra)
+  property int labelsOpen: 0              // hover-mode labels open or closing
 
   property bool showNotificationBadges: true
   // Badge look: what the pill carries, which corner it sits on, its colour.
@@ -967,12 +994,42 @@ Item {
     }
   }
 
+  readonly property var modelSettleTimerRef: modelSettleTimer
+
   // One-shot deferred rebuild after park/restore moves and configreloaded events,
   // so model state is re-frozen once Hyprland handles settle.
   Timer {
     id: modelSettleTimer
     interval: 300
     onTriggered: root.refreshDock()
+  }
+
+  // Slot recovery after a restore: Hyprland inserts the window home as a new tiling
+  // window, so its recorded place is won back with a swap. The layout settles a beat
+  // after the move, hence the delay; every window gets a few passes, then the dock
+  // stops rather than fight a layout the user changed while the window was parked.
+  Timer {
+    id: slotFixTimer
+    interval: 180
+    repeat: false
+    onTriggered: {
+      if (slotLogic.runSlotFixes(root) > 0) restart()
+    }
+  }
+
+  // One shot, on demand: window rectangles for the tiling-place bookkeeping.
+  Process {
+    id: clientRectsProc
+    command: ["hyprctl", "-j", "clients"]
+    running: false
+    stdout: StdioCollector {
+      onStreamFinished: root.clientRects = slotLogic.parseClientRects(root, this.text)
+    }
+  }
+
+  function refreshClientRects() {
+    if (clientRectsProc.running) return
+    clientRectsProc.running = true
   }
 
   Timer {
@@ -1034,14 +1091,14 @@ Item {
           ? (mon.height / scale)
           : (dockScreen ? dockScreen.height : 1080)
 
-        var cardW = (dockCard && dockCard.width > 0) ? (dockCard.width + Style.gapsOut * 2) : 320
-        var cardH = (dockCard && dockCard.height > 0) ? (dockCard.height + Style.gapsOut * 2) : 60
+        var cardW = (dockCard && dockCard.width > 0) ? (dockCard.width + root.edgeGap * 2) : 320
+        var cardH = (dockCard && dockCard.height > 0) ? (dockCard.height + root.edgeGap * 2) : 60
         var monX = (mon && typeof mon.x === "number") ? mon.x : 0
         var monY = (mon && typeof mon.y === "number") ? mon.y : 0
         var cardX = dockCardComp ? dockCardComp.x : ((screenLogicalW - cardW) / 2)
         var dockLeft = monX + cardX
         var dockRight = dockLeft + cardW
-        var dockTop = monY + screenLogicalH - cardH - Style.gapsOut
+        var dockTop = monY + screenLogicalH - cardH - root.edgeGap
         var dockBottom = monY + screenLogicalH
 
         var overlap = false
@@ -1182,16 +1239,12 @@ Item {
   }
 
   function pickCustomFolder() { return folderLogic.pickCustomFolder(root) }
-
   function scanRemovableDrives() { return folderLogic.scanRemovableDrives(root) }
-
   function openDriveContext(dev, mp, name, space, cx, cy) { return folderLogic.openDriveContext(root, dev, mp, name, space, cx, cy) }
-
   function ejectDrive(dev, mountpoint, name) { return folderLogic.ejectDrive(root, dev, mountpoint, name) }
-
   function setDockAlignment(align) { return stateLogic.setDockAlignment(root, align) }
-
   function setDockPosition(pos) { return stateLogic.setDockPosition(root, pos) }
+  function setDockLayout(l) { return stateLogic.setDockLayout(root, l) }
 
   function openAppGroup(gdata, cx, cy) { return groupsLogic.openAppGroup(root, gdata, cx, cy) }
 
@@ -1440,118 +1493,7 @@ Item {
       debounceOverlapTimer.restart()
     }
     function onRawEvent(event) {
-      var n = String((event && event.name) || "")
-      // A config reload drops runtime layer rules along with the Lua state.
-      if (n === "configreloaded") {
-        root.applyBlurRule(true)
-        modelSettleTimer.restart()
-        terminalHostDebounce.restart()
-        return
-      }
-      if (n === "windowtitlev2") {
-        terminalHostDebounce.restart()
-        modelTimer.restart()
-      }
-      if (n === "openwindow") {
-        var rawAddr = String(event.data || "").split(",")[0].trim()
-        if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
-        var fullAddr = "0x" + rawAddr
-        var rec = DockModel.copyMap(root.recentOpenedWindowAddrs)
-        rec[fullAddr] = Date.now() + 3000
-        root.recentOpenedWindowAddrs = rec
-      }
-      if (n === "urgent") {
-        var rawAddr = String(event.data || "").trim()
-        if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
-        var fullAddr = "0x" + rawAddr
-
-        // Foreground Suppression Rule: If the window is ALREADY active and focused, suppress urgency
-        var activeAddr = root.windowAddress(root.hyprToplevelFor(ToplevelManager.activeToplevel))
-        if (activeAddr && activeAddr === fullAddr) {
-          return
-        }
-
-        // Suppress initial window startup / opening urgency
-        if (root.recentOpenedWindowAddrs && root.recentOpenedWindowAddrs[fullAddr] && Date.now() < root.recentOpenedWindowAddrs[fullAddr]) {
-          return
-        }
-
-        // Suppress if the app was recently launched by user
-        var allEntries = root.pinnedSection.concat(root.runningSection)
-        for (var e = 0; e < allEntries.length; e++) {
-          var entry = allEntries[e]
-          if (!entry) continue
-          if (root.launchPending && root.launchPending[entry.id]) {
-            var wins = entry.windowList || []
-            for (var w = 0; w < wins.length; w++) {
-              var wa = wins[w] ? wins[w].address : ""
-              if (wa && wa === fullAddr) {
-                return
-              }
-            }
-          }
-        }
-
-        var map = DockModel.copyMap(root.urgentMap)
-        map[fullAddr] = true
-        root.urgentMap = map
-        root.urgentEventKeys = [fullAddr]
-        root.urgentEvents++
-        modelTimer.restart()
-      }
-      if (n === "activewindow" || n === "activewindowv2") {
-        var eventData = String(event.data || "").trim()
-        if (n === "activewindowv2") {
-          var rawAddr = eventData.split(",")[0].trim()
-          if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
-          var fullAddr = "0x" + rawAddr
-          root.clearUrgentApp("", fullAddr)
-        } else {
-          var winClass = eventData.split(",")[0].trim()
-          if (winClass) root.clearUrgentApp(winClass, "")
-        }
-      }
-      if (n === "closewindow") {
-        var rawAddr = String(event.data || "").trim()
-        if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
-        var fullAddr = "0x" + rawAddr
-        if (root.recentOpenedWindowAddrs && root.recentOpenedWindowAddrs[fullAddr]) {
-          var rec = DockModel.copyMap(root.recentOpenedWindowAddrs)
-          delete rec[fullAddr]
-          root.recentOpenedWindowAddrs = rec
-        }
-        if (root.urgentMap) {
-          root.clearUrgentApp("", fullAddr)
-        }
-        if (root.minimizedOrigins && root.minimizedOrigins[fullAddr]) {
-          var mo = DockModel.copyMap(root.minimizedOrigins)
-          delete mo[fullAddr]
-          root.minimizedOrigins = mo
-        }
-      }
-      if (n === "workspace" || n === "workspacev2" || n === "openwindow" || n === "closewindow" ||
-          n === "movewindow" || n === "movewindowv2" || n === "resizewindow" || n === "resizewindowv2" ||
-          n === "activewindow" || n === "activewindowv2" || n === "changefloatingmode" ||
-          n === "fullscreen" || n === "pin" || n === "focusedmon" ||
-          n === "monitoradded" || n === "monitorremoved") {
-        debounceOverlapTimer.restart()
-      }
-      if (n === "openwindow" || n === "closewindow" || n === "urgent"
-          || n === "movewindow" || n === "movewindowv2"
-          || n === "workspace" || n === "workspacev2") modelTimer.restart()
-      // Per-monitor docks: a workspace (and its windows) changing monitor
-      // moves those apps to another dock.
-      if (root.filterByMonitor && (n === "moveworkspace" || n === "moveworkspacev2"
-          || n === "monitoradded" || n === "monitorremoved")) modelSettleTimer.restart()
-      // Park/restore moves get one deferred rebuild: the 40ms rebuild can land
-      // inside Quickshell's Hyprland-handle lag and freeze pre-move state into
-      // the model (stale isMinimized kept the running icon beside its tile).
-      // Event-driven single shot — self-terminating, no polling.
-      if (n === "movewindow" || n === "movewindowv2") modelSettleTimer.restart()
-      // configreloaded fires Quickshell refreshWorkspaces + refreshToplevels
-      // which destroy/recreate workspace objects and re-assign toplevel handles.
-      // Settle handles cleanly via modelSettleTimer.
-      if (n === "configreloaded") modelSettleTimer.restart()
+      return eventLogic.handleRawEvent(root, event)
     }
   }
 
@@ -1829,39 +1771,24 @@ Item {
   function closeSettingsPanel() { return stateLogic.closeSettingsPanel(root) }
 
   function setOption(key, value) { return settingsLogic.setOption(root, key, value) }
-
   function setDividerStyle(style) { return settingsLogic.setDividerStyle(root, style) }
-
   function setShowBorder(show) { return settingsLogic.setShowBorder(root, show) }
-
   function setDockScreen(name) { return settingsLogic.setDockScreen(root, name) }
-
   function setAutohideMode(mode) { return settingsLogic.setAutohideMode(root, mode) }
-
   function setDockOpacity(val) { return settingsLogic.setDockOpacity(root, val) }
-
   function setBorderOpacity(val) { return settingsLogic.setBorderOpacity(root, val) }
-
   function setHoverEffect(mode) { return settingsLogic.setHoverEffect(root, mode) }
-
   function setDockShape(shape) { return settingsLogic.setDockShape(root, shape) }
-
   function setDockBgColor(col) { return settingsLogic.setDockBgColor(root, col) }
-
   function setIconSize(sz) { return settingsLogic.setIconSize(root, sz) }
-
   function setItemSpacing(sp) { return settingsLogic.setItemSpacing(root, sp) }
-
   function setUrgentSoundName(name) { return settingsLogic.setUrgentSoundName(root, name) }
 
   // ------------------------------------------------- window plumbing
 
   function hyprToplevelFor(toplevel) { return windowLogic.hyprToplevelFor(root, toplevel) }
-
   function windowAddress(handle) { return windowLogic.windowAddress(root, handle) }
-
   function luaString(value) { return windowLogic.luaString(root, value) }
-
   function hyprDispatch(lua, legacy) { return windowLogic.hyprDispatch(root, lua, legacy) }
 
   // Runs action with Hyprland's pointer warps switched off. Activation goes
@@ -1879,9 +1806,16 @@ Item {
   function groupCycleFront(key, windows, frontIndex, angleDelta) { return groupCycleLogic.cycleFront(root, key, windows, frontIndex, angleDelta) }
   function focusPreviewedWindow(windows, frontIndex) { return groupCycleLogic.focusPreviewed(root, windows, frontIndex) }
 
-  // Name labels: rendering policy (visibility, size, contrast, band)
+  // Name labels: rendering policy and the per-slot width registry
   function labelStyle(kind) { return labelLogic.style(root, kind) }
-  function labelBandHeight() { return labelLogic.bandHeight(root) }
+  function labelFillFor(ink, hover) { return labelLogic.fillFor(root, ink, hover) }
+  function labelPlateBox(tileH) { return labelLogic.plateBox(root, tileH) }
+  function labelName(appId, name) { return labelLogic.displayName(root, appId, name) }
+  function labelTooltipNeeded(kind, wins, hint, shortened) { return labelLogic.tooltipNeeded(root, kind, wins, hint, shortened) }
+  function labelExtraBefore(slot, ownLabel) { return labelLogic.extraBefore(root, slot, ownLabel) }
+  function setLabelExtra(slot, owner, width, before) { labelLogic.setExtra(root, slot, owner, width, before) }
+  function setLabelName(appId, name) { labelLogic.setName(root, appId, name) }
+  function labelNameRows() { return labelLogic.nameRows(root) }
 
   function withoutPointerWarp(action) { return stateLogic.withoutPointerWarp(root, action) }
 
@@ -1919,9 +1853,35 @@ Item {
 
   function standingWindowAfterPark(exceptAddress) { return windowLogic.standingWindowAfterPark(root, exceptAddress) }
 
-  function handoffFocusAfterPark(address, focusNext, appId) { return windowLogic.handoffFocusAfterPark(root, address, focusNext, appId) }
+  function handoffFocusAfterPark(address, focusNext, appId) { return slotLogic.handoffFocusAfterPark(root, address, focusNext, appId) }
 
   function restoreWindow(targetRef, appId, useOrigin) { return windowLogic.restoreWindow(root, targetRef, appId, useOrigin) }
+
+  // One specific parked window: the minimize toggle's second press restores exactly
+  // what its first press parked. Always the recorded origin.
+  function restoreAddress(address) { return windowLogic.restoreWindow(root, address, "", true) }
+
+  // Recorded-place bookkeeping: the queue and the timer stay here, the logic in
+  // DockSlotLogic (which other modules reach through these).
+  function scheduleSlotFix(address) {
+    if (!address) return
+    var queue = root.pendingSlotFixes ? root.pendingSlotFixes.slice() : []
+    if (queue.indexOf(address) < 0) queue.push(address)
+    root.pendingSlotFixes = queue
+    root.slotFixFocus = address
+    slotFixTimer.restart()
+  }
+
+  function dropParkSlot(address) {
+    if (!address || !root.parkSlots || root.parkSlots[address] === undefined) return
+    var slots = {}
+    for (var k in root.parkSlots) slots[k] = root.parkSlots[k]
+    delete slots[address]
+    root.parkSlots = slots
+    root.pendingSlotFixes = (root.pendingSlotFixes || []).filter(function(a) { return a !== address })
+  }
+
+  function recordParkSlot(address, origin) { return slotLogic.recordParkSlot(root, address, origin) }
 
   function restoreWindowBatch(wins, primaryAddress, useOrigin) { return windowLogic.restoreWindowBatch(root, wins, primaryAddress, useOrigin) }
 
@@ -1987,6 +1947,13 @@ Item {
 
     function restoreLast(): void {
       root.restoreLast()
+    }
+
+    // Brings back one specific parked window: the minimize/restore key toggle
+    // restores exactly the window its first press parked. Always the recorded
+    // origin, so the window also wins its tiling place back.
+    function restoreAddress(address: string): void {
+      root.restoreAddress(address)
     }
 
     function toggleVisibility(): void {
@@ -2169,7 +2136,7 @@ Item {
 
   function closeFolderStack() { return folderLogic.closeFolderStack(root) }
 
-  function openFolderContext(path, name, cx, cy) { return folderLogic.openFolderContext(root, path, name, cx, cy) }
+  function openFolderContext(path, name, cx, cy, command) { return folderLogic.openFolderContext(root, path, name, cx, cy, command) }
 
   // Per-folder stack order, stored on the pinned entry (see list-folder.py).
   readonly property var folderSortLabels: ({
@@ -2193,6 +2160,9 @@ Item {
   function isFolderPinned(path) { return folderLogic.isFolderPinned(root, path) }
 
   function toggleFolderPin(path, name, icon) { return folderLogic.toggleFolderPin(root, path, name, icon) }
+  function renamePinnedFolder(path, name) { folderLogic.renamePinnedFolder(root, path, name) }
+
+  function unpinButton(name, command) { return folderLogic.unpinButton(root, name, command) }
 
   function moveAppGroup(groupId, insertIndex) { return groupsLogic.moveAppGroup(root, groupId, insertIndex) }
 
@@ -2235,11 +2205,11 @@ Item {
     color: "transparent"
     WlrLayershell.namespace: "omadock"
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: (appGroupLoader.item && appGroupLoader.item.body.isEditingName)
+    WlrLayershell.keyboardFocus: (root.contextRenaming || (appGroupLoader.item && appGroupLoader.item.body.isEditingName))
       ? WlrKeyboardFocus.OnDemand
       : WlrKeyboardFocus.None
     exclusionMode: (!root.autohide) ? ExclusionMode.Normal : ExclusionMode.Ignore
-    exclusiveZone: (!root.autohide) ? Math.round((dockCardComp ? dockCardComp.dockCard.height : 0) + Style.gapsOut * 2) : 0
+    exclusiveZone: (!root.autohide) ? Math.round((dockCardComp ? dockCardComp.dockCard.height : 0) + root.edgeGap * 2) : 0
     anchors {
       bottom: true
       left: true
@@ -2251,7 +2221,7 @@ Item {
     // at scale 1.5 (DockIndicator snaps to it).
     readonly property real dockHeadroom: Style.space(56)
     implicitHeight: {
-      var h = Math.ceil((dockCardComp ? dockCardComp.dockCard.height : 64) + Style.gapsOut + dockWindow.dockHeadroom)
+      var h = Math.ceil((dockCardComp ? dockCardComp.dockCard.height : 64) + root.edgeGap + dockWindow.dockHeadroom)
       return h + (h % 2)
     }
 
@@ -2283,13 +2253,15 @@ Item {
       id: revealStrip
       anchors.bottom: parent.bottom
       x: {
+        if (dockCardComp && dockCardComp.stretch) return 0
         var cardW = (dockCardComp && dockCardComp.dockCard.width > 0) ? dockCardComp.dockCard.width : Style.space(320)
         var targetW = Math.min(parent.width, cardW + Style.space(96))
-        if (root.alignment === "left") return Style.gapsOut
-        if (root.alignment === "right") return parent.width - targetW - Style.gapsOut
+        if (root.placement.align === "left") return Style.gapsOut
+        if (root.placement.align === "right") return parent.width - targetW - Style.gapsOut
         return Math.round((parent.width - targetW) / 2)
       }
       width: {
+        if (dockCardComp && dockCardComp.stretch) return parent.width
         var cardW = (dockCardComp && dockCardComp.dockCard.width > 0) ? dockCardComp.dockCard.width : Style.space(320)
         return Math.min(parent.width, cardW + Style.space(96))
       }
@@ -2391,6 +2363,10 @@ Item {
         open: true
         centerX: root.activeAppGroupX
         body: appGroupPopupComp
+        // The opened group's inline name field (its title row) edits on this
+        // popup's surface, so it needs the keyboard there, like the menu's
+        // name field does.
+        holdsKeyboard: appGroupPopupComp.isEditingName
         onDismissed: root.closeAppGroup()
 
         AppGroupPopup {
@@ -2414,6 +2390,9 @@ Item {
         open: true
         centerX: root.contextX
         body: contextMenuComp
+        // A name field in the menu (ContextRenameRow) needs the keyboard on
+        // this popup's surface, not on the dock's layer surface.
+        holdsKeyboard: root.contextRenaming
         onDismissed: root.closeContext()
 
         DockContextMenu {

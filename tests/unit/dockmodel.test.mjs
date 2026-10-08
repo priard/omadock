@@ -164,3 +164,38 @@ test("the settings module keeps no retired page ids", () => {
   assert.ok(!settingsSources.includes('panel.page === "effects"'))
   assert.ok(!settingsSources.includes('panel.page === "size"'))
 })
+
+test("pickLook carries the label look keys, labels on or off, but not names", () => {
+  const look = plain(M.pickLook({
+    labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
+    labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
+    labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock",
+    labelMode: "hover", labelKind: "apps", labelNames: { a: "A" }
+  }))
+  const want = {
+    labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
+    labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
+    labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock",
+    labelMode: "hover", labelKind: "apps"
+  }
+  for (const k in want) assert.equal(look[k], want[k], k)
+  assert.ok(!("labelNames" in look))
+})
+
+test("a preset from before labels turns them off", () => {
+  const look = plain(M.pickLook({ iconStyle: "dots" }))
+  assert.equal(look.labelMode, "off")
+  assert.equal(look.labelBackground, "none")
+})
+
+test("settings search finds the labels page", () => {
+  const hits = plain(M.searchSettings("typewriter"))
+  assert.ok(hits.some((h) => h.key === "labelReveal" && h.page === "labels"))
+  assert.ok(!plain(M.SETTINGS_SEARCH).some((e) => e.key === "labelPlacement" || e.key === "showLabels"))
+})
+
+test("settings search finds the layout and both sides", () => {
+  assert.ok(M.searchSettings("panel").slice(0, 3).some((h) => h.key === "layout"))
+  assert.ok(M.searchSettings("taskbar").some((h) => h.key === "layout"))
+  assert.equal(M.searchSettings("both sides")[0].key, "alignment")
+})

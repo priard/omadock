@@ -78,6 +78,7 @@ Item {
     id: sharedStore
     property var minimizedOrigins: ({})
     property var parkedAt: ({})
+    property var parkSlots: ({})
   }
 
   Variants {
@@ -147,6 +148,12 @@ Item {
         if (d[i].restoreLast()) return
     }
 
+    function restoreAddress(address: string): void {
+      var d = host.orderedDocks()
+      for (var i = 0; i < d.length; i++)
+        if (d[i].restoreAddress(address)) return
+    }
+
     function toggleVisibility(): void {
       var d = host.orderedDocks()
       if (d.length === 0) return
@@ -188,6 +195,12 @@ Item {
       if (d.length > 0) d[0].setDockAlignment(align)
     }
 
+    // Layout is a config key; the other docks pick it up from the file.
+    function setLayout(layout: string): void {
+      var d = host.orderedDocks()
+      if (d.length > 0) d[0].setDockLayout(layout)
+    }
+
     function setPosition(pos: string): void {
       var d = host.orderedDocks()
       if (d.length > 0) d[0].setDockPosition(pos)
@@ -217,6 +230,10 @@ Item {
         settingsOpen: d[0].settingsPanelOpen,
         settingsPage: d[0].settingsPanelPage,
         activePreset: d[0].activePresetId || "",
+        layout: d[0].layout,
+        align: d[0].placement.align,
+        gapsOut: d[0].outerGap,
+        itemGap: d[0].gapWidth,
         items: JSON.parse(d[0].itemGeometry()).length,
         docks: d.length
       })

@@ -25,13 +25,16 @@ QtObject {
     return n
   }
 
-  function slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth) {
+  // ownLabel false: the slot is not a labelled tile (a preview tile sharing
+  // the next running app's index), so a mirrored label is not its own.
+  function slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) {
     var seps = (typeof sepCount === "number") ? sepCount : (sepCount ? 1 : 0)
     return root.baseRowLeft
       + elementIndex * root.gapWidth
       + slotsBefore * root.iconSlot
       + seps * root.separatorWidth
       + (extraLeftWidth || 0)
+      + root.labelExtraBefore(slotsBefore, ownLabel)
       + root.iconSlot / 2
   }
 
@@ -139,5 +142,38 @@ QtObject {
   function isWindowParked(root, win) {
     if (!win) return false
     return root.isWinParkedLive(win)
+  }
+
+  // Minimized-window preview tiles (macOS-style section on the dock's right).
+  // In minimizeMode "all", a parked app's windows compress into ONE stacked
+  // group tile; in "active" mode every window keeps its own tile.
+  function tileModel(root) {
+    if (!root.showMinimizedTiles) return []
+    var list = root.minimizedWindows
+    if (root.minimizeMode !== "all") {
+      var singles = []
+      for (var s = 0; s < list.length; s++) singles.push({ type: "single", win: list[s] })
+      return singles
+    }
+    var groups = {}
+    var order = []
+    for (var i = 0; i < list.length; i++) {
+      var w = list[i]
+      var key = w.appId || w.address
+      if (!groups[key]) {
+        groups[key] = { type: "group", appId: key, title: w.title, windows: [] }
+        order.push(key)
+      }
+      groups[key].windows.push(w)
+    }
+    // Oldest member parks the group's slot in line.
+    order.sort(function (a, b) {
+      var ta = root.parkedAt[groups[a].windows[0].address] !== undefined ? root.parkedAt[groups[a].windows[0].address] : 0
+      var tb = root.parkedAt[groups[b].windows[0].address] !== undefined ? root.parkedAt[groups[b].windows[0].address] : 0
+      return ta - tb
+    })
+    var out = []
+    for (var g = 0; g < order.length; g++) out.push(groups[order[g]])
+    return out
   }
 }

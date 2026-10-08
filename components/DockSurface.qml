@@ -28,7 +28,7 @@ BorderSurface {
     : ((root && root.dockBgColor === "none") ? effectiveBgColor : Util.alpha(effectiveBgColor, root ? root.effectiveDockOpacity : 1.0))
   borderSpec: (root && !root.showBorder)
     ? Border.none()
-    : Border.flat(surface.effectiveBorderColor, surface.borderWidth)
+    : Border.flat(surface.effectiveBorderColor, (root && root.placement.panel) ? surface.borderWidth + " 0 0 0" : surface.borderWidth)
   radius: root ? root.cardRadius(height) : Style.cornerRadius
 
   // Gradient fill (shaders/gradient.frag): the palette's colours fading

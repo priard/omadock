@@ -82,7 +82,7 @@ Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live wi
 - **🔔 Attention glow & chimes** — bouncing alerts and audio pings.
 - **🔴 Sticky notification badges** — counts matching notifications on pinned, running, and foldered apps; folder tiles sum their members. Counts stay until the app is focused — through dismissals, expiry, and shell restarts. These are not unread-message counts.
 - **🖥️ CLI app identity** — Antigravity and btop keep their own icons when launched in a terminal; the terminal icon is only a fallback.
-- **🏷️ Name labels** — apps, groups and folders can wear their names in a band under (or above) the icons, with per-kind targets and size/contrast controls.
+- **🏷️ Name labels** — names beside the icons, always on or slid out on hover, readable on any dock fill; tooltips that would only repeat the name stay away.
 - **⌨️ Keybindings & IPC** — wired for `~/.config/hypr/bindings.lua` out of the box.
 
 ---
@@ -212,7 +212,8 @@ Zero-CPU hardware integration for removable media and USB storage:
 
 Flexible screen placement tailored to your workflow:
 
-- **`"center"`, `"left"`, `"right"`** along the bottom edge, with smooth cubic transitions.
+- **`"center"`, `"left"`, `"right"`, `"spread"`** along the bottom edge, with smooth cubic transitions. `"spread"` (Both sides) keeps the apps at the left edge and puts folders and drives at the right; it needs the panel layout or Split sections.
+- **Panel layout** (`"layout": "panel"`): a full-width bar on the bottom edge with square corners; alignment moves the icons inside it.
 - **Popovers, tooltips, and menus** self-reposition so nothing clips at screen edges.
 
 #### 🖥️ Multi-Monitor Docks
@@ -304,7 +305,7 @@ The settings at a glance:
 
 - **Shapes**: `Auto (Theme)`, `Rounded`, `Round (Pill)`, `Square`.
 - **Opacity**: `Auto (Theme)`, `100%`, `80%`, `65%`, `35%`, `0% (Transparent Specular)`.
-- **Placement & Alignment**: `Center (Default)`, `Left Aligned`, `Right Aligned` along the screen edge.
+- **Placement & Alignment**: `Dock` or `Panel` layout; `Left`, `Center (Default)`, `Right`, `Both sides` along the screen edge.
 - **Color Presets**: Theme Auto, Pure Black, Mocha, Deep Slate, Midnight Blue, Dark Navy, Emerald Forest, Velvet Ruby.
 - **Icon Sizing**: Small ($28\text{px}$), Medium ($36\text{px}$), Large ($44\text{px}$), Extra Large ($52\text{px}$).
 - **Icon Styles**: `Original`, `Mono`, `Pixel` (coarse grid) and `Dots` (dithered dot matrix), with grid size, tint, contrast and hover-reveal controls.
@@ -318,20 +319,24 @@ The settings at a glance:
 
 ### 🏷️ Name labels
 
-*Settings → Appearance → Labels* puts every item's name in a band over the icon row — below the icons (at the dock's edge) or above them (keeping the indicator side clear). The fuzzy search jumps straight to any of them: type `pill`, pick *Label contrast*, and the panel scrolls to the row.
+*Settings → Labels* puts each item's name to the right of its icon (to the left on a right-aligned dock). **Always** keeps every name out; **On hover** slides a name out over the neighbouring icons after a short rest on the icon, on an opaque pill, so the dock never moves under the pointer. Moving along the dock switches names at once.
 
 <div align="center">
-  <img src="assets/preview-labels.png" width="700" alt="Name labels in pill contrast: each name sits in its own dark pill under the icon" />
+  <img src="assets/preview-labels.png" width="760" alt="Name labels beside the icons on rounded plates that join icon and name into one button" />
 </div>
 
-- **Name labels**: master toggle for the label band.
-- **Label targets**: which items carry a name — `All`, `Apps`, `Groups` or `Folders`.
-- **Label placement**: `Below` the icons, or `Above` them.
-- **Label size**: `Small`, `Medium`, `Large`.
-- **Label contrast**: `Theme` ink, `High` contrast (black or white, whichever reads better), or `Pill` (each name in its own dark pill).
+- **Labels**: `Off`, `Always` or `On hover`; **Show on**: `All`, `Apps`, `App groups` or `Folders`.
+- **Font**: the theme font, `Sans`, or `Pixel` (bundled Silkscreen); **Size** and **Weight**.
+- **Color**: `Auto` (black or white for whatever is behind the icons, gradients included), `Theme` or `Accent`. A name without a background gets a faint outline so it reads on any fill.
+- **Background** (always-on labels): none, a `Pill` behind the name, or a `Plate` that joins icon and name like a button; **Corners**: `Dock` (follows the dock's own corners), `Pill`, `Rounded` or `Square`. With always-on plates, **Indicators** move the window marks into an upright column `Before icon` or `After name`, so every plate is the same height whatever runs (`Under icon` keeps them below). **Plate height** `Dock` stretches plates to the dock's top and bottom; with plates on, the gap between plates, to the dock's edges and to a divider is one and the same.
+- **Reveal**: `Slide`, `Typewriter` or `Scramble`; **Effect**: `Glow` or `Outline`. Lift, glow and glitch hover effects carry the name along with the icon.
+- **Max width**: long names drop a subtitle ("Signal - Private Messenger" → "Signal"), then trailing words, and only then end in an ellipsis. Apps without a desktop entry get a readable name instead of their class id.
+- **Rename…** in the right-click menu of an app, an app group or a pinned folder edits its name in place (Enter saves, Escape cancels, blank restores the default). An app's name is its label text, also listed under **Names**; a folder's name replaces the directory name on the dock.
+
+With labels on, an item's tooltip shows only when it adds something: window previews, a starting/minimized/workspace hint, or the full name of a shortened label.
 
 <div align="center">
-  <img src="assets/preview-settings-labels.png" width="420" alt="The Labels section in Settings → Appearance, with the dock underneath previewing pill labels live" />
+  <img src="assets/preview-settings-labels.png" width="420" alt="The Labels settings page" />
 </div>
 
 ---
@@ -427,11 +432,20 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "keepPointer": true,
   "wheelStepDelay": 150,
   "iconHoverReveal": false,
-  "showLabels": false,
+  "labelMode": "off",
   "labelKind": "all",
-  "labelPlacement": "below",
-  "labelSize": "small",
-  "labelContrast": "theme",
+  "labelFont": "theme",
+  "labelSize": "medium",
+  "labelWeight": "medium",
+  "labelColor": "auto",
+  "labelBackground": "none",
+  "labelShape": "dock",
+  "labelIndicators": "before",
+  "labelPlateHeight": "icon",
+  "labelReveal": "slide",
+  "labelEffect": "none",
+  "labelMaxWidth": 140,
+  "labelNames": {},
   "showAppsButton": true,
   "showTooltips": true,
   "advancedTooltips": true,
@@ -462,7 +476,8 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `alignment` | `string` | `"center"` | Dock placement along screen edge: `"center"`, `"left"`, `"right"`. |
+| `alignment` | `string` | `"center"` | Dock placement along screen edge: `"center"`, `"left"`, `"right"`, `"spread"` (apps left, folders and drives right; panel layout or `splitSections` only). |
+| `layout` | `string` | `"dock"` | `"dock"` floats above the edge; `"panel"` spans the full width on the bottom edge. |
 | `screen` | `string` | first monitor | Monitor for the single dock (e.g. `"DP-3"`). With `multiMonitor`, the dock on this monitor plays alert sounds. |
 | `multiMonitor` | `bool` | `false` | Runs one dock on every connected monitor. |
 | `perMonitorApps` | `bool` | `true` | With `multiMonitor`, each dock lists only the windows on its own monitor. |
@@ -499,11 +514,20 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `iconStrength` | `number` | `1` | `mono` / `dots`: how much of the effect covers the original icon, `0`–`1`. |
 | `iconHoverOriginal` | `bool` | `false` | With an icon style on, the hovered icon (dock, group tiles, an opened group) shows as shipped. |
 | `iconHoverReveal` | `bool` | `false` | With `iconHoverOriginal`, hover dissolves the original icon back in as a dithered reveal instead of a hard switch. |
-| `showLabels` | `bool` | `false` | Shows item names in a band over the icon row. |
+| `labelMode` | `string` | `"off"` | Name labels beside the icons: `"off"`, `"always"` or `"hover"`. Older `showLabels` / `labelPlacement` / `labelContrast` keys are read once and replaced. |
 | `labelKind` | `string` | `"all"` | Which items carry a name label: `"all"`, `"apps"`, `"groups"` or `"folders"`. |
-| `labelPlacement` | `string` | `"below"` | `"below"` the icons (at the dock's edge) or `"above"` them (the indicator side stays clear). |
-| `labelSize` | `string` | `"small"` | Label text size: `"small"`, `"medium"` or `"large"`. |
-| `labelContrast` | `string` | `"theme"` | Label ink: `"theme"`, `"high"` (black or white, whichever contrasts more) or `"pill"` (each name in its own dark pill). |
+| `labelFont` | `string` | `"theme"` | `"theme"`, `"sans"` or `"pixel"` (bundled Silkscreen). |
+| `labelSize` | `string` | `"medium"` | `"small"`, `"medium"` or `"large"`. |
+| `labelWeight` | `string` | `"medium"` | `"regular"`, `"medium"` or `"bold"` (ignored by the pixel font). |
+| `labelColor` | `string` | `"auto"` | `"auto"` (black or white for what is behind the icons), `"theme"` or `"accent"`. |
+| `labelBackground` | `string` | `"none"` | `"none"`, `"pill"` (behind the name) or `"plate"` (behind icon and name). |
+| `labelShape` | `string` | `"dock"` | Background corners: `"dock"` (the dock's own corner ratio), `"pill"`, `"rounded"` or `"square"`. |
+| `labelIndicators` | `string` | `"before"` | Window marks on always-on plates: `"before"` the icon, `"after"` the name (an upright column), or `"under"` the icon. |
+| `labelPlateHeight` | `string` | `"icon"` | Always-on plates: `"icon"` (around the icon) or `"dock"` (the dock's full height, one gap from its edges). |
+| `labelReveal` | `string` | `"slide"` | How a name appears: `"slide"`, `"typewriter"` or `"scramble"`. |
+| `labelEffect` | `string` | `"none"` | `"none"`, `"glow"` or `"outline"`. |
+| `labelMaxWidth` | `int` | `140` | Longest label in px (80–240) before the name is shortened. |
+| `labelNames` | `object` | `{}` | Per-app label text, `{ "appId": "Name" }` (up to 200 entries, 40 characters each). |
 | `keepPointer` | `bool` | `true` | Focusing a window from the dock keeps the pointer where it is instead of warping it to the window centre. |
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
 | `hoverEffect` | `string` | `"zoom"` | Hover mode: magnification `"zoom"` or `"wave"`; effects `"lift"`, `"glow"`, `"glitch"` (shaders); or `"off"`. |
@@ -548,7 +572,8 @@ o.bind("SUPER + SHIFT + M", "Restore oldest minimized", "exec qs -p /usr/share/o
 Additional IPC methods available:
 - `reveal`: Force dock to slide into view.
 - `hide`: Force dock to slide out of view.
-- `setAlignment("center" | "left" | "right")`: Change dock alignment dynamically.
+- `setAlignment("center" | "left" | "right" | "spread")`: Change dock alignment dynamically.
+- `setLayout("dock" | "panel")`: Switch between the floating dock and the full-width panel.
 - `setPosition("bottom" | "top" | "left" | "right")`: Change dock edge position.
 - `openSettings`: Open the settings panel on the focused monitor's dock.
 - `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.
@@ -612,6 +637,11 @@ python3 -m unittest discover -s tests/unit -p 'test_*.py'
 ./tests/live/ipc-roundtrip.sh
 ./tests/live/config-fuzz.sh
 
+# Live check of the tiling-place bookkeeping: opens its own windows on a
+# borrowed workspace, parks and restores them through the dock's IPC, and
+# closes exactly those on the way out
+./tests/live/place-restore.sh
+
 # Performance: CPU, RAM and VRAM in fixed scenarios, dock on/off cost,
 # comparisons and long soak runs (see tests/bench/README.md)
 python3 tests/bench/bench.py run
@@ -650,11 +680,23 @@ qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 Distributed under the **MIT License**.  
 Copyright © 2026 **[thepathless](https://github.com/thepathless)**.
 
+The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscreen) by Jason Kottke (The Silkscreen Project Authors), SIL Open Font License 1.1 — see `fonts/OFL.txt`.
+
 ---
 
 ## 📋 Releases & Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.1.0 — 2026-10-08
+
+- **Name labels** (thanks [@priard](https://github.com/priard), #47) — every app, app group, folder and drive can carry its name beside the icon: `Always` keeps them out, `On hover` slides one out over its neighbours on an opaque pill after a short rest on the icon. Always-on names take a `Pill` behind the text or a `Plate` that joins icon and name into one button, with the window marks in an upright `Before icon` / `After name` column, a bundled Silkscreen pixel font, ink that reads on any fill, and **Rename…** in the right-click menu (blank restores the default).
+- **Panel layout and Both sides alignment** (thanks [@priard](https://github.com/priard), #49) — `"layout": "panel"` spans the bottom edge as one full-width bar whose icons follow `center`, `left`, `right` or `spread`; Both sides sends the pinned folders and drives to the right edge. Split sections, drag gaps and dividers follow the placement, and the read-only `state` IPC reports the layout for scripts and tests.
+- **Presets keep their shape over time** (thanks [@priard](https://github.com/priard), #48) — a preset saved before a look key existed now carries that key's default, so applying an old preset no longer leaves the key at whatever the dock happens to hold.
+- **A parked window comes back to its workspace and its place** (thanks [@lordwotton29](https://github.com/lordwotton29), #50) — parking records the workspace's rectangles before the move and puts each window back on restore (exchanging windows when Hyprland rebuilt the tree differently), the restore target follows the **Restore on** setting (`Current workspace` or `Original workspace`), and the folder section can hold **command buttons** beside the pinned folders (`pinnedButtons`, bounded and shape-checked like the rest of the config).
+- **Dock internals** — `Dock.qml` handed its behaviour to `components/logic/` modules; app groups scroll-cycle their member preview on the wheel and focus a member on click; the manifest description leads with "Dock for Omarchy" so marketplace search finds it.
+- **Running marks sit dead-centre under their icon** — the marks row declared eight grid slots for at most five marks, and a grid reserves a gap for every slot it declares, so a lone dot or accent bar sat half a gap (2 px) left of the icon it belongs to; the row now declares exactly the slots it draws, with a unit test pinning the rule.
+- **Verification** — the live suite now runs against the desktop it is on: the layout test derives its panel/edge thresholds from the shell's own outer gap and row spacing (reported by `state`), and the place test pins the two settings it asserts. Verified on this desktop: 153 node + 92 python tests, `qmllint`, `omarchy plugin validate`, config fuzz, IPC round-trip, layout and place-restore live tests, dock smoke test, and 2–3 jiffies / 6 s idle across three steady-state windows.
 
 ### v4.0.3 — 2026-10-04
 
