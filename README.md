@@ -688,6 +688,15 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
 
+### v4.1.0 — 2026-10-08
+
+- **Name labels** (thanks [@priard](https://github.com/priard), #47) — every app, app group, folder and drive can carry its name beside the icon: `Always` keeps them out, `On hover` slides one out over its neighbours on an opaque pill after a short rest on the icon. Always-on names take a `Pill` behind the text or a `Plate` that joins icon and name into one button, with the window marks in an upright `Before icon` / `After name` column, a bundled Silkscreen pixel font, ink that reads on any fill, and **Rename…** in the right-click menu (blank restores the default).
+- **Panel layout and Both sides alignment** (thanks [@priard](https://github.com/priard), #49) — `"layout": "panel"` spans the bottom edge as one full-width bar whose icons follow `center`, `left`, `right` or `spread`; Both sides sends the pinned folders and drives to the right edge. Split sections, drag gaps and dividers follow the placement, and the read-only `state` IPC reports the layout for scripts and tests.
+- **Presets keep their shape over time** (thanks [@priard](https://github.com/priard), #48) — a preset saved before a look key existed now carries that key's default, so applying an old preset no longer leaves the key at whatever the dock happens to hold.
+- **A parked window comes back to its workspace and its place** (thanks [@lordwotton29](https://github.com/lordwotton29), #50) — parking records the workspace's rectangles before the move and puts each window back on restore (exchanging windows when Hyprland rebuilt the tree differently), the restore target follows the **Restore on** setting (`Current workspace` or `Original workspace`), and the folder section can hold **command buttons** beside the pinned folders (`pinnedButtons`, bounded and shape-checked like the rest of the config).
+- **Dock internals** — `Dock.qml` handed its behaviour to `components/logic/` modules; app groups scroll-cycle their member preview on the wheel and focus a member on click; the manifest description leads with "Dock for Omarchy" so marketplace search finds it.
+- **Verification** — the live suite now runs against the desktop it is on: the layout test derives its panel/edge thresholds from the shell's own outer gap and row spacing (reported by `state`), and the place test pins the two settings it asserts. Verified on this desktop: 153 node + 90 python tests, `qmllint`, `omarchy plugin validate`, config fuzz, IPC round-trip, layout and place-restore live tests, dock smoke test, and 2 jiffies / 6 s idle.
+
 ### v4.0.3 — 2026-10-04
 
 - **Settings pages see the dock again** (thanks [@priard](https://github.com/priard), #40) — the settings pages were wired with `root: root`, which in QML binds to the page's own `root` property and stays null; they now receive the dock through the panel (`panel.root`), and a tree-wide test guards against this self-binding class of bug returning.
