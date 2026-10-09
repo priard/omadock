@@ -4,6 +4,14 @@
 # back to the dock restores it exactly. Backs up omadock.json and restores
 # it on exit. No input.
 #
+# *** INTRUSIVE - this one drives the dock on the OWNER'S DESKTOP. ***
+# It rewrites layout/alignment/splitSections in the live omadock.json (backing
+# it up and restoring it on exit) and it measures the code the running dock
+# LOADED, not this tree - the launcher sets QS_DISABLE_FILE_WATCHER=1. It
+# needs a dock that is really on screen, which is why it is not on
+# tests/live/probe.sh; everything that does not can run there instead (see
+# tests/live/presets.sh).
+#
 # The vertical difference between the two layouts is the shell's outer gap
 # (Style.gapsOut, Hyprland's gaps_out / 2), which the dock's `state` reports:
 # with gaps_out 0 the floating dock is already flush, so "lower" is asserted

@@ -3,6 +3,12 @@
 # settings save (setAlignment) must leave a file that is not a readable JSON
 # object untouched; readable objects are saved with their values bounded.
 # Backs up the config and restores it on exit.
+#
+# *** INTRUSIVE - this one drives the dock on the OWNER'S DESKTOP. ***
+# It copies malformed configs over the LIVE omadock.json one at a time (each
+# backed up and restored) and it exercises the code the running dock LOADED,
+# not this tree. A case that only needs the dock to read a config file runs on
+# tests/live/probe.sh instead, against a copy (see tests/live/presets.sh).
 set -u
 cd "$(dirname "$0")/../.."
 . tests/live/common.sh
