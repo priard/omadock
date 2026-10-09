@@ -36,9 +36,11 @@ class Gate(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.dir = pathlib.Path(tmp.name)
 
-    def run_gate(self, path, cap):
+    def run_gate(self, path, cap, **env_overrides):
+        env = dict(os.environ)
+        env.update(env_overrides)
         return subprocess.run(["sh", "-c", self.gate, "gate", str(path), str(cap)],
-                              capture_output=True, text=True, timeout=10)
+                              capture_output=True, text=True, timeout=10, env=env)
 
     def test_small_regular_file_is_read(self):
         (self.dir / "small").write_text("hello")
@@ -56,6 +58,39 @@ class Gate(unittest.TestCase):
         for name in ("dir", "fifo", "zero", "missing"):
             with self.subTest(name=name):
                 self.assertEqual(self.run_gate(self.dir / name, 1000).returncode, 2)
+
+    def test_empty_file_reads_as_empty(self):
+        # A file truncated to nothing is a normal state (nothing written yet);
+        # it must read as empty rather than as a refusal the dock cannot tell
+        # apart from a missing file.
+        (self.dir / "empty").write_bytes(b"")
+        r = self.run_gate(self.dir / "empty", 1000)
+        self.assertEqual((r.returncode, r.stdout), (0, ""))
+
+    def test_a_file_far_over_the_cap_is_refused_without_reading_it_whole(self):
+        (self.dir / "huge").write_bytes(b"z" * (4 * 1024 * 1024))
+        r = self.run_gate(self.dir / "huge", 65536)
+        self.assertEqual((r.returncode, r.stdout), (3, ""))
+
+    @unittest.skipIf(os.geteuid() == 0, "root reads a 000 file anyway")
+    def test_unreadable_file_is_refused(self):
+        path = self.dir / "noperm"
+        path.write_text("secret")
+        path.chmod(0)
+        self.addCleanup(path.chmod, 0o644)
+        self.assertEqual(self.run_gate(path, 100).returncode, 2)
+
+    def test_an_unusable_temporary_directory_falls_back_to_tmp(self):
+        # The bytes are staged in a temporary file, so a TMPDIR that cannot be
+        # written must not turn into "the dock can no longer read its config"
+        # (the gate answers 2 for a failed staging file, which leaves state
+        # untouched and silently drops every later config edit).
+        (self.dir / "small").write_text("content")
+        for tmp in ("/nonexistent-omadock-test", str(self.dir / "small")):
+            with self.subTest(TMPDIR=tmp):
+                r = self.run_gate(self.dir / "small", 100, TMPDIR=tmp)
+                self.assertEqual((r.returncode, r.stdout), (0, "content"))
+
 
 
 class ReadRace(unittest.TestCase):
@@ -130,6 +165,24 @@ class ReadRace(unittest.TestCase):
         result = self.run_gate_slow(path, 1000)
         swap.join()
         self.assertEqual((result.returncode, result.stdout), (3, ""))
+
+    def test_a_read_killed_mid_way_leaves_no_temporary_file(self):
+        # reload() stops an in-flight gate when a newer read supersedes it, so
+        # the staging file has to go even when the process is killed - one
+        # leaked file per superseded read adds up, and each holds the content
+        # of a watched file.
+        before = set(pathlib.Path(tempfile.gettempdir()).glob("omadock-read.*"))
+        (self.dir / "big").write_bytes(b"y" * 900000)
+        env = dict(os.environ)
+        env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")
+        process = subprocess.Popen(["sh", "-c", self.gate, "gate", str(self.dir / "big"), "2000000"],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+        time.sleep(0.2)          # inside the slowed head's window
+        process.terminate()
+        process.wait(timeout=10)
+        time.sleep(0.1)
+        after = set(pathlib.Path(tempfile.gettempdir()).glob("omadock-read.*"))
+        self.assertEqual(after - before, set(), "a killed read left its staging file behind")
 
 
 if __name__ == "__main__":

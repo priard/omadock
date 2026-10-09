@@ -115,10 +115,16 @@ Item {
   // One read of at most $2 + 1 bytes settles both questions: the count is of
   // the bytes that actually came out, so a file replaced mid-read yields the
   // new file whole rather than a prefix of it, and the shell still never
-  // receives more than $2 bytes of content.
+  // receives more than $2 bytes of content. The bytes are staged in a
+  // temporary file so they can be counted before any is emitted; reload()
+  // stops an in-flight gate when a newer read supersedes it, so the trap is
+  // what removes that staging file when this process is killed mid-read, and
+  // a temporary directory that cannot be written falls back to /tmp rather
+  // than leaving the dock unable to read its own config.
   readonly property string gateScript: [
     '[ -f "$1" ] && [ -r "$1" ] || exit 2',
-    't=$(mktemp "${TMPDIR:-/tmp}/omadock-read.XXXXXX") || exit 2',
+    't=$(mktemp "${TMPDIR:-/tmp}/omadock-read.XXXXXX" 2>/dev/null || mktemp /tmp/omadock-read.XXXXXX) || exit 2',
+    'trap "rm -f -- $t" EXIT',
     'timeout 2 head -c "$(( $2 + 1 ))" -- "$1" > "$t" || { rm -f -- "$t"; exit 2; }',
     'n=$(wc -c < "$t" | tr -d "[:space:]") || { rm -f -- "$t"; exit 2; }',
     '[ "$n" -le "$2" ] || { rm -f -- "$t"; exit 3; }',
