@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 # Live: every IPC function round-trips and leaves the dock mapped with a
 # clean log. Backs up omadock.json and restores it on exit. No input.
+#
+# *** INTRUSIVE - this one drives the dock on the OWNER'S DESKTOP. ***
+# It opens the full-screen settings overlay on the running dock (a click or a
+# key press during the run fails it), it writes the running dock's config file
+# in place, and it exercises the code the running dock LOADED - not this tree,
+# because the launcher runs Quickshell with QS_DISABLE_FILE_WATCHER=1. It is
+# kept for the wiring only a real dock can show: the settings panel's open and
+# page state, setLayout/setAlignment, and itemGeometry of the live items.
+#
+# Anything else belongs in a suite built on tests/live/probe.sh, which runs the
+# plugin's own DockHost.qml in a second Quickshell instance against a copy of
+# the config and never touches the desktop: tests/live/presets.sh is the model.
 set -u
 cd "$(dirname "$0")/../.."
 . tests/live/common.sh
