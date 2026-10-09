@@ -102,8 +102,8 @@ Item {
 
   // With shadows on, the card lifts by the room the drop shadow needs below
   // it (the gapsOut margin the layout already models); without one it sits
-  // where it always has. The window's height and the reserved screen space
-  // do not change — the shadow only overlaps what is underneath.
+  // where it always has. The panel's reserved band carries the same lift
+  // (Dock.qml exclusiveZone), so the card's top edge never crosses into it.
   readonly property real shadowRoom: (root && !root.placement.panel && root.showShadow && root.showBackground && root.shadowStrength > 0) ? Style.space(5) : 0
   anchors.bottom: parent ? parent.bottom : undefined
   anchors.bottomMargin: (root && root.dockVisible) ? root.edgeGap + cardWrapper.shadowRoom : -(dockCard.height + (root ? root.edgeGap : 0) + cardWrapper.shadowRoom + 10)
