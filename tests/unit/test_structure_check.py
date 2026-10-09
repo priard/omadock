@@ -64,5 +64,47 @@ class NestedWorktree(unittest.TestCase):
         self.assertNotIn("experiment/Dock.qml", reported)
 
 
+class ShellSuites(unittest.TestCase):
+    """Rule 5: shell files are capped, and the live suites are ratcheted.
+
+    Before this rule the walker took only .qml/.js/.mjs, so the largest test
+    file in the repo (a live suite) could have doubled unnoticed.
+    """
+
+    def build(self, pinned_lines, fresh_lines):
+        tmp = tempfile.TemporaryDirectory()
+        root = pathlib.Path(tmp.name)
+        live = root / "tests" / "live"
+        live.mkdir(parents=True)
+        (live / "pinned.sh").write_text("# filler\n" * pinned_lines)
+        (live / "fresh.sh").write_text("# filler\n" * fresh_lines)
+        return tmp, root
+
+    def run_check(self, module, root, ceilings):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            module.ROOT = root
+            module.SHELL_CEILINGS = ceilings
+            rc = module.main()
+        return rc, out.getvalue()
+
+    def test_shell_files_are_capped_and_live_suites_ratcheted(self):
+        module = load()
+        tmp, root = self.build(pinned_lines=11, fresh_lines=900)
+        with tmp:
+            rc, reported = self.run_check(module, root, {"tests/live/pinned.sh": 10})
+        self.assertEqual(rc, 1)
+        self.assertIn("tests/live/pinned.sh: 11 lines exceeds suite ratchet of 10",
+                      reported)
+        self.assertIn("tests/live/fresh.sh: 900 lines exceeds file-size cap of 800",
+                      reported)
+
+    def test_a_suite_at_its_ceiling_passes(self):
+        module = load()
+        tmp, root = self.build(pinned_lines=10, fresh_lines=3)
+        with tmp:
+            rc, reported = self.run_check(module, root, {"tests/live/pinned.sh": 10})
+        self.assertEqual(rc, 0, reported)
+
+
 if __name__ == "__main__":
     unittest.main()

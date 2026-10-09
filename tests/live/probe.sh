@@ -51,10 +51,10 @@
 # which counts survivors across fresh sessions and is the regression test for
 # this rule.
 #
-# Functions: probe_start, probe_ipc, probe_cfg, probe_wait_cfg, probe_log,
-#            probe_log_tail, probe_running, probe_pids, probe_descendants,
-#            probe_pgid, probe_group_pids, probe_cmdlines, probe_stop,
-#            probe_cleanup.
+# Functions: probe_start, probe_ipc, probe_cfg, probe_wait_cfg,
+#            probe_wait_presets, probe_log, probe_log_tail, probe_pids,
+#            probe_descendants, probe_pgid, probe_group_pids, probe_cmdlines,
+#            probe_stop, probe_cleanup.
 
 # PROBE_CFG_SRC points the probe at another config to copy: the owner's file
 # (the default) or, for a case the owner's config cannot show - a fresh install
@@ -69,12 +69,7 @@ PROBE_PID=""
 # The probe's own process group (it is started with `setsid --fork`, so the
 # group holds the shell and every helper it spawned) and what teardown saw.
 PROBE_PGID=""
-PROBE_KIDS=""
 PROBE_LEAKED=""
-
-# The plugin directory under test (not the live plugin under
-# ~/.config/omarchy/plugins/omadock, which follows the active profile).
-probe_root() { echo "$PROBE_ROOT"; }
 
 # Start the probe. 0 on success; on failure the log tail is printed and the
 # caller should probe_cleanup and stop.
@@ -211,15 +206,9 @@ probe_cfg() { echo "$PROBE_DIR/home/.config/omarchy/omadock.json"; }
 
 # Wait (up to ~8s) until a python predicate on the config copy holds. Argument 1
 # is the program, the config path is argv[1] and further arguments follow it; the
-# program exits non-zero while the dock has not written the file yet. A preset
-# save or delete lands on disk a moment after the IPC call returns, so a test
-# that reads the file straight after one races the write and reports a state
-# that has already passed. Best-effort pacing only: the caller keeps its own
-# assertion, which is what explains a real failure.
-#
-#   probe_wait_cfg 'import json,sys; c=json.load(open(sys.argv[1]));
-#                    sys.exit(0 if sys.argv[2] in [p["id"] for p in c.get("presets") or []] else 1)' "$id"
-#   python3 - "$CFG" "$id" <<'PY'   # the real assertion, with its diagnostics
+# program exits non-zero while the dock has not written the file yet. Best-effort
+# pacing only: the caller keeps its own assertion, which is what explains a real
+# failure. The preset-shaped predicate is probe_wait_presets below.
 probe_wait_cfg() {
   local prog=$1 i
   shift
@@ -230,11 +219,24 @@ probe_wait_cfg() {
   return 1
 }
 
+# Wait until the presets in the config copy satisfy one condition: every id
+# given is present (`probe_wait_presets in <id>...`) or every id is absent
+# (`out <id>...`). A save or delete lands on disk a moment after the IPC call
+# returns; the predicate lives here once, so call sites cannot drift apart.
+probe_wait_presets() {
+  local want=$1
+  shift
+  probe_wait_cfg 'import json,sys
+c = json.load(open(sys.argv[1]))
+ids = [p["id"] for p in c.get("presets") or []]
+hits = [i for i in sys.argv[3:] if i in ids]
+ok = hits == sys.argv[3:] if sys.argv[2] == "in" else not hits
+sys.exit(0 if ok else 1)' "$want" "$@"
+}
+
 probe_log() { echo "$PROBE_DIR/probe.log"; }
 
 probe_log_tail() { tail -20 "$PROBE_DIR/probe.log" 2>/dev/null; }
-
-probe_running() { [ -n "$PROBE_DIR" ] && [ -n "$(probe_pids)" ]; }
 
 # Stop the probe AND everything it spawned. The helpers a dock spawns under
 # `Process` are not killed by killing the shell - they are reparented and keep
@@ -245,7 +247,6 @@ probe_stop() {
   local i pids pgid p survivors
   [ -n "$PROBE_DIR" ] || return 0
   pids=$(probe_pids)
-  [ -n "$PROBE_PID" ] && PROBE_KIDS=$(probe_descendants "$PROBE_PID")
   pgid=$(probe_pgid)
   if probe_group_killable "$pgid"; then kill -TERM -- "-$pgid" 2>/dev/null; fi
   [ -n "$pids" ] && kill $pids 2>/dev/null
@@ -324,7 +325,6 @@ probe_cleanup() {
   PROBE_DIR=""
   PROBE_PID=""
   PROBE_PGID=""
-  PROBE_KIDS=""
   PROBE_LEAKED=""
   return $rc
 }

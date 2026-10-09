@@ -52,12 +52,37 @@ print(rows[0] if rows else "")
 ')
     [ -n "$victim" ] || return 1
     probe_ipc deletePreset "$victim" >/dev/null || return 1
-    probe_wait_cfg 'import json,sys
-c=json.load(open(sys.argv[1]))
-sys.exit(0 if sys.argv[2] not in [p["id"] for p in c.get("presets") or []] else 1)' "$victim"
+    probe_wait_presets out "$victim"
     echo "   (six presets already saved - removed $victim from the copy)" >&2
   done
 }
+
+# A presets() listing - or a config's saved presets - may carry each name once:
+# the list is keyed by name, so a repeated name is the bug. One owner for the
+# shape, run on the listing before and after a removal and on the config.
+assert_unique_preset_names() {
+  python3 - "$1" <<'PY' || fail "a duplicate preset name in $1"
+import json, sys
+data = json.load(open(sys.argv[1]))
+rows = data if isinstance(data, list) else (data.get("presets") or [])
+names = [str(r.get("name", "")).strip().lower() for r in rows]
+dupes = sorted({n for n in names if names.count(n) > 1})
+assert not dupes, "a name is carried more than once: %s" % dupes
+PY
+}
+
+# The bound a saved name is stored under is DockModel's (MAX_PRESET_NAME): read
+# it out of the module, not repeated here, so the guard cannot drift from the
+# rule - the unit suite reads the same constant.
+MAX_PRESET_NAME=$(node -e '
+const fs = require("node:fs"), vm = require("node:vm");
+const ctx = vm.createContext({ console, Quickshell: { iconPath: () => "" } });
+vm.runInContext(fs.readFileSync("DockModel.js", "utf8"), ctx);
+console.log(ctx.MAX_PRESET_NAME);
+' 2>/dev/null)
+case "$MAX_PRESET_NAME" in
+  "" | *[!0-9]*) fail "could not read MAX_PRESET_NAME out of DockModel.js" ;;
+esac
 
 probe_start || { probe_cleanup >/dev/null 2>&1; exit 1; }
 WORK="$PROBE_DIR/work"
@@ -69,6 +94,7 @@ BEFORE="$WORK/presets-before.json"
 # ---------------------------------------------------------------------------
 echo "-- presets() shape"
 probe_ipc presets > "$BEFORE"
+assert_unique_preset_names "$BEFORE"
 python3 - "$BEFORE" "$ORIG" <<'PY' || fail "presets() shape"
 import json, sys
 rows = json.load(open(sys.argv[1]))
@@ -76,8 +102,6 @@ owner = json.load(open(sys.argv[2]))
 key = lambda r: str(r.get("name", "")).strip().lower()
 names = [key(r) for r in rows]
 assert names, "presets() is empty"
-dupes = sorted({n for n in names if names.count(n) > 1})
-assert not dupes, "a name is listed more than once: %s" % dupes
 for r in rows:
     assert r.get("id"), "a row without an id: %r" % r
 # At most one row carries the active mark - two would be a bug. None is honest:
@@ -200,9 +224,7 @@ assert any(r["id"] == sys.argv[1] and not r.get("builtin") for r in rows), "the 
 [ "$(probe_ipc deletePreset "$pid")" = "ok" ] || fail "deletePreset"
 [ "$(probe_ipc deletePreset "$pid")" = "not found" ] || fail "deletePreset twice must answer not found"
 # The removal reaches the file a moment after the call returns.
-probe_wait_cfg 'import json,sys
-c=json.load(open(sys.argv[1]))
-sys.exit(0 if sys.argv[2] not in [p["id"] for p in c.get("presets") or []] else 1)' "$pid"
+probe_wait_presets out "$pid"
 bid=$(python3 -c 'import json,sys; print([r["id"] for r in json.load(open(sys.argv[1])) if r.get("builtin")][0])' "$BEFORE")
 [ "$(probe_ipc deletePreset "$bid")" = "not found" ] || fail "a shipped look must not be removable"
 python3 - "$CFG" "$WORK/before-delete.json" <<'PY' || fail "save-then-remove disturbed the config"
@@ -223,10 +245,9 @@ else
   victim=$(echo "$saved_ids" | awk '{print $1}')
   rows_before=$(probe_ipc presets | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
   [ "$(probe_ipc deletePreset "$victim")" = "ok" ] || fail "deletePreset \"$victim\""
-  probe_wait_cfg 'import json,sys
-c=json.load(open(sys.argv[1]))
-sys.exit(0 if sys.argv[2] not in [p["id"] for p in c.get("presets") or []] else 1)' "$victim"
+  probe_wait_presets out "$victim"
   probe_ipc presets > "$WORK/presets-after.json"
+  assert_unique_preset_names "$WORK/presets-after.json"
   python3 - "$WORK/presets-after.json" "$WORK/before-delete.json" "$victim" <<'PY' || fail "removal lost other presets"
 import json, sys
 after = json.load(open(sys.argv[1]))
@@ -237,8 +258,6 @@ assert victim not in ids, "the removed preset is still listed"
 expected = [p["id"] for p in before["presets"] if p["id"] != victim]
 missing = [i for i in expected if i not in ids]
 assert not missing, "removal took other presets with it: %s" % missing
-names = [str(r["name"]).strip().lower() for r in after]
-assert len(names) == len(set(names)), "a duplicate name appeared: %s" % names
 print("   removed %s; still listed: %s" % (victim, expected))
 PY
   python3 - "$CFG" "$WORK/before-delete.json" "$victim" <<'PY' || fail "the config rewrite is wrong"
@@ -271,9 +290,10 @@ PY
 fi
 
 # ---------------------------------------------------------------------------
-# A hostile name is persisted data too: DockModel bounds it (MAX_PRESET_NAME =
-# 40) and strips control and bidi characters. If that bound were ever dropped,
-# a 10k name would land in omadock.json - this is the live guard for it.
+# A hostile name is persisted data too: DockModel bounds it (MAX_PRESET_NAME,
+# read from the module above) and strips control and bidi characters. If that
+# bound were ever dropped, a 10k name would land in omadock.json - this is the
+# live guard for it.
 echo "-- a hostile preset name is stored bounded and clean"
 ensure_slot 2 || fail "could not make room for two saved presets"
 probe_ipc presets > "$WORK/rows-before-names.json"
@@ -281,20 +301,18 @@ hid=$(probe_ipc savePreset "$(python3 -c 'print("x" * 10000)')")
 [ -n "$hid" ] || fail "savePreset with a 10k name"
 did=$(probe_ipc savePreset "$(printf 'evil\xe2\x80\xaename\x01here')")
 [ -n "$did" ] || fail "savePreset with a control/bidi name"
-probe_wait_cfg 'import json,sys
-c=json.load(open(sys.argv[1]))
-ids=[p["id"] for p in c.get("presets") or []]
-sys.exit(0 if sys.argv[2] in ids and sys.argv[3] in ids else 1)' "$hid" "$did"
-python3 - "$CFG" "$hid" "$did" <<'PY' || fail "a saved name is unbounded or unclean"
+probe_wait_presets in "$hid" "$did"
+python3 - "$CFG" "$hid" "$did" "$MAX_PRESET_NAME" <<'PY' || fail "a saved name is unbounded or unclean"
 import json, re, sys
 cfg = json.load(open(sys.argv[1]))
+bound = int(sys.argv[4])
 byid = {p["id"]: p for p in cfg.get("presets") or []}
 bad = re.compile("[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]")
 for pid, keep in ((sys.argv[2], "x"), (sys.argv[3], "evil")):
     p = byid.get(pid)
     assert p, "the preset was not stored under its id %s" % pid
     name = p["name"]
-    assert len(name) <= 40, "name of %d characters was stored unbounded" % len(name)
+    assert len(name) <= bound, "name of %d characters was stored unbounded (bound %d)" % (len(name), bound)
     assert name == name.strip() and name, "name %r is not trimmed and non-empty" % name
     assert not bad.search(name), "name %r kept control or bidi characters" % name
     assert keep in name, "name %r lost its visible text" % name
@@ -303,19 +321,17 @@ PY
 for id in "$hid" "$did"; do
   [ "$(probe_ipc deletePreset "$id")" = "ok" ] || fail "deletePreset $id after the name check"
 done
-probe_wait_cfg 'import json,sys
-c=json.load(open(sys.argv[1]))
-ids=[p["id"] for p in c.get("presets") or []]
-sys.exit(0 if sys.argv[2] not in ids and sys.argv[3] not in ids else 1)' "$hid" "$did"
-python3 - "$CFG" "$WORK/rows-before-names.json" <<'PY' || fail "the name check did not clean up after itself"
+probe_wait_presets out "$hid" "$did"
+assert_unique_preset_names "$CFG"
+python3 - "$CFG" "$WORK/rows-before-names.json" "$MAX_PRESET_NAME" <<'PY' || fail "the name check did not clean up after itself"
 import json, sys
 cfg = json.load(open(sys.argv[1]))
 rows_before = json.load(open(sys.argv[2]))
+bound = int(sys.argv[3])
 saved = [p["name"] for p in cfg.get("presets") or []]
-assert len(saved) == len(set(saved)), "the name check left a duplicate: %s" % saved
 want = len([r for r in rows_before if not r.get("builtin")])
 assert len(saved) == want, "%d saved preset(s) left, expected %d" % (len(saved), want)
-assert not any("x" * 41 in n for n in saved), "an unbounded name survived: %s" % saved
+assert not any("x" * (bound + 1) in n for n in saved), "an unbounded name survived: %s" % saved
 print("   cleaned up: %d saved preset(s) left, %d config keys" % (len(saved), len(cfg)))
 PY
 

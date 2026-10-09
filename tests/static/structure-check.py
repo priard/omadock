@@ -2,7 +2,7 @@
 """Maintainability structure check (AGENTS.md "Maintainability Rules").
 
 Rules enforced:
-  1. File-size cap: every .qml/.js/.mjs file is at most MAX_LINES lines.
+  1. File-size cap: every .qml/.js/.mjs/.sh file is at most MAX_LINES lines.
   2. Composition roots (Dock.qml, DockModel.js) are the only exceptions and
      carry ratchet ceilings: they may shrink over time, never grow. Lowering
      a ceiling is part of any refactor that moves code out of a root.
@@ -10,6 +10,10 @@ Rules enforced:
      no timers, processes, file views, windows, or visual items.
   4. components/logic/*.qml functions take the owner root as the FIRST
      parameter (`root`), keeping every module call uniform.
+  5. The live suites (tests/live/*.sh) carry the same ratchet as the
+     composition roots: they are the repo's largest shell files, so the size
+     each had when the cap reached them is recorded in SHELL_CEILINGS and may
+     only be lowered.
 
 Exit codes: 0 = all rules hold; 1 = violations (printed one per line).
 """
@@ -28,6 +32,23 @@ ROOT_CEILINGS = {
     "Dock.qml": 2412,    "DockModel.js": 1326,
 }
 
+# Rule 5: the live suites, ratcheted at the size they had when the cap was
+# extended to shell files (they were uncapped before, so the largest test in the
+# repo could have doubled unnoticed). Lower one when a suite shrinks; move code
+# out of a suite rather than raising it.
+SHELL_CEILINGS = {
+    "tests/live/presets.sh": 388,
+    "tests/live/indicators.sh": 352,
+    "tests/live/probe.sh": 330,
+    "tests/live/place-restore.sh": 250,
+    "tests/live/teardown.sh": 125,
+    "tests/live/layout.sh": 115,
+    "tests/live/ipc-roundtrip.sh": 115,
+    "tests/live/label-metrics.sh": 110,
+    "tests/live/config-fuzz.sh": 84,
+    "tests/live/common.sh": 24,
+}
+
 # Rule 3: objects that belong in the composition root or in a visual
 # component, never in a logic module.
 FORBIDDEN_IN_LOGIC = re.compile(
@@ -42,7 +63,7 @@ SKIP_DIRS = {".git", "node_modules", "__pycache__"}
 
 
 def source_files():
-    """This branch's QML and JS, walking around nested working trees.
+    """This branch's QML, JS and shell, walking around nested working trees.
 
     The `experiment/` worktree lives inside the root directory, and its files
     belong to the `experimental` branch: capping them against this branch's
@@ -58,7 +79,7 @@ def source_files():
         dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS)
         for name in sorted(filenames):
             path = here / name
-            if path.suffix in {".qml", ".js", ".mjs"}:
+            if path.suffix in {".qml", ".js", ".mjs", ".sh"}:
                 yield path
 
 
@@ -67,9 +88,14 @@ def main():
     for path in source_files():
         rel = path.relative_to(ROOT).as_posix()
         lines = path.read_text(errors="replace").splitlines()
-        cap = ROOT_CEILINGS.get(rel, MAX_LINES)
+        cap = ROOT_CEILINGS.get(rel) or SHELL_CEILINGS.get(rel) or MAX_LINES
         if len(lines) > cap:
-            kind = "root ratchet" if rel in ROOT_CEILINGS else "file-size cap"
+            if rel in ROOT_CEILINGS:
+                kind = "root ratchet"
+            elif rel in SHELL_CEILINGS:
+                kind = "suite ratchet"
+            else:
+                kind = "file-size cap"
             violations.append(f"{rel}: {len(lines)} lines exceeds {kind} of {cap}")
         if rel.startswith("components/logic/"):
             for n, line in enumerate(lines, 1):
@@ -86,8 +112,8 @@ def main():
         for v in violations:
             print("  " + v)
         print(f"\n{len(violations)} violation(s). See AGENTS.md "
-              f"\"Maintainability Rules\". Composition-root ceilings may only "
-              f"be lowered, never raised.")
+              f"\"Maintainability Rules\". Composition-root and live-suite "
+              f"ceilings may only be lowered, never raised.")
         return 1
     print("structure-check PASSED: no file exceeds its cap; "
           "logic modules are pure.")
