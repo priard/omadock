@@ -125,3 +125,25 @@ test("thepathless:ristretto pins the look the maintainer's dock runs", () => {
   assert.equal(r.look.hoverEffect, "glitch")
   assert.equal(r.look.opacity, "theme")
 })
+
+test("a key-for-key tie goes to the saved preset, not the shipped row", () => {
+  const mono = merged([]).find((p) => p.name === "Mono")
+  // The user's own copy of that look, under a name of their own: no name
+  // collision, so merge keeps both rows and only the active mark can tell.
+  const mine = { id: "preset_1700000000000", name: "Mine", look: plain(mono.look) }
+  const list = merged([mine])
+  assert.equal(list.findIndex((p) => p.builtin === true), 0,
+    "the shipped looks lead the list, which is why the tie needs settling")
+  assert.equal(ctx.activeId(list, plain(mono.look), ctx.lookIncludes), mine.id,
+    "the row the user can edit takes the active mark")
+  assert.notEqual(ctx.activeId(list, plain(mono.look), ctx.lookIncludes), mono.id,
+    "the read-only shipped row does not")
+  // A look only a shipped preset matches still marks that one, whether or not
+  // anything was saved.
+  const glass = merged([]).find((p) => p.name === "Glass")
+  assert.equal(ctx.activeId(list, plain(glass.look), ctx.lookIncludes), glass.id)
+  assert.equal(ctx.activeId(merged([]), plain(glass.look), ctx.lookIncludes), glass.id)
+  // Nothing matches: no row is marked, and an empty list answers "".
+  assert.equal(ctx.activeId(list, plain(ctx.pickLook({ grain: 0.9 })), ctx.lookIncludes), "")
+  assert.equal(ctx.activeId([], plain(ctx.pickLook({})), ctx.lookIncludes), "")
+})

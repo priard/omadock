@@ -2010,13 +2010,8 @@ Item {
   // config. Applying one goes through applyLook, like loading the config.
   property var presets: []
   readonly property bool canSavePreset: configLogic.savedCount(root) < DockModel.MAX_PRESETS
-  readonly property string activePresetId: {
-    var cur = root.currentLook
-    var list = root.presets || []
-    for (var i = 0; i < list.length; i++)
-      if (list[i] && DockModel.lookIncludes(cur, list[i].look)) return list[i].id
-    return ""
-  }
+  // Which row is the active preset; DockPresets.activeId picks it.
+  readonly property string activePresetId: configLogic.activePresetId(root)
 
   function presetIndex(id) { return configLogic.presetIndex(root, id) }
 

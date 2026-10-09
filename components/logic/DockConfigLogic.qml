@@ -281,6 +281,13 @@ QtObject {
     return DockPresets.userCount(root.presets)
   }
 
+  // The preset the look on screen matches, for the "active" mark.
+  // DockPresets.activeId settles which row that is when a saved preset and a
+  // shipped look are key-for-key equal: the row the user saved keeps it.
+  function activePresetId(root) {
+    return DockPresets.activeId(root.presets, root.currentLook, DockModel.lookIncludes)
+  }
+
   // The preset with this name, ignoring case; "" when none or the name is
   // longer than a preset name can be.
   function presetIdByName(root, name) {
