@@ -14,13 +14,18 @@ import time
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-QML = pathlib.Path(os.environ.get("GATE_QML", ROOT / "components" / "CappedFileView.qml"))
+QML = pathlib.Path(os.environ.get("GATE_QML") or ROOT / "components" / "CappedFileView.qml")
 
 
 def gate_script():
     src = QML.read_text()
     block = re.search(r'gateScript:\s*\[(.*?)\]\.join\("\\n"\)', src, re.S).group(1)
-    return "\n".join(re.findall(r"'((?:[^'\\]|\\.)*)'", block))
+    # The array holds JS string literals and may quote them either way; take them
+    # in order and unescape, so a line written with the other quote style cannot
+    # quietly drop out of the script under test.
+    lines = [m.group(1) if m.group(1) is not None else m.group(2)
+             for m in re.finditer(r"'((?:[^'\\]|\\.)*)'|\"((?:[^\"\\]|\\.)*)\"", block)]
+    return "\n".join(re.sub(r'\\(["\\])', r'\1', line) for line in lines)
 
 
 GATE = gate_script()
@@ -178,20 +183,32 @@ class ReadRace(unittest.TestCase):
         # the machine is asked too (on CI, `sh` is dash and both are the same
         # binary; on an Arch host `dash` is usually absent).
         (self.dir / "big").write_bytes(b"y" * 900000)
+        spacey = self.dir / "oma dock tmp"
+        spacey.mkdir()
         shells = ["sh"] + [s for s in (shutil.which("dash"),) if s]
-        for shell in shells:
-            with self.subTest(shell=shell):
-                before = set(pathlib.Path(tempfile.gettempdir()).glob("omadock-read.*"))
-                env = dict(os.environ)
-                env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")
-                process = subprocess.Popen([shell, "-c", self.gate, "gate", str(self.dir / "big"), "2000000"],
-                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
-                time.sleep(0.2)      # inside the slowed head's window
-                process.terminate()
-                process.wait(timeout=10)
-                time.sleep(0.1)
-                after = set(pathlib.Path(tempfile.gettempdir()).glob("omadock-read.*"))
-                self.assertEqual(after - before, set(), "a killed read left its staging file behind")
+        # The staging file lives in TMPDIR, and a path in it may hold a space:
+        # naming that path inside the cleanup command split it into two names,
+        # and rm removed neither.
+        for tmpdir, where in ((None, pathlib.Path(tempfile.gettempdir())),
+                              (spacey, spacey),
+                              (pathlib.Path("/nonexistent-omadock-test"), pathlib.Path("/tmp"))):
+            for shell in shells:
+                with self.subTest(shell=shell, tmpdir=str(where)):
+                    before = set(where.glob("omadock-read.*"))
+                    env = dict(os.environ)
+                    env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")
+                    if tmpdir is None:
+                        env.pop("TMPDIR", None)
+                    else:
+                        env["TMPDIR"] = str(tmpdir)
+                    process = subprocess.Popen([shell, "-c", self.gate, "gate", str(self.dir / "big"), "2000000"],
+                                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+                    time.sleep(0.2)      # inside the slowed head's window
+                    process.terminate()
+                    process.wait(timeout=10)
+                    time.sleep(0.1)
+                    after = set(where.glob("omadock-read.*"))
+                    self.assertEqual(after - before, set(), "a killed read left its staging file behind")
 
 
 if __name__ == "__main__":

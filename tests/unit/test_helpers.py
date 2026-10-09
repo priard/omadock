@@ -11,6 +11,9 @@ import time
 import unittest
 from unittest.mock import mock_open, patch
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from test_capped_gate import gate_script   # noqa: E402  (sibling test owns it)
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -162,9 +165,9 @@ class FolderTests(unittest.TestCase):
 
 class CappedReadTests(unittest.TestCase):
     def test_actual_qml_gate_handles_symlinks_ceiling_and_fifo(self):
-        qml = (ROOT / 'components/CappedFileView.qml').read_text()
-        lines = qml.split('readonly property string gateScript: [', 1)[1].split('].join', 1)[0]
-        script = '\n'.join(line.strip()[1:-2] for line in lines.splitlines() if line.strip().startswith("'"))
+        # The gate's own test owns the extraction; sharing it keeps a line from
+        # dropping out of the script under test by being quoted the other way.
+        script = gate_script()
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'data'
             path.write_text('abcd')
