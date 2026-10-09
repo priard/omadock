@@ -68,6 +68,10 @@ probe_root() { echo "$PROBE_ROOT"; }
 # for that reason, and cleanup kills the PIDs it identified.
 probe_pids() {
   local p exe
+  # No directory yet (probe_start refused a missing config, say): looking for
+  # " -p " with nothing after it would match any quickshell on this session -
+  # including the owner's dock - and report it as one of ours.
+  [ -n "$PROBE_DIR" ] || return 0
   for p in $(pgrep -f -- " -p $PROBE_DIR" 2>/dev/null); do
     exe=$(basename "$(readlink -f "/proc/$p/exe" 2>/dev/null || true)")
     case "$exe" in quickshell|qs) echo "$p" ;; esac
