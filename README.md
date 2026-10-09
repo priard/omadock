@@ -367,7 +367,7 @@ omarchy-shell omadock applyPreset "Night"
 
 ### Shipped looks
 
-Five looks ride with the dock and sit ahead of the presets you save — a fresh install with no `omadock.json` still offers every one of them. A shipped look and a saved preset can never appear as two rows under one name: the list carries a name once, and where they collide the preset you saved keeps it (it is the row you can rename, update or delete), so the shipped look of that name sits that one out rather than the other way round. They are read-only (no Update or Delete, and the name cannot be edited), so removing your own presets never removes them. `DockPresets.js` holds the definitions; the shipped keys are the ones that differ from the defaults, and every other key is filled from `DockModel.DEFAULT_LOOK` when the list is built, so a look key added later cannot leak the value the dock happens to hold.
+Seven looks ride with the dock and sit ahead of the presets you save — a fresh install with no `omadock.json` still offers every one of them. A shipped look and a saved preset can never appear as two rows under one name: the list carries a name once, and where they collide the preset you saved keeps it (it is the row you can rename, update or delete), so the shipped look of that name sits that one out rather than the other way round. They are read-only (no Update or Delete, and the name cannot be edited), so removing your own presets never removes them. `DockPresets.js` holds the definitions; the shipped keys are the ones that differ from the defaults, and every other key is filled from `DockModel.DEFAULT_LOOK` when the list is built, so a look key added later cannot leak the value the dock happens to hold.
 
 | Preset | The look | Built from |
 | :--- | :--- | :--- |
@@ -376,6 +376,8 @@ Five looks ride with the dock and sit ahead of the presets you save — a fresh 
 | `Pixel` | Pixel icons on a B/W tint with a coarse grid and the tone controls that keep a poster-like icon readable | [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
 | `Mono` | The transparent dock — icons only, no card, rim or panel — in monochrome with the accent tint and the Glow hover | [#12](https://github.com/thepathless/omadock/pull/12), [#13](https://github.com/thepathless/omadock/pull/13), [#19](https://github.com/thepathless/omadock/pull/19) by [@priard](https://github.com/priard) |
 | `Panels` | Split sections: one panel per dock section over a quiet Mono gradient, with a pixel-snapped gap | [#14](https://github.com/thepathless/omadock/pull/14) and [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
+| `Nameplates` | Names always on, joined to their icon by a plate, with the window marks in the upright column beside the name | [#47](https://github.com/thepathless/omadock/pull/47) by [@priard](https://github.com/priard) |
+| `Silkscreen` | The same names in the bundled Silkscreen pixel font — small, on a pill, drawn with the outline that reads on any fill | [#47](https://github.com/thepathless/omadock/pull/47) by [@priard](https://github.com/priard) |
 
 The same list is scriptable end to end — list it, save the look on screen under a chosen name, remove one by id:
 
@@ -719,6 +721,14 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 ## 📋 Releases & Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.3.0 — 2026-10-09
+
+- **Two looks that show the names, because that is the look the pull-request record asked for** — the dock has carried name labels since [#47](https://github.com/thepathless/omadock/pull/47) (names beside the icons, a `Plate` that joins icon and name into one button, the window marks in an upright column, a bundled Silkscreen pixel font, ink that reads on any fill), and a preset has been able to hold all thirteen label keys the whole time — but not one of the five shipped looks turned them on, so the only way to see any of it was to build it by hand in Settings. Two shipped looks now do: **`Nameplates`** (names always on, joined by a plate, marks in the upright column) and **`Silkscreen`** (the same names in the pixel font, small on a pill, outlined), both read-only like every shipped look and both credited to [@priard](https://github.com/priard). Applying one is a click in *Settings → Presets* or the dock's right-click menu, and the label keys are applied through `DockLabels.pickLabelLook`, exactly as a saved preset's are.
+- **What the record did *not* support, so it is not shipped** — panel layout ([#49](https://github.com/thepathless/omadock/pull/49)) is not a look key (`LOOK_KEYS` has no `layout`), so a preset holding it would silently do nothing; it stays a placement setting reachable from any look. [#13](https://github.com/thepathless/omadock/pull/13)'s "Zen / Arc-style gradient" has no matching gradient — `Dock.qml`'s palette is fixed (aurora, sunset, ocean, forest, rose, lavender, ember, citrus, mono and the theme) — and Wave magnification and launch bounce ([#2](https://github.com/thepathless/omadock/pull/2)) are motion, not a look. Inventing a look to fill the gap would be worse than five.
+- **A shipped look's label values are now pinned by a test** — `pickLabelLook` keeps a label value only when it is one the labels accept and otherwise falls back to what the dock already holds, so a misspelled enum in a shipped look would ship a look that does nothing. `tests/unit/shippedpresets.test.mjs` now checks every label key of every shipped look against the label lists, and asserts at least one look shows names.
+- **Deleting a preset, proved on the real surface** — remove one over IPC against a copy of a live config and the list shrinks by exactly that row (7 → 5 for two removals), the other presets and all 93 config keys survive, no shipped look is written into `omadock.json`, a shipped look and a repeat removal both answer `not found`, and removing the preset the look on screen matches hands the active mark to the shipped look of that name. `omadock.json` (md5 `f16967d3…`) and the running shell's PID were unchanged throughout — no shell restart.
+- **Verification** — 180 node + 95 python tests, `node --check` over every root module, `qmllint` with zero errors, the structure and security gates, `omarchy plugin validate`, the manifest check and the dock smoke test, all green.
 
 ### v4.2.3 — 2026-10-09
 

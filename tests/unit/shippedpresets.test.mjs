@@ -9,12 +9,48 @@ import vm from "node:vm"
 
 const root = new URL("../../", import.meta.url)
 const ctx = vm.createContext({ console, Quickshell: { iconPath: () => "" } })
-for (const file of ["DockModel.js", "DockPresets.js"])
+for (const file of ["DockModel.js", "DockPresets.js", "DockLabels.js"])
   vm.runInContext(readFileSync(new URL(file, root), "utf8"), ctx)
 const plain = (v) => JSON.parse(JSON.stringify(v))
 
 const SHIPPED = plain(ctx.SHIPPED)
 const merged = (user) => plain(ctx.merge(user, ctx.pickLook))
+
+// A preset's label keys are applied through DockLabels.pickLabelLook, which
+// keeps a value only when it is one of the lists below and otherwise falls
+// back to the value already on the dock -- so a misspelled enum in a shipped
+// look would ship a look that silently does nothing. Assert the values here.
+const LABEL_LISTS = {
+  labelMode: "LABEL_MODES", labelKind: "LABEL_KINDS", labelFont: "LABEL_FONTS",
+  labelSize: "LABEL_SIZES", labelWeight: "LABEL_WEIGHTS", labelColor: "LABEL_COLORS",
+  labelBackground: "LABEL_BACKGROUNDS", labelShape: "LABEL_SHAPES",
+  labelIndicators: "LABEL_INDICATORS", labelPlateHeight: "LABEL_PLATE_HEIGHTS",
+  labelReveal: "LABEL_REVEALS", labelEffect: "LABEL_EFFECTS",
+}
+
+test("every label key a shipped look carries is a value the labels accept", () => {
+  let shown = 0
+  for (const p of SHIPPED) {
+    for (const [key, listName] of Object.entries(LABEL_LISTS)) {
+      if (!(key in p.look)) continue
+      const allowed = plain(ctx[listName])
+      assert.ok(allowed.includes(p.look[key]),
+        `${p.name}.${key} = ${JSON.stringify(p.look[key])} is not one of ${allowed.join(", ")}`)
+    }
+    if (p.look.labelMode && p.look.labelMode !== "off") shown++
+  }
+  // #47's whole subject is how the names look, and no other look turns them
+  // on, so a set that shows no names is the gap this test exists to keep shut.
+  assert.ok(shown >= 1, "at least one shipped look shows the names")
+  for (const name of ["Nameplates", "Silkscreen"]) {
+    const look = SHIPPED.find((p) => p.name === name)
+    assert.ok(look, `${name} ships`)
+    assert.equal(look.look.labelMode, "always", `${name} shows the names`)
+  }
+  assert.notEqual(SHIPPED.find((p) => p.name === "Nameplates").look.labelBackground,
+    SHIPPED.find((p) => p.name === "Silkscreen").look.labelBackground,
+    "the two name looks are not the same look")
+})
 
 test("shipped presets are well formed and distinct", () => {
   assert.ok(SHIPPED.length >= 1, "at least one look ships")
