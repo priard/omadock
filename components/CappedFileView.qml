@@ -117,14 +117,16 @@ Item {
   // new file whole rather than a prefix of it, and the shell still never
   // receives more than $2 bytes of content. The bytes are staged in a
   // temporary file so they can be counted before any is emitted; reload()
-  // stops an in-flight gate when a newer read supersedes it, so the trap is
-  // what removes that staging file when this process is killed mid-read, and
-  // a temporary directory that cannot be written falls back to /tmp rather
-  // than leaving the dock unable to read its own config.
+  // stops an in-flight gate when a newer read supersedes it, so traps are what
+  // remove that staging file when this process is killed mid-read - and both
+  // the signals and EXIT are named, because an EXIT-only trap covers the kill
+  // on bash but not on dash (CI runs this suite where /bin/sh is dash, and the
+  // staging file leaked there). A temporary directory that cannot be written
+  // falls back to /tmp rather than leaving the dock unable to read its config.
   readonly property string gateScript: [
     '[ -f "$1" ] && [ -r "$1" ] || exit 2',
     't=$(mktemp "${TMPDIR:-/tmp}/omadock-read.XXXXXX" 2>/dev/null || mktemp /tmp/omadock-read.XXXXXX) || exit 2',
-    'trap "rm -f -- $t" EXIT',
+    'trap "rm -f -- $t" EXIT; trap "rm -f -- $t; exit 2" TERM INT HUP',
     'timeout 2 head -c "$(( $2 + 1 ))" -- "$1" > "$t" || { rm -f -- "$t"; exit 2; }',
     'n=$(wc -c < "$t" | tr -d "[:space:]") || { rm -f -- "$t"; exit 2; }',
     '[ "$n" -le "$2" ] || { rm -f -- "$t"; exit 3; }',
