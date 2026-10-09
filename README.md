@@ -367,7 +367,7 @@ omarchy-shell omadock applyPreset "Night"
 
 ### Shipped looks
 
-Five looks ride with the dock and are always in the list, ahead of the presets you save — a fresh install with no `omadock.json` still offers every one of them. They are read-only (no Update or Delete, and the name cannot be edited), so removing your own presets never removes them. `DockPresets.js` holds the definitions; the shipped keys are the ones that differ from the defaults, and every other key is filled from `DockModel.DEFAULT_LOOK` when the list is built, so a look key added later cannot leak the value the dock happens to hold.
+Five looks ride with the dock and sit ahead of the presets you save — a fresh install with no `omadock.json` still offers every one of them. A shipped look and a saved preset can never appear as two rows under one name: the list carries a name once, and where they collide the preset you saved keeps it (it is the row you can rename, update or delete), so the shipped look of that name sits that one out rather than the other way round. They are read-only (no Update or Delete, and the name cannot be edited), so removing your own presets never removes them. `DockPresets.js` holds the definitions; the shipped keys are the ones that differ from the defaults, and every other key is filled from `DockModel.DEFAULT_LOOK` when the list is built, so a look key added later cannot leak the value the dock happens to hold.
 
 | Preset | The look | Built from |
 | :--- | :--- | :--- |
@@ -717,6 +717,10 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 ## 📋 Releases & Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.2.1 — 2026-10-09
+
+- **One row per preset name** — a preset saved before a look of the same name shipped (so the saved one did not exist yet, and saving refuses a name that is taken) was listed beside it, which read as the dock showing a duplicate. The preset list now carries a name once, and the collision rule lives where the list is built: `DockPresets.merge()` drops a shipped look whose name a saved preset holds. The saved preset is the one that keeps the name, because it is the row you can rename, update or delete — hiding it instead would spend one of your six slots on a row you cannot see, and rewriting or deleting it to settle a name would throw away a preset you made. Nothing in `omadock.json` is touched: the saved entry stays exactly as it is, and a fresh install, which has no saved presets, still offers every shipped look.
 
 ### v4.2.0 — 2026-10-09
 

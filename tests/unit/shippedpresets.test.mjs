@@ -76,6 +76,38 @@ test("saved presets follow the shipped ones and stay untouched", () => {
   assert.deepEqual(plain(ctx.boundPresets(ctx.userOnly(list))), saved)
 })
 
+test("one row per name: the saved preset wins its name and the shipped one steps aside", () => {
+  const r = merged([]).find((p) => p.name === "thepathless:ristretto")
+  const mine = { id: "preset_7", name: "thepathless:ristretto", look: plain(r.look) }
+  const list = merged([mine])
+  // Exactly one row under that name, and it is the entry the user saved.
+  const named = list.filter((p) => ctx.nameKey(p.name) === ctx.nameKey(mine.name))
+  assert.equal(named.length, 1, "the name is listed once")
+  assert.deepEqual(named[0], mine, "the listed row is the user's own, verbatim")
+  assert.notEqual(named[0].builtin, true, "it stays the row they can edit")
+  // Every other shipped look is untouched, and the entry is not hidden data:
+  // it is still the user's preset, still counted, still what gets written back.
+  assert.equal(list.length, SHIPPED.length - 1 + 1)
+  for (const p of SHIPPED)
+    if (p.name !== mine.name) assert.ok(list.some((x) => x.name === p.name), `${p.name} still ships`)
+  assert.deepEqual(plain(ctx.userOnly(list)), [mine])
+  assert.equal(plain(ctx.userCount(list)), 1)
+  assert.deepEqual(plain(ctx.boundPresets(ctx.userOnly(list))), [mine])
+})
+
+test("the collision rule ignores case and surrounding space", () => {
+  const mine = { id: "preset_8", name: "  ThePathless:RISTRETTO ", look: plain(ctx.pickLook({})) }
+  const list = merged([mine])
+  assert.equal(list.filter((p) => ctx.nameKey(p.name) === "thepathless:ristretto").length, 1)
+  assert.deepEqual(list[list.length - 1], mine)
+  // Without a collision the shipped look is back, and a saved preset that
+  // shares no name never displaces anything.
+  const other = { id: "preset_9", name: "Mine", look: plain(ctx.pickLook({})) }
+  const clean = merged([other])
+  assert.equal(clean.length, SHIPPED.length + 1)
+  assert.ok(clean.some((p) => p.name === "thepathless:ristretto" && p.builtin === true))
+})
+
 test("thepathless:ristretto pins the look the maintainer's dock runs", () => {
   const r = merged([]).find((p) => p.name === "thepathless:ristretto")
   assert.ok(r, "the owner's look ships")
