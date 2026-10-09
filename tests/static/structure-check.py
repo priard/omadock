@@ -25,7 +25,7 @@ MAX_LINES = 800
 # Composition roots: single-owner state + wiring must live somewhere, and it
 # lives here. These ceilings are ratchets - see rule 2.
 ROOT_CEILINGS = {
-    "Dock.qml": 2412,    "DockModel.js": 1529,
+    "Dock.qml": 2412,    "DockModel.js": 1326,
 }
 
 # Rule 3: objects that belong in the composition root or in a visual

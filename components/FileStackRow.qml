@@ -3,7 +3,7 @@ import QtQuick.Effects
 import Quickshell
 import qs.Commons
 import qs.Ui
-import "../DockModel.js" as DockModel
+import "../DockIcons.js" as DockIcons
 
 Item {
   id: frow
@@ -45,7 +45,7 @@ Item {
 
   readonly property string resolvedIconSource: {
     var _tv = frow.themeVersion
-    return DockModel.resolveFileItemIcon(frow.icon, frow.currentIconThemeName, frow.folderColor, frow.appLibrary || null)
+    return DockIcons.resolveFileItemIcon(frow.icon, frow.currentIconThemeName, frow.folderColor, frow.appLibrary || null)
   }
   readonly property bool isIconSymbolic: resolvedIconSource.indexOf("-symbolic.svg") >= 0 || resolvedIconSource.indexOf("symbolic") >= 0
   // Set by the popup, which knows the backdrop the row sits on.
