@@ -670,8 +670,20 @@ python3 -m unittest discover -s tests/unit -p 'test_*.py'
 # config rewrite, and save-then-remove leaving every other preset and config
 # key intact. tests/live/probe.sh is the harness (source it, then probe_start /
 # probe_ipc / probe_cfg / probe_cleanup); PROBE_CFG_SRC=<file> copies another
-# config in, e.g. a fresh-install one
+# config in, e.g. a fresh-install one, and PROBE_BODY=<file> replaces the body
+# of the probe's ShellRoot with a fixture that reaches inside the dock
 ./tests/live/presets.sh
+
+# A session must leave nothing behind: three fresh probe sessions are started
+# and stopped, then their helpers and scratch directories are counted. A dock
+# spawns helpers through Process and they do not exit with the shell - the
+# harness used to leak one per session (80 had accumulated on this desktop)
+./tests/live/teardown.sh
+
+# The label shortening survives its own metrics being destroyed: a real dock
+# label's two TextMetrics are destroyed from outside and reshorten() is called
+# (this is the fault logged at DockLabel.qml:97 in the wild)
+./tests/live/label-metrics.sh
 
 # Live checks against the RUNNING dock on this desktop - INTRUSIVE. They write
 # the live omadock.json in place (backing it up and restoring it) and they
@@ -723,7 +735,7 @@ qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 | `shaders/` | Hover/icon-style fragment shaders with precompiled `.qsb` bundles. |
 | `tests/unit/` | Node and Python unit suites — what CI runs on every PR. |
 | `tests/` | `smoke-test.sh` (live-shell probe) and `manifest-check.sh` (CI manifest gate). |
-| `tests/live/` | Live suites. `probe.sh` is the harness: a second Quickshell instance running this tree's `DockHost.qml` against a config copy under a redirected HOME, off screen. `presets.sh` runs on it and is the non-intrusive one; `ipc-roundtrip.sh`, `layout.sh` and `config-fuzz.sh` are marked INTRUSIVE because they drive the dock on this desktop and write the live config (see the note at the top of each). |
+| `tests/live/` | Live suites. `probe.sh` is the harness: a second Quickshell instance running this tree's `DockHost.qml` against a config copy under a redirected HOME, off screen. `presets.sh`, `teardown.sh` (a session leaves no process or directory behind) and `label-metrics.sh` (the shortening search survives its metrics being destroyed, via `PROBE_BODY`) run on it and are the non-intrusive ones; `ipc-roundtrip.sh`, `layout.sh` and `config-fuzz.sh` are marked INTRUSIVE because they drive the dock on this desktop and write the live config (see the note at the top of each). |
 | `assets/` | README imagery. |
 | `.github/workflows/ci.yml` | CI: test suites, QML syntax gate, manifest schema. |
 
@@ -741,6 +753,13 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 ## 📋 Releases & Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.3.4 — 2026-10-09
+
+- **The live harness was leaving litter on the machine it promises not to disturb** — a dock spawns helpers through `Process` (`scripts/drive-removal-watch.py`, the folder scanner) and a helper does not exit with the Quickshell process that spawned it: it is reparented to the user's systemd and keeps polling with no parent. Stopping only the shell therefore leaked **one helper per probe session**, and **80** had accumulated on this desktop before it was noticed. `probe_stop` now kills the probe's whole process group (the session is started with `setsid --fork`, so the group is the shell and everything it spawned) and hunts any descendant that left the group by PID; `probe_cleanup` fails, with the command lines named, if a process of the session or its scratch directory survived. Measured: three sessions leaked three helpers before (with `probe_cleanup` returning 0 throughout), zero after, with the live dock's own helper untouched.
+- **That rule is a test now, not a habit** — `tests/live/teardown.sh` starts fresh sessions, stops them, and counts what is still running afterwards by two independent views: any process left in a session's process group, and any helper that outlived its session (excluding the live dock's own, which must still be there). Run against the previous harness it fails, naming both leaked processes; against this one it passes. Because `probe_cleanup` itself now fails on a survivor, every live suite fails on the next leak instead of accumulating more; `PROBE_BODY` was added to the harness so a test can put its own QML inside the probe's `ShellRoot`.
+- **A queued name shortening could read metrics that were already destroyed** — `components/DockLabel.qml` shortens a tile's name with a search that writes into the label's own `TextMetrics` (`probe.text = t`), and the call is deferred, so it can land in the window where a delegate's children have been destroyed and the label itself has not. There the write is a null dereference. This is not hypothetical: the quickshell logs hold **seven** occurrences today, every one at `DockLabel.qml:97` — `TypeError: Value is null and could not be converted to an object (exception occurred during delayed function evaluation)` — and the live suite's clean-log check failed on one of them. `reshorten()` now returns unless its metrics exist (a no-op on the ordinary path), and `tests/live/label-metrics.sh` manufactures the state on demand with the real dock: it destroys a real label's two `TextMetrics` from outside, proves the deletion landed (the label's children go 9 → 7), and calls `reshorten()`. Without the guard the call throws the exact wild message; with it the call is a no-op and the label keeps the name it had. The same test first pins the ordinary path (a 38-character name really is shortened to `A Deliberately Long`), so a guard that broke shortening could not pass.
+- **Verification** — 180 node + 102 python tests, `node --check` over every root module, `qmllint` with zero errors, the structure and security gates, `omarchy plugin validate`, the manifest check, the shader gate and the dock smoke test, all green; `tests/live/presets.sh` green on both harness paths; `tests/live/teardown.sh` green at three sessions (and red against the previous harness, naming the leaks); `tests/live/label-metrics.sh` red without the guard and green with it, twice. `omadock.json` (md5 `f16967d3…`) and the shell PID (805789) were unchanged throughout, nothing was shown on screen and no shell restart was needed.
 
 ### v4.3.3 — 2026-10-09
 
