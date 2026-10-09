@@ -50,6 +50,15 @@ assert not any(p['id'] == sys.argv[1] for p in d), d
 " "$pid" || fail "presets() dropped the removed one"
 [ "$(ipc deletePreset "$pid")" = "not found" ] || fail "deletePreset twice"
 
+# The shipped looks ride with the dock: listed, marked, and not removable.
+bid=$(ipc presets | python3 -c "
+import json, sys
+d = [p for p in json.load(sys.stdin) if p.get('builtin')]
+if not d: sys.exit(1)
+print(d[0]['id'])
+") || fail "presets() does not list a shipped look"
+[ "$(ipc deletePreset "$bid")" = "not found" ] || fail "a shipped preset is not removable"
+
 align=$(python3 -c "import json; print(json.load(open('$CFG')).get('alignment', 'center'))")
 ipc setAlignment "$align"; sleep 0.5
 

@@ -215,14 +215,15 @@ Item {
     }
 
     // The preset list, read-only: every preset the dock holds and which of
-    // them the look on screen matches right now. Presets live in
-    // omadock.json; this reads them from the dock instead of that file.
+    // them the look on screen matches right now. `builtin: true` marks a look
+    // that ships with the dock (DockPresets.js) rather than one saved in
+    // omadock.json; shipped presets cannot be renamed, updated or removed.
     function presets(): string {
       var d = host.orderedDocks()
       if (d.length === 0) return "[]"
       var active = d[0].activePresetId
       return JSON.stringify((d[0].presets || []).map(function(p) {
-        return { id: p.id, name: p.name, active: p.id === active }
+        return { id: p.id, name: p.name, active: p.id === active, builtin: p.builtin === true }
       }))
     }
 

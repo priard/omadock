@@ -365,6 +365,18 @@ The dock follows your Omarchy theme's palette and wallpaper — three of the twe
 omarchy-shell omadock applyPreset "Night"
 ```
 
+### Shipped looks
+
+Five looks ride with the dock and are always in the list, ahead of the presets you save — a fresh install with no `omadock.json` still offers every one of them. They are read-only (no Update or Delete, and the name cannot be edited), so removing your own presets never removes them. `DockPresets.js` holds the definitions; the shipped keys are the ones that differ from the defaults, and every other key is filled from `DockModel.DEFAULT_LOOK` when the list is built, so a look key added later cannot leak the value the dock happens to hold.
+
+| Preset | The look | Built from |
+| :--- | :--- | :--- |
+| `thepathless:ristretto` | Dot-matrix icons on a Forest gradient with film grain, long custom dividers, the Glitch hover, and no rim or shadow | The maintainer's own dock |
+| `Glass` | Aurora gradient fill with grain, a rim that stays visible over it, long theme-coloured dividers and the Lift hover | [#13](https://github.com/thepathless/omadock/pull/13), [#45](https://github.com/thepathless/omadock/pull/45), [#17](https://github.com/thepathless/omadock/pull/17), [#19](https://github.com/thepathless/omadock/pull/19) by [@priard](https://github.com/priard) |
+| `Pixel` | Pixel icons on a B/W tint with a coarse grid and the tone controls that keep a poster-like icon readable | [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
+| `Mono` | The transparent dock — icons only, no card, rim or panel — in monochrome with the accent tint and the Glow hover | [#12](https://github.com/thepathless/omadock/pull/12), [#13](https://github.com/thepathless/omadock/pull/13), [#19](https://github.com/thepathless/omadock/pull/19) by [@priard](https://github.com/priard) |
+| `Panels` | Split sections: one panel per dock section over a quiet Mono gradient, with a pixel-snapped gap | [#14](https://github.com/thepathless/omadock/pull/14) and [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
+
 The same list is scriptable end to end — list it, save the look on screen under a chosen name, remove one by id:
 
 ```bash
@@ -587,9 +599,9 @@ Additional IPC methods available:
 - `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.
 - `closeSettings`: Close the settings panel.
 - `applyPreset("<name>")`: Apply a saved appearance preset by name; returns `ok` or `not found`.
-- `presets()`: JSON list of the saved presets, each with the flag `active` set on the one the look on screen matches.
-- `savePreset("<name>")`: Save the look the dock has right now as a preset; returns its id, or an empty string when six are already saved.
-- `deletePreset("<id>")`: Remove one preset; returns `ok` or `not found`.
+- `presets()`: JSON list of every preset the dock holds — the shipped looks and the saved ones — each with `active` set on the one the look on screen matches, and `builtin: true` on a look that ships with the dock.
+- `savePreset("<name>")`: Save the look the dock has right now as a preset; returns its id, or an empty string when six are already saved. Shipped looks do not count against those six.
+- `deletePreset("<id>")`: Remove one saved preset; returns `ok` or `not found` (a shipped look is never removable).
 
 > [!NOTE]
 > The `-p /usr/share/omarchy/shell` flag is mandatory to target the active Omarchy system shell instance.

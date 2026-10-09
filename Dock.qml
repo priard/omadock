@@ -2009,7 +2009,7 @@ Item {
   // Named copies of the look (DockModel.LOOK_KEYS), at most six, kept in the
   // config. Applying one goes through applyLook, like loading the config.
   property var presets: []
-  readonly property bool canSavePreset: (root.presets || []).length < DockModel.MAX_PRESETS
+  readonly property bool canSavePreset: configLogic.savedCount(root) < DockModel.MAX_PRESETS
   readonly property string activePresetId: {
     var cur = root.currentLook
     var list = root.presets || []
