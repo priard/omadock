@@ -365,6 +365,14 @@ The dock follows your Omarchy theme's palette and wallpaper — three of the twe
 omarchy-shell omadock applyPreset "Night"
 ```
 
+The same list is scriptable end to end — list it, save the look on screen under a chosen name, remove one by id:
+
+```bash
+omarchy-shell omadock presets                                  # [{"id":"…","name":"…","active":true}]
+omarchy-shell omadock savePreset "thepathless:ristretto"      # -> the new preset's id
+omarchy-shell omadock deletePreset <id>                        # -> ok | not found
+```
+
 ## 🖱️ Controls Cheat Sheet
 
 | Gesture / Trigger | Target | Action Executed |
@@ -578,6 +586,10 @@ Additional IPC methods available:
 - `openSettings`: Open the settings panel on the focused monitor's dock.
 - `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.
 - `closeSettings`: Close the settings panel.
+- `applyPreset("<name>")`: Apply a saved appearance preset by name; returns `ok` or `not found`.
+- `presets()`: JSON list of the saved presets, each with the flag `active` set on the one the look on screen matches.
+- `savePreset("<name>")`: Save the look the dock has right now as a preset; returns its id, or an empty string when six are already saved.
+- `deletePreset("<id>")`: Remove one preset; returns `ok` or `not found`.
 
 > [!NOTE]
 > The `-p /usr/share/omarchy/shell` flag is mandatory to target the active Omarchy system shell instance.

@@ -214,6 +214,32 @@ Item {
       return (id !== "" && d[0].applyPreset(id)) ? "ok" : "not found"
     }
 
+    // The preset list, read-only: every preset the dock holds and which of
+    // them the look on screen matches right now. Presets live in
+    // omadock.json; this reads them from the dock instead of that file.
+    function presets(): string {
+      var d = host.orderedDocks()
+      if (d.length === 0) return "[]"
+      var active = d[0].activePresetId
+      return JSON.stringify((d[0].presets || []).map(function(p) {
+        return { id: p.id, name: p.name, active: p.id === active }
+      }))
+    }
+
+    // Saves the look the dock has right now ("Save current look") under a
+    // name; returns the new preset's id, or "" when six are already saved.
+    function savePreset(name: string): string {
+      var d = host.orderedDocks()
+      return d.length > 0 ? String(d[0].savePreset(String(name))) : ""
+    }
+
+    // Removes one preset: "ok", or "not found" when no preset has that id.
+    function deletePreset(id: string): string {
+      var d = host.orderedDocks()
+      if (d.length === 0) return "not found"
+      return d[0].deletePreset(String(id)) ? "ok" : "not found"
+    }
+
     // Read-only: item rectangles of the focused monitor's dock (window
     // coordinates), used by tests/bench/bench.py and the live tests.
     function itemGeometry(): string {
