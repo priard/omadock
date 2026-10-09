@@ -1303,10 +1303,10 @@ Item {
   // watcher only and reads content through a stat-then-read gate bounded by
   // DockModel.MAX_*_BYTES (a large file or FIFO can never enter or stall the
   // shell at the read boundary). DockModel.readCapped stays as defense in
-  // depth on the accepted slice. Reload cycles are debounced (fileChanged only
-  // fires from the filesystem watcher, never from our own atomic writes — the
-  // debounce coalesces rapid external edit bursts and the _savingConfig guard
-  // keeps the read after a save from re-applying stale data).
+  // depth on the accepted slice. Reload cycles are debounced (a rename from
+  // our own atomic write wakes the watcher too, so the debounce coalesces it
+  // with outside edits; _savingConfig skips a read landing mid-save, and a
+  // read older than a write is CappedFileView's to hold back).
 
   // Coalesces rapid external change bursts into one reload per file.
   Timer {
