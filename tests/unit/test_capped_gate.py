@@ -171,18 +171,27 @@ class ReadRace(unittest.TestCase):
         # the staging file has to go even when the process is killed - one
         # leaked file per superseded read adds up, and each holds the content
         # of a watched file.
-        before = set(pathlib.Path(tempfile.gettempdir()).glob("omadock-read.*"))
+        #
+        # The shell matters: an EXIT-only trap removes the file when bash is
+        # killed, and a dash killed the same way never runs it. The dock spawns
+        # `sh`, so `sh` is the case that counts, and every other POSIX shell on
+        # the machine is asked too (on CI, `sh` is dash and both are the same
+        # binary; on an Arch host `dash` is usually absent).
         (self.dir / "big").write_bytes(b"y" * 900000)
-        env = dict(os.environ)
-        env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")
-        process = subprocess.Popen(["sh", "-c", self.gate, "gate", str(self.dir / "big"), "2000000"],
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
-        time.sleep(0.2)          # inside the slowed head's window
-        process.terminate()
-        process.wait(timeout=10)
-        time.sleep(0.1)
-        after = set(pathlib.Path(tempfile.gettempdir()).glob("omadock-read.*"))
-        self.assertEqual(after - before, set(), "a killed read left its staging file behind")
+        shells = ["sh"] + [s for s in (shutil.which("dash"),) if s]
+        for shell in shells:
+            with self.subTest(shell=shell):
+                before = set(pathlib.Path(tempfile.gettempdir()).glob("omadock-read.*"))
+                env = dict(os.environ)
+                env["PATH"] = str(self.bin) + os.pathsep + env.get("PATH", "")
+                process = subprocess.Popen([shell, "-c", self.gate, "gate", str(self.dir / "big"), "2000000"],
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+                time.sleep(0.2)      # inside the slowed head's window
+                process.terminate()
+                process.wait(timeout=10)
+                time.sleep(0.1)
+                after = set(pathlib.Path(tempfile.gettempdir()).glob("omadock-read.*"))
+                self.assertEqual(after - before, set(), "a killed read left its staging file behind")
 
 
 if __name__ == "__main__":
