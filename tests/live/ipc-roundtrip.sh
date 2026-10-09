@@ -33,6 +33,32 @@ ipc reveal; sleep 0.5
 [ "$(ipc applyPreset no-such-preset-xyz)" = "not found" ] || fail "applyPreset unknown"
 [ "$(ipc applyPreset "$(python3 -c 'print("x" * 10000)')")" = "not found" ] || fail "applyPreset 10k name"
 
+# Presets: save the look on screen under a chosen name, list it, remove it.
+# The list lives in omadock.json, which this script restores on exit.
+pid=$(ipc savePreset verify_ipc_roundtrip)
+[ -n "$pid" ] || fail "savePreset (six presets already saved? remove one to run this test)"
+ipc presets | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert any(p['name'] == 'verify_ipc_roundtrip' and p['id'] == sys.argv[1] for p in d), d
+" "$pid" || fail "presets() lists the saved one"
+[ "$(ipc deletePreset "$pid")" = "ok" ] || fail "deletePreset"
+ipc presets | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+assert not any(p['id'] == sys.argv[1] for p in d), d
+" "$pid" || fail "presets() dropped the removed one"
+[ "$(ipc deletePreset "$pid")" = "not found" ] || fail "deletePreset twice"
+
+# The shipped looks ride with the dock: listed, marked, and not removable.
+bid=$(ipc presets | python3 -c "
+import json, sys
+d = [p for p in json.load(sys.stdin) if p.get('builtin')]
+if not d: sys.exit(1)
+print(d[0]['id'])
+") || fail "presets() does not list a shipped look"
+[ "$(ipc deletePreset "$bid")" = "not found" ] || fail "a shipped preset is not removable"
+
 align=$(python3 -c "import json; print(json.load(open('$CFG')).get('alignment', 'center'))")
 ipc setAlignment "$align"; sleep 0.5
 

@@ -1,5 +1,6 @@
 import QtQuick
 import "../../DockModel.js" as DockModel
+import "../../DockPresets.js" as DockPresets
 import "../../Buttons.js" as Buttons
 import "../../DockLabels.js" as DockLabels
 import "../../DockLayout.js" as DockLayout
@@ -114,7 +115,9 @@ QtObject {
     } else {
       root.appGroups = []
     }
-    root.presets = parsed ? DockModel.boundPresets(parsed.presets) : []
+    // The shipped looks lead the list, then whatever the user saved: a fresh
+    // install has no config at all and still offers every shipped preset.
+    root.presets = DockPresets.merge(parsed ? DockModel.boundPresets(parsed.presets) : [], DockModel.pickLook)
     root.autohide = parsed && parsed.autohide !== false
     root.intelligentAutohide = parsed && parsed.intelligentAutohide !== false
     root.showAppsButton = parsed && parsed.showAppsButton !== false
@@ -251,7 +254,8 @@ QtObject {
     conf.wheelStepDelay = root.wheelStepDelay
     conf.pinnedFolders = DockModel.boundPinnedFolders(root.pinnedFolders)
     conf.pinnedButtons = Buttons.boundPinnedButtons(root.pinnedButtons)
-    conf.presets = DockModel.boundPresets(root.presets)
+    // Only the saved presets reach the file: a shipped look is code, not state.
+    conf.presets = DockModel.boundPresets(DockPresets.userOnly(root.presets))
     return conf
   }
 
@@ -263,6 +267,18 @@ QtObject {
     var list = root.presets || []
     for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return i
     return -1
+  }
+
+  // A preset the dock ships cannot be renamed, updated or removed -- the next
+  // load would bring it back -- so every mutation refuses its index here.
+  function presetEditable(root, i) {
+    var list = root.presets || []
+    return i >= 0 && list[i] && list[i].builtin !== true
+  }
+
+  // The saved presets, against DockModel.MAX_PRESETS (shipped ones are free).
+  function savedCount(root) {
+    return DockPresets.userCount(root.presets)
   }
 
   // The preset with this name, ignoring case; "" when none or the name is
@@ -312,7 +328,7 @@ QtObject {
   function renamePreset(root, id, name) {
     var i = presetIndex(root, id)
     var clean = DockModel.cleanPresetName(name)
-    if (i < 0 || clean === "" || presetNameTaken(root, clean, id)) return false
+    if (!presetEditable(root, i) || clean === "" || presetNameTaken(root, clean, id)) return false
     var p = root.presets[i]
     replacePreset(root, i, { id: p.id, name: clean, look: p.look })
     return true
@@ -320,7 +336,7 @@ QtObject {
 
   function updatePreset(root, id) {
     var i = presetIndex(root, id)
-    if (i < 0) return false
+    if (!presetEditable(root, i)) return false
     var p = root.presets[i]
     replacePreset(root, i, { id: p.id, name: p.name, look: root.currentLook })
     return true
@@ -328,7 +344,7 @@ QtObject {
 
   function deletePreset(root, id) {
     var i = presetIndex(root, id)
-    if (i < 0) return false
+    if (!presetEditable(root, i)) return false
     var next = root.presets.slice()
     next.splice(i, 1)
     root.presets = next

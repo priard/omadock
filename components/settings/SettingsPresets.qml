@@ -3,8 +3,11 @@ import qs.Commons
 import qs.Ui
 
 import ".."
+import "../../DockPresets.js" as DockPresets
 
 // Settings page: the look preset list and save/rename/delete actions.
+// The list holds the shipped looks (DockPresets.js) first, then the ones the
+// user saved; only the saved ones can be renamed, updated or deleted.
 // Instantiated by SettingsPanel, which injects root (the Dock, for
 // values and setters) and panel (page/edit state).
 
@@ -26,7 +29,7 @@ Column {
     width: parent.width
     topPadding: Style.spacing.xs
     bottomPadding: Style.spacing.lg
-    text: (root ? root.presets.length : 0) + " of 6 · A preset keeps the look: background, effects, border, dividers, icons, label style, size and spacing."
+    text: (root ? DockPresets.userCount(root.presets) : 0) + " of 6 saved · the shipped looks come with the dock · A preset keeps the look: background, effects, border, dividers, icons, label style, size and spacing."
     textFormat: Text.PlainText
     color: Util.alpha(Color.menu.text, 0.55)
     wrapMode: Text.WordWrap
@@ -41,6 +44,7 @@ Column {
       required property var modelData
       readonly property bool editing: panel.editingPresetId === modelData.id
       readonly property bool confirming: panel.confirmDeletePresetId === modelData.id
+      readonly property bool builtin: modelData.builtin === true
 
       function startEdit() {
         panel.editingPresetId = presetRow.modelData.id
@@ -152,8 +156,8 @@ Column {
             visible: !presetRow.editing
             anchors.fill: presetLabel
             hoverEnabled: true
-            cursorShape: Qt.IBeamCursor
-            onClicked: presetRow.startEdit()
+            cursorShape: presetRow.builtin ? Qt.ArrowCursor : Qt.IBeamCursor
+            onClicked: if (!presetRow.builtin) presetRow.startEdit()
           }
           TextField {
             id: presetName
@@ -168,6 +172,15 @@ Column {
             Keys.onEscapePressed: presetRow.finishEdit(false)
             onActiveFocusChanged: if (!activeFocus) presetRow.finishEdit(false)
           }
+        }
+
+        Text {
+          visible: presetRow.builtin
+          text: "shipped with the dock"
+          textFormat: Text.PlainText
+          color: Util.alpha(Color.menu.text, 0.5)
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
         }
       }
 
@@ -184,13 +197,13 @@ Column {
           onClicked: { panel.endPresetEdit(); root.applyPreset(presetRow.modelData.id) }
         }
         Button {
-          visible: !presetRow.confirming
+          visible: !presetRow.confirming && !presetRow.builtin
           text: "Update"
           foreground: Color.menu.text
           onClicked: { panel.endPresetEdit(); root.updatePreset(presetRow.modelData.id) }
         }
         Button {
-          visible: !presetRow.confirming
+          visible: !presetRow.confirming && !presetRow.builtin
           text: "Delete"
           foreground: Color.menu.text
           onClicked: { panel.endPresetEdit(); panel.confirmDeletePresetId = presetRow.modelData.id }

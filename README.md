@@ -365,6 +365,26 @@ The dock follows your Omarchy theme's palette and wallpaper — three of the twe
 omarchy-shell omadock applyPreset "Night"
 ```
 
+### Shipped looks
+
+Five looks ride with the dock and are always in the list, ahead of the presets you save — a fresh install with no `omadock.json` still offers every one of them. They are read-only (no Update or Delete, and the name cannot be edited), so removing your own presets never removes them. `DockPresets.js` holds the definitions; the shipped keys are the ones that differ from the defaults, and every other key is filled from `DockModel.DEFAULT_LOOK` when the list is built, so a look key added later cannot leak the value the dock happens to hold.
+
+| Preset | The look | Built from |
+| :--- | :--- | :--- |
+| `thepathless:ristretto` | Dot-matrix icons on a Forest gradient with film grain, long custom dividers, the Glitch hover, and no rim or shadow | The maintainer's own dock |
+| `Glass` | Aurora gradient fill with grain, a rim that stays visible over it, long theme-coloured dividers and the Lift hover | [#13](https://github.com/thepathless/omadock/pull/13), [#45](https://github.com/thepathless/omadock/pull/45), [#17](https://github.com/thepathless/omadock/pull/17), [#19](https://github.com/thepathless/omadock/pull/19) by [@priard](https://github.com/priard) |
+| `Pixel` | Pixel icons on a B/W tint with a coarse grid and the tone controls that keep a poster-like icon readable | [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
+| `Mono` | The transparent dock — icons only, no card, rim or panel — in monochrome with the accent tint and the Glow hover | [#12](https://github.com/thepathless/omadock/pull/12), [#13](https://github.com/thepathless/omadock/pull/13), [#19](https://github.com/thepathless/omadock/pull/19) by [@priard](https://github.com/priard) |
+| `Panels` | Split sections: one panel per dock section over a quiet Mono gradient, with a pixel-snapped gap | [#14](https://github.com/thepathless/omadock/pull/14) and [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
+
+The same list is scriptable end to end — list it, save the look on screen under a chosen name, remove one by id:
+
+```bash
+omarchy-shell omadock presets                                  # [{"id":"…","name":"…","active":true}]
+omarchy-shell omadock savePreset "thepathless:ristretto"      # -> the new preset's id
+omarchy-shell omadock deletePreset <id>                        # -> ok | not found
+```
+
 ## 🖱️ Controls Cheat Sheet
 
 | Gesture / Trigger | Target | Action Executed |
@@ -578,6 +598,10 @@ Additional IPC methods available:
 - `openSettings`: Open the settings panel on the focused monitor's dock.
 - `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.
 - `closeSettings`: Close the settings panel.
+- `applyPreset("<name>")`: Apply a saved appearance preset by name; returns `ok` or `not found`.
+- `presets()`: JSON list of every preset the dock holds — the shipped looks and the saved ones — each with `active` set on the one the look on screen matches, and `builtin: true` on a look that ships with the dock.
+- `savePreset("<name>")`: Save the look the dock has right now as a preset; returns its id, or an empty string when six are already saved. Shipped looks do not count against those six.
+- `deletePreset("<id>")`: Remove one saved preset; returns `ok` or `not found` (a shipped look is never removable).
 
 > [!NOTE]
 > The `-p /usr/share/omarchy/shell` flag is mandatory to target the active Omarchy system shell instance.
@@ -693,6 +717,13 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 ## 📋 Releases & Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.2.0 — 2026-10-09
+
+- **Five looks ship with the dock** — `thepathless:ristretto` (the maintainer's own look), **Glass**, **Pixel**, **Mono** and **Panels** are always in the preset list, ahead of the presets you save, so a fresh install with no `omadock.json` still offers every one of them. They are read-only (no Update or Delete, and the name cannot be edited) and `presets()` marks them `builtin: true`. `DockPresets.js` holds the definitions — each one the keys that differ from `DockModel.DEFAULT_LOOK`, every other key filled from the defaults when the list is built — and the looks are made of vocabulary this repository's pull requests contributed: transparency and the panel switches (#12), the gradient fill, film grain, the pixel/dots/mono icon styles and the tone controls (#13), split sections (#14), theme-coloured dividers (#17), the Lift, Glow and Glitch hover effects (#19) and the rim that stays visible over a gradient (#45). `DockConfigLogic` merges them in front of the saved presets on load and writes only the saved ones back, so a shipped look never lands in a user's config.
+- **The preset list is scriptable end to end** — `presets()`, `savePreset("<name>")` and `deletePreset("<id>")` join `applyPreset()` on the IPC surface: save the look the dock has right now under a name, list what is there, remove one by id (the round-trip lives in `tests/live/ipc-roundtrip.sh`). Shipped looks do not count against the six saved presets and are never removable.
+- **Selecting a preset no longer parks the dock over the active window's bottom edge** — the card lifts by the room its drop shadow needs, and the panel's reserved band did not include that lift, so on any shadow-enabled look the card's top edge sat a few pixels inside window space and covered the bottom of whatever was underneath. The band now includes the shadow room (`Dock.qml`), the window keeps its full height, and the dock's own look is unchanged — measured live, a preset that turns the shadow on grows the reserved band 58 → 64 px with the card's top edge landing exactly on the band boundary.
+- **Verification** — 170 node + 95 python tests, `qmllint` with zero errors, the structure and security gates, `omarchy plugin validate` and the manifest check, the live IPC round-trip (save → list → apply → remove, shipped looks included) and the dock smoke test, all green on this release; the shipped `thepathless:ristretto` matches the maintainer's live look on all fifty look keys.
 
 ### v4.1.1 — 2026-10-09
 
