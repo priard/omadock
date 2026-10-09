@@ -33,6 +33,32 @@ fail() {
   exit 1
 }
 
+# Make room for $1 more saved presets (default one) on a copy that may already
+# hold the maximum six - an ordinary config, and the copy is disposable (this
+# suite removes saved presets from it anyway). Called before a section takes
+# its snapshot, so the snapshot is the state that section compares against.
+ensure_slot() {
+  local need=${1:-1} saved victim
+  while :; do
+    saved=$(probe_ipc presets | python3 -c '
+import json, sys
+print(sum(1 for r in json.load(sys.stdin) if not r.get("builtin")))
+')
+    [ "$saved" -le $((6 - need)) ] && return 0
+    victim=$(probe_ipc presets | python3 -c '
+import json, sys
+rows = [r["id"] for r in json.load(sys.stdin) if not r.get("builtin")]
+print(rows[0] if rows else "")
+')
+    [ -n "$victim" ] || return 1
+    probe_ipc deletePreset "$victim" >/dev/null || return 1
+    probe_wait_cfg 'import json,sys
+c=json.load(open(sys.argv[1]))
+sys.exit(0 if sys.argv[2] not in [p["id"] for p in c.get("presets") or []] else 1)' "$victim"
+    echo "   (six presets already saved - removed $victim from the copy)" >&2
+  done
+}
+
 probe_start || { probe_cleanup >/dev/null 2>&1; exit 1; }
 WORK="$PROBE_DIR/work"
 mkdir -p "$WORK"
@@ -158,13 +184,14 @@ first_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[0]["i
 # Deleting. The copy is disposable, so this may remove a real saved preset too -
 # which is the case that matters: a removal must not take the others with it.
 echo "-- save then remove leaves everything else alone"
+ensure_slot || fail "could not make room for a saved preset"
 python3 - "$CFG" <<'PY' > "$WORK/before-delete.json"
 import json, sys
 conf = json.load(open(sys.argv[1]))
 print(json.dumps({"presets": conf.get("presets") or [], "keys": sorted(conf.keys())}))
 PY
 pid=$(probe_ipc savePreset "verify_live_presets")
-[ -n "$pid" ] || fail "savePreset (six already saved?)"
+[ -n "$pid" ] || fail "savePreset returned no id"
 probe_ipc presets | python3 -c '
 import json, sys
 rows = json.load(sys.stdin)
@@ -248,6 +275,7 @@ fi
 # 40) and strips control and bidi characters. If that bound were ever dropped,
 # a 10k name would land in omadock.json - this is the live guard for it.
 echo "-- a hostile preset name is stored bounded and clean"
+ensure_slot 2 || fail "could not make room for two saved presets"
 probe_ipc presets > "$WORK/rows-before-names.json"
 hid=$(probe_ipc savePreset "$(python3 -c 'print("x" * 10000)')")
 [ -n "$hid" ] || fail "savePreset with a 10k name"
@@ -325,6 +353,16 @@ if grep -q "Failed parsing omadock.json" "$PROBE_DIR/probe.log"; then
   fail "the dock parsed a torn omadock.json during the suite"
 fi
 echo "   no parse failure in the dock's log"
+
+# The other half of what the running-dock suite used to assert: the dock's own
+# log stays clean while all of the above runs through it. A QML exception the
+# dock survives is still a defect.
+echo "-- the dock's log is clean"
+if grep -inE "(TypeError|ReferenceError|is not a function|is not defined|Unable to assign)" "$PROBE_DIR/probe.log" | head -5 > "$WORK/log-errors.txt" && [ -s "$WORK/log-errors.txt" ]; then
+  sed 's/^/   /' "$WORK/log-errors.txt" >&2
+  fail "runtime errors in the dock's log"
+fi
+echo "   no runtime error in the dock's log"
 
 echo "-- the probe's own copy is still a valid config"
 python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$CFG" || fail "the config copy is not valid JSON"
