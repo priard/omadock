@@ -52,21 +52,6 @@ function copyMap(src) {
   return out
 }
 
-// Compact workspace label for a tooltip: numbered workspaces only. Special
-// workspaces have no number worth showing, so they get nothing.
-function workspaceShort(wsId, wsName) {
-  var name = String(wsName == null ? "" : wsName).trim()
-  if (!name || name.indexOf("special:") === 0 || name === "special") return ""
-  var num = Number(wsId)
-  if (isNaN(num) || num < 0) {
-    if (name.length <= 2 && !isNaN(Number(name)) && Number(name) >= 0) return name
-    return ""
-  }
-  if (name.length <= 2) return name
-  return String(wsId)
-}
-
-
 function extractNotificationWebDomain(body, summary) {
   var text = (String(body || "") + "\n" + String(summary || "")).trim()
   if (!text) return ""
@@ -770,21 +755,6 @@ function reanchorGroups(groups, oldPins, newPins) {
 // Persisted pinned folders: drop malformed entries, cap counts and lengths.
 // Stack orders a pinned folder may carry (scripts/list-folder.py).
 var FOLDER_SORTS = ["name", "kind", "modified", "added", "size"]
-
-// Folder stack header count: "" for none, "N+" when the scan stopped at its
-// budget (list-folder.py MAX_SCAN) and the folder holds more.
-function stackCountLabel(count, truncated) {
-  var n = Math.max(0, Math.floor(Number(count) || 0))
-  if (n === 0) return ""
-  return truncated ? n + "+" : String(n)
-}
-
-// Folder stack footer for entries not shown: "" when all are shown.
-function stackMoreLabel(count, shown, truncated) {
-  var rest = Math.max(0, Math.floor(Number(count) || 0) - Math.floor(Number(shown) || 0))
-  if (rest === 0) return ""
-  return "+ " + rest + (truncated ? "+" : "") + " more"
-}
 
 function boundPinnedFolders(arr) {
   return boundList(arr, MAX_PINNED_FOLDERS, function(f) {

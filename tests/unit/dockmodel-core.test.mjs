@@ -8,6 +8,8 @@ import vm from "node:vm"
 const file = process.env.DOCKMODEL || new URL("../../DockModel.js", import.meta.url)
 const M = vm.createContext({})
 vm.runInContext(readFileSync(file, "utf8"), M)
+// workspaceShort lives in DockLabels.js now; the assertions are unchanged.
+vm.runInContext(readFileSync(new URL("../../DockLabels.js", import.meta.url), "utf8"), M)
 const plain = (v) => JSON.parse(JSON.stringify(v))
 
 test("stripDesktop", () => {
@@ -21,6 +23,16 @@ test("workspaceShort", () => {
   assert.equal(M.workspaceShort(-98, "special:magic"), "")
   assert.equal(M.workspaceShort(5, "mail"), "5")
   assert.equal(M.workspaceShort(-1, "7"), "7")
+  // The quiet cases, captured before the move: a nameless workspace has no
+  // label, a two-character numeric name is its own label, and anything else
+  // falls back to the id (an id that is not a number has nothing to fall back
+  // to, so it prints nothing).
+  assert.equal(M.workspaceShort(10, ""), "")
+  assert.equal(M.workspaceShort(0, "special:scratch"), "")
+  assert.equal(M.workspaceShort(3, null), "")
+  assert.equal(M.workspaceShort("", "3"), "3")
+  assert.equal(M.workspaceShort("2", "12"), "12")
+  assert.equal(M.workspaceShort("x", "x"), "")
 })
 
 test("getCandidates drops vendor tokens", () => {
