@@ -1,7 +1,7 @@
 import QtQuick
 import Quickshell
 import qs.Commons
-import "../DockModel.js" as DockModel
+import "../DockIcons.js" as DockIcons
 
 // The faded folder shown in the gap the dock opens while a folder from a file
 // manager is dragged over it. It grows with the gap, so it slides in rather
@@ -23,7 +23,7 @@ Item {
     width: full * Math.min(1, ghost.width / Math.max(1, ghost.root ? ghost.root.iconSlot : 1))
     height: width
     opacity: 0.5
-    source: ghost.root ? DockModel.resolveThemedFolderIcon("folder", ghost.root.currentIconThemeName, ghost.root.folderColor, ghost.root.appLibrary) : ""
+    source: ghost.root ? DockIcons.resolveThemedFolderIcon("folder", ghost.root.currentIconThemeName, ghost.root.folderColor, ghost.root.appLibrary) : ""
     sourceSize: Qt.size(full * 2, full * 2)
     fillMode: Image.PreserveAspectFit
     smooth: true

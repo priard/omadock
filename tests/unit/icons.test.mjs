@@ -72,3 +72,57 @@ test("the icon scan's output parses to one path per name, first path winning", (
   assert.deepEqual(plain(ctx.parseIconIndex(null)), {})
   assert.deepEqual(plain(ctx.parseIconIndex("   \n  \n")), {})
 })
+
+// The app library double: it knows one cached scan path and answers nothing
+// else, which is how the fallbacks below get to run.
+const lib = { iconSource: name => name === "image-x-generic" ? "file:///idx/image-x-generic.svg" : "" }
+
+// Values captured from DockModel.js before the move, asserted here after it.
+test("a place icon resolves through the theme, the colour mode, then Adwaita", () => {
+  const yaru = "file:///usr/share/icons/Yaru/256x256/places/"
+  const symbol = "file:///usr/share/icons/Adwaita/symbolic/places/"
+  assert.equal(ctx.resolveThemedFolderIcon("folder", "Yaru", "theme", lib), yaru + "folder.png")
+  assert.equal(ctx.resolveThemedFolderIcon("folder-download", "Yaru", "theme", lib),
+    yaru + "folder-download.png")
+  assert.equal(ctx.resolveThemedFolderIcon("user-home", "Yaru", "theme", lib), yaru + "user-home.png")
+  // No colour Yaru variant (vantablack, Yaru-gray): the monochrome outline,
+  // never the icon index, so the B&W themes keep their look.
+  assert.equal(ctx.resolveThemedFolderIcon("folder", "Yaru-gray", "theme", lib), symbol + "folder-symbolic.svg")
+  assert.equal(ctx.resolveThemedFolderIcon("folder", "vantablack", "theme", lib), symbol + "folder-symbolic.svg")
+  assert.equal(ctx.resolveThemedFolderIcon("folder", "Yaru", "white", lib), symbol + "folder-symbolic.svg")
+  // An explicit colour variant wins, whether it is the theme or the setting.
+  assert.equal(ctx.resolveThemedFolderIcon("folder-music", "Yaru-Yellow", "theme", lib),
+    "file:///usr/share/icons/Yaru-Yellow/256x256/places/folder-music.png")
+  assert.equal(ctx.resolveThemedFolderIcon("folder-music", "Yaru", "Yaru-Yellow", lib),
+    "file:///usr/share/icons/Yaru-Yellow/256x256/places/folder-music.png")
+  // Names outside the place whitelist, and the aliases folded into it, are the
+  // plain folder rather than a path that does not exist.
+  assert.equal(ctx.resolveThemedFolderIcon("folder-weird", "Yaru", "theme", lib), yaru + "folder.png")
+  assert.equal(ctx.resolveThemedFolderIcon("folder-development", "Yaru", "theme", lib), yaru + "folder.png")
+  assert.equal(ctx.resolveThemedFolderIcon("file:///abs/f.svg", "Yaru", "theme", lib), "file:///abs/f.svg")
+  assert.equal(ctx.resolveThemedFolderIcon("/abs/p.png", "Yaru", "theme", lib), "/abs/p.png")
+})
+
+test("a file item's icon: places and mimetypes, the scan, then text-x-generic", () => {
+  const yaru = "file:///usr/share/icons/Yaru/256x256/"
+  assert.equal(ctx.resolveFileItemIcon("folder", "Yaru", "theme", lib), yaru + "places/folder.png")
+  assert.equal(ctx.resolveFileItemIcon("folder-pictures", "Yaru", "theme", lib),
+    yaru + "places/folder-pictures.png")
+  assert.equal(ctx.resolveFileItemIcon("user-trash", "Yaru", "theme", lib), yaru + "places/user-trash.png")
+  assert.equal(ctx.resolveFileItemIcon("text-x-generic", "Yaru", "theme", lib),
+    yaru + "mimetypes/text-x-generic.png")
+  assert.equal(ctx.resolveFileItemIcon("application-pdf", "Yaru", "theme", lib),
+    yaru + "mimetypes/application-pdf.png")
+  // A name the scan knows wins over the hardcoded fallback.
+  assert.equal(ctx.resolveFileItemIcon("image-x-generic", "Yaru", "theme", lib),
+    "file:///idx/image-x-generic.svg")
+  assert.equal(ctx.resolveFileItemIcon("file:///f.svg", "Yaru", "theme", lib), "file:///f.svg")
+  // With no library at all, an unknown or empty name lands on the generic text
+  // icon rather than an empty source.
+  assert.equal(ctx.resolveFileItemIcon("unknown-thing", "Yaru", "theme", null),
+    yaru + "mimetypes/text-x-generic.png")
+  assert.equal(ctx.resolveFileItemIcon("", "Yaru", "theme", null), yaru + "mimetypes/text-x-generic.png")
+  // A library that answers "" for everything leaves an unknown name blank:
+  // it is the caller's library, and the dock's real one never does this.
+  assert.equal(ctx.resolveFileItemIcon("unknown-thing", "Yaru", "theme", lib), "")
+})

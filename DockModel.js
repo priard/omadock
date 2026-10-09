@@ -1279,96 +1279,6 @@ function closeApp(toplevels, appId) {
   return closed
 }
 
-function resolveThemedFolderIcon(iconName, themeName, folderColorMode, appLibrary) {
-  var name = String(iconName || "folder").trim()
-  if (name.indexOf("/") === 0 || name.indexOf("file://") === 0) return name
-
-  // Standardize known place aliases that don't have dedicated icons in Adwaita/Yaru
-  var placeAliases = {
-    "folder-development": "folder",
-    "folder-projects": "folder",
-    "folder-code": "folder",
-    "folder-git": "folder",
-    "folder-github": "folder",
-    "folder-src": "folder",
-    "folder-source": "folder",
-    "folder-build": "folder"
-  }
-  if (placeAliases[name]) {
-    name = placeAliases[name]
-  }
-
-  // Whitelist of valid place icons guaranteed to exist in Adwaita / Yaru place icon themes
-  var validPlaces = [
-    "folder", "folder-documents", "folder-download", "folder-music",
-    "folder-pictures", "folder-publicshare", "folder-remote",
-    "folder-templates", "folder-videos", "user-home", "user-desktop", "user-trash"
-  ]
-  if (validPlaces.indexOf(name) < 0) {
-    name = "folder"
-  }
-
-  // Explicit white, black, or symbolic mode — deliberately monochrome Adwaita outlines.
-  // These are intentionally hardcoded for B&W Omarchy themes (vantablack, white, etc.)
-  // and must NOT be intercepted by the iconIndex which may return colored variants.
-  if (folderColorMode === "white" || folderColorMode === "black" || folderColorMode === "bw" || folderColorMode === "symbolic") {
-    return "file:///usr/share/icons/Adwaita/symbolic/places/" + name + "-symbolic.svg"
-  }
-
-  // Explicit custom Yaru color preset (user chose a specific variant):
-  if (folderColorMode && folderColorMode !== "theme" && folderColorMode !== "auto") {
-    var customTheme = folderColorMode
-    if (customTheme.indexOf("Yaru") === 0) {
-      return "file:///usr/share/icons/" + customTheme + "/256x256/places/" + name + ".png"
-    }
-  }
-
-  // Automatic theme mode:
-  var theme = String(themeName || "").trim()
-
-  // 1. If valid Yaru variant theme (user's active icon theme):
-  if (theme.indexOf("Yaru-") === 0 && theme !== "Yaru-gray" && theme !== "Yaru-grey") {
-    return "file:///usr/share/icons/" + theme + "/256x256/places/" + name + ".png"
-  }
-  if (theme === "Yaru") {
-    return "file:///usr/share/icons/Yaru/256x256/places/" + name + ".png"
-  }
-
-  // 2. For Vantablack / minimal themes (Yaru-gray / unstyled):
-  // Nautilus displays the clean monochrome symbolic outline icon!
-  // Do NOT route through iconIndex here — it would return colored folder
-  // icons from other themes, breaking the deliberate B&W aesthetic.
-  return "file:///usr/share/icons/Adwaita/symbolic/places/" + name + "-symbolic.svg"
-}
-
-function resolveFileItemIcon(iconName, themeName, folderColorMode, appLibrary) {
-  var name = String(iconName || "text-x-generic").trim()
-  if (name.indexOf("/") === 0 || name.indexOf("file://") === 0) return name
-
-  // If it is a folder / place icon:
-  if (name === "folder" || name.indexOf("folder-") === 0 || name.indexOf("user-") === 0) {
-    return resolveThemedFolderIcon(name, themeName, folderColorMode, appLibrary)
-  }
-
-  // Resolve mimetypes through iconIndex for theme resilience
-  if (appLibrary) {
-    var src = appLibrary.iconSource(name)
-    if (src && src.length > 0) return src
-  }
-
-  // Known mimetypes — hardcoded Yaru fallback only if iconIndex missed
-  var knownMimetypes = [
-    "image-x-generic", "video-x-generic", "audio-x-generic",
-    "package-x-generic", "application-pdf", "text-x-generic",
-    "application-x-executable"
-  ]
-  if (knownMimetypes.indexOf(name) >= 0) {
-    return "file:///usr/share/icons/Yaru/256x256/mimetypes/" + name + ".png"
-  }
-
-  return appLibrary ? appLibrary.iconSource("text-x-generic") : "file:///usr/share/icons/Yaru/256x256/mimetypes/text-x-generic.png"
-}
-
 function resolveAppIcon(appLibrary, appRows, appId, terminalHost) {
   var originalId = String(appId || "").trim()
   var id = cliAppId(originalId)
@@ -1444,4 +1354,3 @@ function resolveAppName(appLibrary, appRows, appId) {
   }
   return id
 }
-
