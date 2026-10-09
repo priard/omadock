@@ -91,7 +91,14 @@ Item {
   TextMetrics { id: textWidth; font: textItem.font; text: label.shortText }
 
   function reshorten() {
-    if (!label.style) return
+    // A deferred call can land in the window where this label's children have
+    // been destroyed and the label itself has not (a delegate being torn
+    // down): the metrics the search writes into are gone by then, and the
+    // write is a null dereference - the fault logged at this line in the wild
+    // ("Value is null and could not be converted to an object", during
+    // delayed function evaluation). Nothing to measure with, nothing to
+    // shorten: leave the name as it is.
+    if (!label.style || !probe || !textWidth) return
     // Max width is for the name; the indicator column comes on top of it.
     var limit = label.style.maxWidth - label.pad * 2 - label.gap - (label.plate ? Style.space(1) : label.trail)
     var r = DockLabels.shortenName(label.fullText, function(t) { probe.text = t; return probe.advanceWidth <= limit })
