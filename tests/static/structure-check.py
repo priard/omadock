@@ -39,7 +39,7 @@ ROOT_CEILINGS = {
 SHELL_CEILINGS = {
     "tests/live/presets.sh": 388,
     "tests/live/indicators.sh": 352,
-    "tests/live/probe.sh": 330,
+    "tests/live/probe.sh": 328,
     "tests/live/place-restore.sh": 250,
     "tests/live/teardown.sh": 125,
     "tests/live/layout.sh": 115,
