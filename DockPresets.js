@@ -34,10 +34,24 @@
 //   Panels                 Split sections (#14, afb82a6 and b721251): one panel
 //                          per dock section over a quiet Mono gradient, with the
 //                          panel gap #13 taught to snap to the pixel grid
+//   Nameplates             names always on, joined to the icon by a Plate, with
+//                          the window marks in the upright column beside the
+//                          name (#47, @priard)
+//   Silkscreen              the same names in the Silkscreen pixel font the
+//                          labels ship with, small on a pill, drawn with the
+//                          outline that reads on any fill (#47, @priard)
 //
-// Deliberately not shipped as presets: Wave magnification and launch bounce
-// (#2) and side labels (#47) are motion and text, not the look a preset holds;
-// divider geometry and the panel layout (#49) are reachable from any look.
+// Deliberately not shipped as presets, and why:
+//   - panel layout (#49) is not a look key -- `LOOK_KEYS` has no `layout`, so a
+//     preset cannot hold it and one would silently do nothing. It is a
+//     placement setting, reachable from any look.
+//   - #13's "Zen / Arc-style gradient" has no matching gradient: `Dock.qml`'s
+//     `gradientPresets` are the fixed palette (aurora, sunset, ocean, forest,
+//     rose, lavender, ember, citrus, mono) plus the theme.
+//   - Wave magnification and launch bounce (#2) are motion, not a look.
+// The label keys are a look's: `DockModel.LOOK_KEYS` carries all thirteen and
+// `DockConfigLogic.applyLook` applies them through `DockLabels.pickLabelLook`,
+// so names are exactly as shippable as a gradient is.
 
 var SHIPPED = [
   {
@@ -79,6 +93,24 @@ var SHIPPED = [
     look: {
       bgFill: "gradient", gradientPreset: "mono", gradientStrength: 0.4, grain: 0.12,
       splitSections: true, sectionSpacing: 14, hoverEffect: "zoom"
+    }
+  },
+  {
+    id: "builtin_nameplates",
+    name: "Nameplates",
+    look: {
+      labelMode: "always", labelKind: "all", labelBackground: "plate",
+      labelPlateHeight: "icon", labelIndicators: "before", labelSize: "medium",
+      labelWeight: "medium", labelColor: "auto", labelFont: "theme"
+    }
+  },
+  {
+    id: "builtin_silkscreen",
+    name: "Silkscreen",
+    look: {
+      labelMode: "always", labelKind: "all", labelBackground: "pill", labelFont: "pixel",
+      labelSize: "small", labelWeight: "bold", labelColor: "auto", labelEffect: "outline",
+      labelReveal: "slide"
     }
   }
 ]
