@@ -120,6 +120,28 @@ function merge(userPresets, fillLook) {
   return out
 }
 
+// The row that stands for the look on screen, for the "active" mark: the first
+// entry whose look the current one includes. `lookIncludes` is
+// DockModel.lookIncludes, passed the way merge() takes fillLook.
+//
+// A saved preset and a shipped look can be key-for-key equal without sharing a
+// name -- merge() only settles names, and the copy the user saved under a name
+// of their own is exactly the row they can edit. Since the shipped looks lead
+// the list, a plain first match would light up the read-only row and leave
+// theirs reading as inactive, so the entry the user saved wins the tie and a
+// shipped look answers only when no saved preset matches.
+function activeId(presets, cur, lookIncludes) {
+  var list = Array.isArray(presets) ? presets : []
+  var shipped = ""
+  for (var i = 0; i < list.length; i++) {
+    var p = list[i]
+    if (!p || !lookIncludes(cur, p.look)) continue
+    if (p.builtin !== true) return p.id
+    if (shipped === "") shipped = p.id
+  }
+  return shipped
+}
+
 // The presets a config may hold: everything the list carries that did not ship
 // with the dock. Writes go through this, so a shipped look is never saved into
 // a user's omadock.json.

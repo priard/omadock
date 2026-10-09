@@ -380,10 +380,12 @@ Five looks ride with the dock and sit ahead of the presets you save — a fresh 
 The same list is scriptable end to end — list it, save the look on screen under a chosen name, remove one by id:
 
 ```bash
-omarchy-shell omadock presets                                  # [{"id":"…","name":"…","active":true}]
-omarchy-shell omadock savePreset "thepathless:ristretto"      # -> the new preset's id
-omarchy-shell omadock deletePreset <id>                        # -> ok | not found
+omarchy-shell omadock presets                       # [{"id":"…","name":"…","active":true,"builtin":false}]
+omarchy-shell omadock savePreset "Night"           # -> the new preset's id
+omarchy-shell omadock deletePreset <id>             # -> ok | not found
 ```
+
+A name that is already taken — by one of your presets or by a shipped look — falls back to `Preset 1`, `Preset 2` and so on, so the call still returns an id. When you save a copy of a shipped look under a name of your own, the row you saved is the one marked `active`; the shipped row answers only when no preset of yours matches the look on screen.
 
 ## 🖱️ Controls Cheat Sheet
 
@@ -717,6 +719,12 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 ## 📋 Releases & Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.2.2 — 2026-10-09
+
+- **The preset row you saved keeps the active mark** — a saved preset and a shipped look can be key-for-key equal without sharing a name (the copy of a shipped look you save under a name of your own), and the shipped looks lead the list. The plain first match the dock used lit up the read-only shipped row and left your own editable copy reading as inactive. The choice now lives in `DockPresets.activeId()`: the row the user saved wins the tie and a shipped look answers only when no preset of yours matches. `Dock.qml` delegates to it, which also moves five lines out of the composition root (ratchet 2418 → 2412).
+- **The live preset guard asserts the rule, not more** — it failed on *any* repeated name, so a hand-edited or restored `omadock.json` holding `Mine` and `mine` turned the round-trip test red over data this release never changed. It now fails only when one name is a shipped look and a saved preset at once — the bug it was written for — and still fails when a saved preset is missing from the list, so it stays closed on both halves of that bug.
+- **Docs** — the `savePreset` example no longer asks for a name a shipped look already holds (a taken name falls back to `Preset 1`, `Preset 2`, …), and the `presets()` payload in the example shows the `builtin` field it documents.
 
 ### v4.2.1 — 2026-10-09
 

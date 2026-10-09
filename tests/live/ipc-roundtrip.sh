@@ -50,21 +50,25 @@ assert not any(p['id'] == sys.argv[1] for p in d), d
 " "$pid" || fail "presets() dropped the removed one"
 [ "$(ipc deletePreset "$pid")" = "not found" ] || fail "deletePreset twice"
 
-# One row per name, and no saved preset hidden: a shipped look and a preset of
-# the same name are listed once, never twice, and the entry the user saved is
-# always among the rows (DockPresets.merge). This is red on a dock that loaded
-# its QML before a change to DockPresets.js -- this host disables QML file
-# watching, so the running dock only picks the rule up on the next restart.
+# The rule DockPresets.merge settles: one name is never a shipped look *and* a
+# saved preset at once, and the entry the user saved is never hidden from the
+# list. Two saved presets sharing a name are the user's own config, not this
+# rule -- a hand-edited or restored omadock.json is left as it is -- so the
+# clash is only counted against the shipped rows. Red on a dock that loaded its
+# QML before a change to DockPresets.js: this host disables QML file watching,
+# so the running dock only picks the rule up on the next restart.
 ipc presets > /tmp/omadock-presets.json
-python3 - "$CFG" /tmp/omadock-presets.json <<'PY' || fail "one row per preset name"
+python3 - "$CFG" /tmp/omadock-presets.json <<'PY' || fail "a name is a shipped look and a saved preset at once"
 import json, sys
+key = lambda r: str(r["name"]).strip().lower()
 rows = json.load(open(sys.argv[2]))
-names = [str(r["name"]).strip().lower() for r in rows]
-dupes = sorted({n for n in names if names.count(n) > 1})
-if dupes:
-    raise SystemExit("preset names listed more than once: %s" % ", ".join(dupes))
+saved_rows = [r for r in rows if not r.get("builtin")]
+shipped = {key(r) for r in rows if r.get("builtin")}
+clash = sorted(n for n in {key(r) for r in saved_rows} if n in shipped)
+if clash:
+    raise SystemExit("listed as a shipped look and a saved preset at once: %s" % ", ".join(clash))
 saved = [str(p.get("name", "")).strip().lower() for p in (json.load(open(sys.argv[1])).get("presets") or [])]
-listed = [str(r["name"]).strip().lower() for r in rows if not r.get("builtin")]
+listed = {key(r) for r in saved_rows}
 missing = [n for n in saved if n not in listed]
 if missing:
     raise SystemExit("saved presets missing from the list: %s" % ", ".join(missing))
