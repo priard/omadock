@@ -40,8 +40,21 @@
 #    hiding again. The hide() at start and probe_stop are what make it
 #    invisible - a test that calls those on the probe is not non-intrusive.
 #
-# Functions: probe_start, probe_ipc, probe_cfg, probe_wait_cfg, probe_log_tail,
-#            probe_running, probe_pids, probe_stop, probe_cleanup.
+# A probe session must leave NOTHING behind. The dock spawns helpers through
+# `Process` (scripts/drive-removal-watch.py, the folder scanner), and a helper
+# does not exit with the Quickshell process that spawned it: it is reparented
+# to the user's systemd and keeps running. Stopping only the shell therefore
+# leaked one helper per session, and the litter accumulated (80 were found on
+# this desktop). probe_stop now kills the probe's whole process group plus
+# every descendant it can see, and probe_cleanup fails the test if any process
+# of the session, or the scratch directory, survived - see tests/live/teardown.sh,
+# which counts survivors across fresh sessions and is the regression test for
+# this rule.
+#
+# Functions: probe_start, probe_ipc, probe_cfg, probe_wait_cfg, probe_log,
+#            probe_log_tail, probe_running, probe_pids, probe_descendants,
+#            probe_pgid, probe_group_pids, probe_cmdlines, probe_stop,
+#            probe_cleanup.
 
 # PROBE_CFG_SRC points the probe at another config to copy: the owner's file
 # (the default) or, for a case the owner's config cannot show - a fresh install
@@ -53,6 +66,11 @@ PROBE_OWNER_MD5=""
 PROBE_OWNER_PID=""
 PROBE_DIR=""
 PROBE_PID=""
+# The probe's own process group (it is started with `setsid --fork`, so the
+# group holds the shell and every helper it spawned) and what teardown saw.
+PROBE_PGID=""
+PROBE_KIDS=""
+PROBE_LEAKED=""
 
 # The plugin directory under test (not the live plugin under
 # ~/.config/omarchy/plugins/omadock, which follows the active profile).
@@ -76,6 +94,54 @@ probe_pids() {
     exe=$(basename "$(readlink -f "/proc/$p/exe" 2>/dev/null || true)")
     case "$exe" in quickshell|qs) echo "$p" ;; esac
   done
+}
+
+# The probe's process group: `setsid --fork` makes the Quickshell process a
+# group leader, so the group is the whole session - the shell and every helper
+# it spawned. Recorded at start, because the group is unreadable once the
+# leader is gone.
+probe_pgid() { [ -n "$PROBE_PGID" ] && echo "$PROBE_PGID"; }
+
+# This shell's own process group, so a group kill can never take the caller.
+probe_own_pgid() { ps -o pgid= -p $$ 2>/dev/null | tr -d ' '; }
+
+# Every process reachable from the given PIDs by parentage - the helpers a
+# Quickshell dock spawns. A snapshot of the tree, walked breadth-first; a
+# helper spawned after the snapshot is caught by probe_group_pids instead.
+probe_descendants() {
+  local snap frontier next pid kid out depth
+  [ -n "$1" ] || return 0
+  snap=$(ps -eo pid=,ppid= 2>/dev/null)
+  frontier="$*"
+  out=""
+  for depth in 1 2 3 4 5 6; do
+    next=""
+    for pid in $frontier; do
+      kid=$(printf '%s\n' "$snap" | awk -v pp="$pid" '$2 == pp {print $1}' | tr '\n' ' ')
+      next="$next $kid"
+    done
+    next=$(echo $next)
+    [ -n "$next" ] || break
+    out="$out $next"
+    frontier="$next"
+  done
+  echo $out
+}
+
+# Anything still in the probe's process group. Nothing of the owner's can be
+# in it (their dock is not started with setsid), so a match is litter.
+probe_group_pids() {
+  [ -n "$PROBE_PGID" ] || return 0
+  ps -eo pid=,pgid= 2>/dev/null | awk -v g="$PROBE_PGID" '$2 == g {print $1}'
+}
+
+# The command lines behind a list of PIDs, for the failure report.
+probe_cmdlines() {
+  local p out
+  for p in $*; do
+    out="$out $p:$(tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null)"
+  done
+  echo $out
 }
 
 probe_start() {
@@ -108,19 +174,24 @@ json.dump(conf, open(path, "w"), indent=2)
 PY
   ln -s /usr/share/omarchy/shell/Commons "$PROBE_DIR/Commons"
   ln -s /usr/share/omarchy/shell/Ui "$PROBE_DIR/Ui"
-  cat > "$PROBE_DIR/shell.qml" <<EOF
-import Quickshell
-import "file:$PROBE_ROOT" as Od
-
-ShellRoot {
-  Od.DockHost { }
-}
-EOF
+  # PROBE_BODY names a QML file whose contents become the body of ShellRoot,
+  # for a test that must reach inside the dock (tests/live/label-metrics.sh).
+  # Such a body declares its own `Od.DockHost { id: ... }`; the default is the
+  # dock alone. Imports belong at the top of the file, so the body holds only
+  # the inside of ShellRoot.
+  {
+    printf 'import QtQuick\nimport Quickshell\nimport "file:%s" as Od\n\nShellRoot {\n' "$PROBE_ROOT"
+    if [ -n "${PROBE_BODY:-}" ]; then cat "$PROBE_BODY"; else printf '  Od.DockHost { }\n'; fi
+    printf '}\n'
+  } > "$PROBE_DIR/shell.qml"
   ( cd "$PROBE_DIR" && HOME="$PROBE_DIR/home" QS_DISABLE_FILE_WATCHER=1 \
       setsid --fork qs -p "$PROBE_DIR" > "$PROBE_DIR/probe.log" 2>&1 </dev/null )
   for i in $(seq 40); do
+    # Recorded before the IPC wait, so a start that never answers is still
+    # torn down with its group (and its helpers) rather than left behind.
+    [ -n "$PROBE_PID" ] || PROBE_PID=$(probe_pids | head -1)
+    [ -n "$PROBE_PGID" ] || PROBE_PGID=$(ps -o pgid= -p "${PROBE_PID:-0}" 2>/dev/null | tr -d ' ')
     if qs -p "$PROBE_DIR" ipc call omadock state >/dev/null 2>&1; then
-      PROBE_PID=$(probe_pids | head -1)
       probe_ipc hide >/dev/null 2>&1
       return 0
     fi
@@ -159,25 +230,56 @@ probe_wait_cfg() {
   return 1
 }
 
+probe_log() { echo "$PROBE_DIR/probe.log"; }
+
 probe_log_tail() { tail -20 "$PROBE_DIR/probe.log" 2>/dev/null; }
 
 probe_running() { [ -n "$PROBE_DIR" ] && [ -n "$(probe_pids)" ]; }
 
+# Stop the probe AND everything it spawned. The helpers a dock spawns under
+# `Process` are not killed by killing the shell - they are reparented and keep
+# running - so the session's whole process group is signalled, and any
+# descendant that left the group is hunted by PID. Whatever survived both is
+# recorded in PROBE_LEAKED for probe_cleanup to fail on.
 probe_stop() {
-  local i pids
+  local i pids pgid p survivors
   [ -n "$PROBE_DIR" ] || return 0
   pids=$(probe_pids)
+  [ -n "$PROBE_PID" ] && PROBE_KIDS=$(probe_descendants "$PROBE_PID")
+  pgid=$(probe_pgid)
+  if probe_group_killable "$pgid"; then kill -TERM -- "-$pgid" 2>/dev/null; fi
   [ -n "$pids" ] && kill $pids 2>/dev/null
   for i in $(seq 20); do
-    [ -n "$(probe_pids)" ] || break
+    [ -z "$(probe_pids)" ] && break
     sleep 0.25
   done
-  pids=$(probe_pids)
+  if probe_group_killable "$pgid"; then kill -KILL -- "-$pgid" 2>/dev/null; fi
   [ -n "$pids" ] && kill -9 $pids 2>/dev/null
+  sleep 0.3
+  PROBE_LEAKED=""
+  survivors="$(probe_group_pids) $(probe_descendants "$PROBE_PID")"
+  for p in $survivors; do
+    [ "$p" = "$$" ] && continue
+    kill -9 "$p" 2>/dev/null && PROBE_LEAKED="$PROBE_LEAKED $p"
+  done
+  PROBE_LEAKED=$(echo $PROBE_LEAKED)
+}
+
+# A group kill is only safe when the group is a real one, is not init's, and
+# is not this shell's own (that would kill the test that is running it).
+probe_group_killable() {
+  local g=$1 own
+  [ -n "$g" ] || return 1
+  [ "$g" = "1" ] && return 1
+  own=$(probe_own_pgid)
+  [ -n "$own" ] && [ "$g" = "$own" ] && return 1
+  return 0
 }
 
 # Stop the probe, remove its directory, and report the owner's side. Returns
-# non-zero if the owner's config or shell changed, or anything was left behind.
+# non-zero if the owner's config or shell changed, or anything was left behind
+# - a process of the session's group, a helper that outlived it, or the
+# scratch directory itself.
 probe_cleanup() {
   local rc=0 now nowpid
   probe_stop
@@ -201,7 +303,28 @@ probe_cleanup() {
     echo "probe: a probe process is still running ($(probe_pids | tr '\n' ' '))" >&2
     rc=1
   fi
-  [ -n "$PROBE_DIR" ] && rm -rf "$PROBE_DIR"
+  # Nothing of the session may survive it. The group scan catches a helper
+  # spawned after probe_stop's snapshot; PROBE_LEAKED names one that was
+  # still alive when teardown finished.
+  local leftovers
+  leftovers=$(echo $(probe_group_pids) $PROBE_LEAKED | tr ' ' '\n' | sort -n -u | tr '\n' ' ')
+  leftovers=$(echo $leftovers)
+  if [ -n "$leftovers" ]; then
+    echo "probe: LEFT BEHIND by the session:$(probe_cmdlines $leftovers)" >&2
+    kill -9 $leftovers 2>/dev/null
+    rc=1
+  fi
+  if [ -n "$PROBE_DIR" ]; then
+    rm -rf "$PROBE_DIR"
+    if [ -e "$PROBE_DIR" ]; then
+      echo "probe: scratch directory survived ($PROBE_DIR)" >&2
+      rc=1
+    fi
+  fi
   PROBE_DIR=""
+  PROBE_PID=""
+  PROBE_PGID=""
+  PROBE_KIDS=""
+  PROBE_LEAKED=""
   return $rc
 }
