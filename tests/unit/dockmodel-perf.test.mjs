@@ -7,6 +7,8 @@ import vm from "node:vm"
 const file = process.env.DOCKMODEL || new URL("../../DockModel.js", import.meta.url)
 const M = vm.createContext({})
 vm.runInContext(readFileSync(file, "utf8"), M)
+// parseIconIndex is DockIcons.js' now; the assertions below are untouched.
+vm.runInContext(readFileSync(new URL("../../DockIcons.js", import.meta.url), "utf8"), M)
 
 const win = (title, ws) => ({ title, address: "0x1", appId: "foot", workspaceName: ws, isMinimized: false })
 const model = (title, ws) => ({

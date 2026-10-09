@@ -1178,7 +1178,7 @@ Item {
           var baseName = chosen.split("/").pop() || "Folder"
           var home = Quickshell.env("HOME")
           var relPath = (chosen.indexOf(home) === 0) ? chosen.replace(home, "~") : chosen
-          root.toggleFolderPin(relPath, baseName, DockModel.folderIconFor(relPath, ""))
+          root.toggleFolderPin(relPath, baseName, "")
         }
       }
     }
@@ -1715,7 +1715,7 @@ Item {
         if (chosen === "" || root.isFolderPinned(chosen)) return
         var home = Quickshell.env("HOME")
         var relPath = (chosen === home || chosen.indexOf(home + "/") === 0) ? "~" + chosen.slice(home.length) : chosen
-        root.insertFolderPin(relPath, chosen.split("/").pop() || "Folder", DockModel.folderIconFor(relPath, ""), dropFolderCheck.insertAt)
+        root.insertFolderPin(relPath, chosen.split("/").pop() || "Folder", "", dropFolderCheck.insertAt)
         if (dropFolderCheck.insertAt >= 0) dropFolderCheck.insertAt++
       }
     }

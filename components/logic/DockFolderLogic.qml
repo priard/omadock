@@ -7,6 +7,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
+import "../../DockIcons.js" as DockIcons
 import "../../DockLabels.js" as DockLabels
 
 // Logic extracted from Dock.qml: stateless functions, the dock root
@@ -225,7 +226,7 @@ QtObject {
       }
     }
     if (!found) {
-      next.push({ path: path, name: name || "Folder", icon: icon || DockModel.folderIconFor(path, "") })
+      next.push({ path: path, name: name || "Folder", icon: icon || DockIcons.folderIconFor(path, "") })
     }
     root.pinnedFolders = next
     root.saveConfig()

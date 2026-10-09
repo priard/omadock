@@ -5,6 +5,7 @@ import qs.Commons
 import qs.Ui
 import "logic"
 import "../DockModel.js" as DockModel
+import "../DockIcons.js" as DockIcons
 import "../DockLabels.js" as DockLabels
 import "../DockLayout.js" as DockLayout
 
@@ -644,7 +645,7 @@ Item {
             folderPath: modelData.path || ""
             command: modelData.command || ""
             name: modelData.name || "Folder"
-            icon: modelData.icon || (modelData.command ? "application-x-executable" : DockModel.folderIconFor(modelData.path, ""))
+            icon: modelData.icon || (modelData.command ? "application-x-executable" : DockIcons.folderIconFor(modelData.path, ""))
             slotIndex: index
             dropLineHere: cardWrapper.dropLineFolder === index
             homeCenter: root ? root.slotHomeCenter(
