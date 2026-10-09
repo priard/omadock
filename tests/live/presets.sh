@@ -326,6 +326,16 @@ if grep -q "Failed parsing omadock.json" "$PROBE_DIR/probe.log"; then
 fi
 echo "   no parse failure in the dock's log"
 
+# The other half of what the running-dock suite used to assert: the dock's own
+# log stays clean while all of the above runs through it. A QML exception the
+# dock survives is still a defect.
+echo "-- the dock's log is clean"
+if grep -inE "(TypeError|ReferenceError|is not a function|is not defined|Unable to assign)" "$PROBE_DIR/probe.log" | head -5 > "$WORK/log-errors.txt" && [ -s "$WORK/log-errors.txt" ]; then
+  sed 's/^/   /' "$WORK/log-errors.txt" >&2
+  fail "runtime errors in the dock's log"
+fi
+echo "   no runtime error in the dock's log"
+
 echo "-- the probe's own copy is still a valid config"
 python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$CFG" || fail "the config copy is not valid JSON"
 
