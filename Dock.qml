@@ -2209,7 +2209,7 @@ Item {
       ? WlrKeyboardFocus.OnDemand
       : WlrKeyboardFocus.None
     exclusionMode: (!root.autohide) ? ExclusionMode.Normal : ExclusionMode.Ignore
-    exclusiveZone: (!root.autohide) ? Math.round((dockCardComp ? dockCardComp.dockCard.height : 0) + root.edgeGap * 2) : 0
+    exclusiveZone: (!root.autohide) ? Math.round((dockCardComp ? dockCardComp.dockCard.height + dockCardComp.shadowRoom : 0) + root.edgeGap * 2) : 0
     anchors {
       bottom: true
       left: true

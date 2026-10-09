@@ -694,6 +694,10 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
 
+### v4.1.1 — 2026-10-09
+
+- **Selecting a preset no longer parks the dock over the active window's bottom edge** — the card lifts by the room its drop shadow needs, and the panel's reserved band did not include that lift, so on any shadow-enabled look the card's top edge sat a few pixels inside window space and covered the bottom of whatever was underneath (most visibly after choosing a preset). The reserved band now includes the shadow room (`Dock.qml`), so the window keeps its full height and the dock's own look is unchanged. Measured live: on a preset apply the reserved band grew 62 → 68 px while the window's bottom border stayed fully visible (0 → 720 border pixels inside the dock's columns).
+
 ### v4.1.0 — 2026-10-09
 
 - **Name labels** (thanks [@priard](https://github.com/priard), #47) — every app, app group, folder and drive can carry its name beside the icon: `Always` keeps them out, `On hover` slides one out over its neighbours on an opaque pill after a short rest on the icon. Always-on names take a `Pill` behind the text or a `Plate` that joins icon and name into one button, with the window marks in an upright `Before icon` / `After name` column, a bundled Silkscreen pixel font, ink that reads on any fill, and **Rename…** in the right-click menu (blank restores the default).
