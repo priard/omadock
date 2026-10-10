@@ -14,7 +14,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
-  readonly property var folderSeparatorRef: folderSeparator
+  readonly property var folderSeparatorRef: rightRow.folderSeparator
   readonly property var separatorRef: separator
   readonly property var rightRowRef: rightRow
 
@@ -25,8 +25,8 @@ Item {
   property alias row: row
   property alias pinnedRowRepeater: pinnedRowRepeater
   property alias minimizedTilesRepeater: minimizedTilesRepeater
-  property alias foldersRepeater: foldersRepeater
-  property alias drivesRepeater: drivesRepeater
+  readonly property var foldersRepeater: rightRow.foldersRepeater
+  readonly property var drivesRepeater: rightRow.drivesRepeater
   property alias runningRepeater: runningRepeater
   readonly property bool folderDropActive: folderDrop.containsDrag
   // The card's box when it spans the window (panel, or a spread dock); null
@@ -237,9 +237,11 @@ Item {
     var cuts = []
     if (leftTileSeparator.visible) cuts.push({ at: leftTileSeparator.x })
     if (separator.visible) cuts.push({ at: separator.x })
-    if (spreadGap.visible) cuts.push({ at: spreadGap.x, next: rightRow.x + (folderSeparator.visible ? folderSeparator.x + folderSeparator.width + row.spacing : 0) })
-    else if (folderSeparator.visible) cuts.push({ at: rightRow.x + folderSeparator.x })
-    if (driveSeparator.visible) cuts.push({ at: rightRow.x + driveSeparator.x })
+    var fsep = rightRow.folderSeparator
+    var dsep = rightRow.driveSeparator
+    if (spreadGap.visible) cuts.push({ at: spreadGap.x, next: rightRow.x + (fsep.visible ? fsep.x + fsep.width + row.spacing : 0) })
+    else if (fsep.visible) cuts.push({ at: rightRow.x + fsep.x })
+    if (dsep.visible) cuts.push({ at: rightRow.x + dsep.x })
     var out = []
     var start = 0
     for (var i = 0; i < cuts.length; i++) {
@@ -616,131 +618,13 @@ Item {
         height: 1
       }
 
-      // Folders and drives: the right group of the Both sides alignment.
-      // Its own Row so the gap before it can be sized from its width
-      // without the outer row measuring itself.
-      Row {
+      // Folders, buttons and drives (DockRightGroup).
+      DockRightGroup {
         id: rightRow
-        spacing: row.spacing
-        anchors.verticalCenter: parent.verticalCenter
-        visible: root ? (root.hasFolderSeparator || root.folderSlots > 0 || root.driveSlots > 0 || trailingDropGap.open) : true
-
-        Item {
-          id: folderSeparator
-          visible: root ? root.hasFolderSeparator : false
-          anchors.verticalCenter: parent.verticalCenter
-          width: root ? root.separatorWidth : Style.space(1)
-          height: root ? (root.iconSize * 0.7) : 24
-
-          // The line, placed by dockCard (70% of its height by default, as on
-          // macOS). It overflows the slot, so it does not grow the row. With
-          // split sections the slot is the gap between two panels and no line
-          // is drawn.
-          Rectangle {
-            visible: !(root && (root.placement.split || root.placement.align === "spread"))
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: root && root.dividerGeometry === "long"
-              ? dockCard.dividerTop - row.y - rightRow.y - parent.y : (root ? root.iconCenterOffset : 0)
-            width: dockCard.dividerWidth
-            height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
-            color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
-          }
-        }
-
-        Repeater {
-          id: foldersRepeater
-          // Folders first, then the command buttons: the section keeps one row.
-          model: root ? root.pinnedFolders.concat(root.pinnedButtons) : []
-          delegate: DockFolderItem {
-            rootRef: cardWrapper.rootRef
-            folderPath: modelData.path || ""
-            command: modelData.command || ""
-            name: modelData.name || "Folder"
-            icon: modelData.icon || (modelData.command ? "application-x-executable" : DockIcons.folderIconFor(modelData.path, ""))
-            slotIndex: index
-            dropLineHere: cardWrapper.dropLineFolder === index
-            homeCenter: root ? root.slotHomeCenter(
-              root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + index,
-              root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index,
-              (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0),
-              root.tilesFixedWidth + cardWrapper.spreadShift) : 0
-            labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index : -1
-            onOpenStackRequested: function(fpath, fname, cx, cy) {
-              if (root) root.openFolderStack(fpath, fname, cx)
-            }
-            onMenuRequested: function(fpath, fname, cx, cy, cmd) {
-              if (root) root.openFolderContext(fpath, fname, cx, cy, cmd)
-            }
-            onDragStarted: function(fpath) { cardWrapper.handleFolderDragStarted(fpath) }
-            onDragMoved: function(fpath, mx, my) { cardWrapper.handleFolderDragMoved(fpath, mx, my) }
-            onDragDropped: function(fpath) { cardWrapper.handleFolderDragDropped(fpath) }
-          }
-        }
-
-        // A folder dragged after the last one.
-        DropGap {
-          rootRef: cardWrapper.rootRef
-          spacer: true
-          open: cardWrapper.dropLineFolder >= 0 && cardWrapper.dropLineFolder === foldersRepeater.count
-        }
-
-        // Drop gap after the last pinned folder (see DockFolderItem.gapWidth).
-        DropGhost {
-          id: trailingDropGap
-          rootRef: cardWrapper.rootRef
-          readonly property bool open: root ? (root.dropPreviewPath !== "" && root.dropInsertIndex >= foldersRepeater.count) : false
-          width: open && root ? root.iconSlot : 0
-          height: root ? root.iconSlot : 0
-          Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-        }
-
-        Item {
-          id: driveSeparator
-          visible: root ? root.hasDriveSeparator : false
-          anchors.verticalCenter: parent.verticalCenter
-          width: root ? root.separatorWidth : Style.space(1)
-          height: root ? (root.iconSize * 0.7) : 24
-
-          // The line, placed by dockCard (70% of its height by default, as on
-          // macOS). It overflows the slot, so it does not grow the row. With
-          // split sections the slot is the gap between two panels and no line
-          // is drawn.
-          Rectangle {
-            visible: !(root && root.placement.split)
-            anchors.horizontalCenter: parent.horizontalCenter
-            y: root && root.dividerGeometry === "long"
-              ? dockCard.dividerTop - row.y - rightRow.y - parent.y : (root ? root.iconCenterOffset : 0)
-            width: dockCard.dividerWidth
-            height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
-            color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
-          }
-        }
-
-        Repeater {
-          id: drivesRepeater
-          model: (root && root.showRemovableDrives) ? root.mountedDrives : []
-          delegate: DockDriveItem {
-            rootRef: cardWrapper.rootRef
-            dev: modelData.dev || ""
-            mountpoint: modelData.mountpoint || ""
-            name: modelData.name || "USB Drive"
-            size: modelData.size || ""
-            space: modelData.space || ""
-            fstype: modelData.fstype || ""
-            icon: modelData.icon || "drive-removable-media"
-            homeCenter: root ? root.slotHomeCenter(
-              root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + root.folderSlots + (root.hasDriveSeparator ? 1 : 0) + index,
-              root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + root.folderSlots + index,
-              (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0) + (root.hasDriveSeparator ? 1 : 0),
-              root.tilesFixedWidth + cardWrapper.spreadShift) : 0
-            onOpenStackRequested: function(fpath, fname, cx, cy) {
-              if (root) root.openFolderStack(fpath, fname, cx)
-            }
-            onMenuRequested: function(d, mp, n, s, cx, cy) {
-              if (root) root.openDriveContext(d, mp, n, s, cx, cy)
-            }
-          }
-        }
+        rootRef: cardWrapper.rootRef
+        cardRef: dockCard
+        wrapper: cardWrapper
+        outerRow: row
       }
     }
 
