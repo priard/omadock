@@ -454,6 +454,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
   "iconSize": 0,
   "hoverEffect": "zoom",
   "keepPointer": true,
+  "animations": "full",
   "wheelStepDelay": 150,
   "iconHoverReveal": false,
   "labelMode": "off",
@@ -553,6 +554,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `labelMaxWidth` | `int` | `140` | Longest label in px (80–240) before the name is shortened. |
 | `labelNames` | `object` | `{}` | Per-app label text, `{ "appId": "Name" }` (up to 200 entries, 40 characters each). |
 | `keepPointer` | `bool` | `true` | Focusing a window from the dock keeps the pointer where it is instead of warping it to the window centre. |
+| `animations` | `string` | `"full"` | How the dock moves: `"full"` (items, dividers, popups, marks and the badge ease in and out), `"reduced"` (short fades only: no movement, bounces or label typing) or `"off"` (everything changes at once). Settings → Motion & Effects → Animations. |
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
 | `hoverEffect` | `string` | `"zoom"` | Hover mode: magnification `"zoom"` or `"wave"`; effects `"lift"`, `"glow"`, `"glitch"` (shaders); or `"off"`. |
 | `dividerGeometry` | `string` | `"classic"` | Section divider length: `"classic"` keeps the original short lines; `"long"` uses the adjustable `dividerHeight` share. |
