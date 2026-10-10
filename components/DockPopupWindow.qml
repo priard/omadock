@@ -50,7 +50,15 @@ PopupWindow {
   color: "transparent"
   visible: open && body !== null
   implicitWidth: Math.ceil(Math.min(popup.maxWidth, popup.dockWindow ? popup.dockWindow.width - Style.gapsOut * 2 : popup.maxWidth))
-  implicitHeight: Math.ceil(popup.dockRoot ? popup.dockRoot.popupMaxHeight : 600)
+  // Whole device pixels tall: at a fractional output scale a surface a
+  // half pixel short lost the menu's bottom border row to the compositor's
+  // rounding (at 1.5x, every menu of an odd height).
+  implicitHeight: {
+    var h = Math.ceil(popup.dockRoot ? popup.dockRoot.popupMaxHeight : 600)
+    var s = popup.dockRoot ? popup.dockRoot.outputScale : 1
+    for (var i = 0; i < 4 && s > 0 && Math.abs(h * s - Math.round(h * s)) > 1e-6; i++) h++
+    return h
+  }
 
   // Input only over the menu itself.
   mask: Region { item: popup.body }
