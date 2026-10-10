@@ -46,7 +46,8 @@ Column {
       if (spreadOk) list.push({ value: "spread", label: "Both sides" })
       return list
     }
-    value: root ? (root.alignment || "center") : "center"
+    // A stored Both sides that cannot apply marks what the dock draws.
+    value: root ? (spreadOk ? (root.alignment || "center") : root.placement.align) : "center"
     onPicked: function(v) { root.setDockAlignment(v) }
   }
 
