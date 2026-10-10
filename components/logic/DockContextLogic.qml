@@ -157,16 +157,17 @@ QtObject {
     // A hidden dock only slides off screen, so its items still look visible.
     if (!card || !root.dockVisible) return "[]"
     var i, it
-    for (i = 0; i < card.pinnedRowRepeater.count; i++) {
-      var slot = card.pinnedRowRepeater.itemAt(i)
-      it = slot ? slot.item : null
+    var pins = card.liveSlots(card.pinnedRowRepeater)
+    for (i = 0; i < pins.length; i++) {
+      it = pins[i].child.item
       if (!it) continue
       if (it.groupData !== undefined) add(it, "group", (it.groupData || {}).id, 0, false)
       else if (it.appId !== undefined) add(it, "app", it.appId, it.windows, it.urgent)
     }
-    for (i = 0; i < card.runningRepeater.count; i++) {
-      it = card.runningRepeater.itemAt(i)
-      if (it) add(it, "app", it.appId, it.windows, it.urgent)
+    var runs = card.liveSlots(card.runningRepeater)
+    for (i = 0; i < runs.length; i++) {
+      it = runs[i].child
+      add(it, "app", it.appId, it.windows, it.urgent)
     }
     for (i = 0; i < card.minimizedTilesRepeater.count; i++)
       add(card.minimizedTilesRepeater.itemAt(i), "tile", "", 1, false)

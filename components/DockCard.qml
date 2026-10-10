@@ -62,6 +62,19 @@ Item {
 
   DockDragLogic { id: dragLogic }
 
+  // The RowSlots of a Repeater's live rows (not leaving, not hidden), in
+  // order: the drag logic and itemGeometry measure these, never a row on its
+  // way out. A slot's x and width are in the row's coordinates; its element
+  // is slot.child.
+  function liveSlots(repeater) {
+    var out = []
+    for (var i = 0; i < (repeater ? repeater.count : 0); i++) {
+      var s = repeater.itemAt(i)
+      if (s && !s.leaving && s.shown !== false && s.child) out.push(s)
+    }
+    return out
+  }
+
   function inPinZone(px) { return dragLogic.inPinZone(root, cardWrapper, px) }
 
   function folderInsertIndex(px) { return dragLogic.folderInsertIndex(root, cardWrapper, px) }
@@ -394,17 +407,20 @@ Item {
       x: dockCard.contentLeftInset + cardWrapper.rowOffset
       y: dockCard.contentTopInset
 
-      DockIconButton {
+      RowSlot {
         rootRef: cardWrapper.rootRef
-        visible: root ? root.showAppsButton : true
-        homeCenter: root ? root.slotHomeCenter(0, 0, false) : 0
-        glyph: "\ue900"
-        glyphColor: root ? root.dockForeground : Color.bar.text
-        tooltip: "Omarchy"
-        onPressed: Quickshell.execDetached(["omarchy-menu", "toggle", "root"])
-        onMiddleClicked: Quickshell.execDetached(["omarchy-launch-terminal"])
-        onMenuRequested: function(cx, cy) {
-          if (root) root.openDockSettingsMenu(cx, cy)
+        shown: root ? root.showAppsButton : true
+        DockIconButton {
+          rootRef: cardWrapper.rootRef
+          homeCenter: root ? root.slotHomeCenter(0, 0, false) : 0
+          glyph: "\ue900"
+          glyphColor: root ? root.dockForeground : Color.bar.text
+          tooltip: "Omarchy"
+          onPressed: Quickshell.execDetached(["omarchy-menu", "toggle", "root"])
+          onMiddleClicked: Quickshell.execDetached(["omarchy-launch-terminal"])
+          onMenuRequested: function(cx, cy) {
+            if (root) root.openDockSettingsMenu(cx, cy)
+          }
         }
       }
 
@@ -413,75 +429,85 @@ Item {
       Repeater {
         id: pinnedRowRepeater
         model: pinnedRowModel
-        delegate: Loader {
-          id: rowSlot
+        // RowSlot eases the element in and out (KeyedListModel's leaving and
+        // fresh); slot, not index, is its place among the live rows.
+        delegate: RowSlot {
+          id: rowWrap
           required property string key
-          required property int index
-          readonly property bool isGroup: key.indexOf("group:") === 0
-          // Looked up by key; kept through the moment a removed key has left
-          // the lookup but not yet the model.
-          property var modelData: ({})
-          Binding on modelData {
-            value: root ? root.pinnedRowByKey[rowSlot.key] : undefined
-            when: !!(root && root.pinnedRowByKey[rowSlot.key])
-            restoreMode: Binding.RestoreNone
-          }
-          readonly property real home: root ? root.slotHomeCenter(root.appsSlots + index, root.appsSlots + index, false) : 0
-          sourceComponent: isGroup ? groupSlotComp : appSlotComp
-          // A zoomed icon raises itself over its neighbours; in the Row that
-          // takes the slot's z.
-          z: item ? item.z : 0
-
-          Component {
-            id: appSlotComp
-            DockItem {
-              readonly property var entry: rowSlot.modelData.entry || ({})
-              rootRef: cardWrapper.rootRef
-              appId: entry.appId || ""
-              name: entry.name || ""
-              icon: entry.icon || ""
-              running: !!entry.running
-              windows: entry.windows || 0
-              windowList: entry.windowList || []
-              homeCenter: rowSlot.home
-              labelSlot: root ? root.appsSlots + rowSlot.index : -1
-              dropLineHere: cardWrapper.dropLineRow === rowSlot.index
-              pinned: true
-              active: root ? (entry.appId === root.activeId) : false
-              onActivateRequested: function(aid) { if (root) root.activate(aid) }
-              onNewWindowRequested: function(aid) { if (root) root.launchApp(aid, null) }
-              onMenuRequested: function(aid, cx, cy) { if (root) root.openContext(aid, cx, cy) }
-              onDragStarted: function(aid) {
-                if (root) {
-                  root.dragAppId = aid
-                  root.dropBeforeId = ""
-                  root.dropTargetAppId = ""
-                  root.dropTargetGroupId = ""
-                  root.dropRowIndex = -1
-                }
-              }
-              onDragMoved: function(aid, mx, my) { cardWrapper.handleDragMoved(aid, mx, my) }
-              onDragDropped: function(aid) { cardWrapper.handleDragDropped(aid) }
+          required property bool leaving
+          required property bool fresh
+          required property int slot
+          rootRef: cardWrapper.rootRef
+          Loader {
+            id: rowSlot
+            readonly property string key: rowWrap.key
+            readonly property int index: rowWrap.slot
+            readonly property bool isGroup: key.indexOf("group:") === 0
+            // Looked up by key; kept through the moment a removed key has left
+            // the lookup but not yet the model.
+            property var modelData: ({})
+            Binding on modelData {
+              value: root ? root.pinnedRowByKey[rowSlot.key] : undefined
+              when: !!(root && root.pinnedRowByKey[rowSlot.key])
+              restoreMode: Binding.RestoreNone
             }
-          }
+            readonly property real home: root ? root.slotHomeCenter(root.appsSlots + index, root.appsSlots + index, false) : 0
+            sourceComponent: isGroup ? groupSlotComp : appSlotComp
+            // A zoomed icon raises itself over its neighbours; in the Row that
+            // takes the slot's z.
+            z: item ? item.z : 0
 
-          Component {
-            id: groupSlotComp
-            DockAppGroupItem {
-              rootRef: cardWrapper.rootRef
-              groupData: rowSlot.modelData.group || ({})
-              homeCenter: rowSlot.home
-              labelSlot: root ? root.appsSlots + rowSlot.index : -1
-              dropLineHere: cardWrapper.dropLineRow === rowSlot.index
-              onOpenGroupRequested: function(gdata, cx, cy) {
-                if (root) root.openAppGroup(gdata, cx, cy)
+            Component {
+              id: appSlotComp
+              DockItem {
+                readonly property var entry: rowSlot.modelData.entry || ({})
+                rootRef: cardWrapper.rootRef
+                appId: entry.appId || ""
+                name: entry.name || ""
+                icon: entry.icon || ""
+                running: !!entry.running
+                windows: entry.windows || 0
+                windowList: entry.windowList || []
+                homeCenter: rowSlot.home
+                labelSlot: root ? root.appsSlots + rowSlot.index : -1
+                dropLineHere: cardWrapper.dropLineRow === rowSlot.index
+                pinned: true
+                active: root ? (entry.appId === root.activeId) : false
+                onActivateRequested: function(aid) { if (root) root.activate(aid) }
+                onNewWindowRequested: function(aid) { if (root) root.launchApp(aid, null) }
+                onMenuRequested: function(aid, cx, cy) { if (root) root.openContext(aid, cx, cy) }
+                onDragStarted: function(aid) {
+                  if (root) {
+                    root.dragAppId = aid
+                    root.dropBeforeId = ""
+                    root.dropTargetAppId = ""
+                    root.dropTargetGroupId = ""
+                    root.dropRowIndex = -1
+                  }
+                }
+                onDragMoved: function(aid, mx, my) { cardWrapper.handleDragMoved(aid, mx, my) }
+                onDragDropped: function(aid) { cardWrapper.handleDragDropped(aid) }
               }
-              onMenuRequested: function(gdata, cx, cy) {
-                if (root) root.openAppGroupContext(gdata, cx, cy)
+            }
+
+            Component {
+              id: groupSlotComp
+              DockAppGroupItem {
+                rootRef: cardWrapper.rootRef
+                groupData: rowSlot.modelData.group || ({})
+                homeCenter: rowSlot.home
+                labelSlot: root ? root.appsSlots + rowSlot.index : -1
+                dropLineHere: cardWrapper.dropLineRow === rowSlot.index
+                onOpenGroupRequested: function(gdata, cx, cy) {
+                  if (root) root.openAppGroup(gdata, cx, cy)
+                }
+                onMenuRequested: function(gdata, cx, cy) {
+                  if (root) root.openAppGroupContext(gdata, cx, cy)
+                }
+                onDragStarted: function(gid) { cardWrapper.handleGroupDragStarted(gid) }
+                onDragMoved: function(gid, mx, my) { cardWrapper.handleGroupDragMoved(gid, mx, my) }
+                onDragDropped: function(gid) { cardWrapper.handleGroupDragDropped(gid) }
               }
-              onDragStarted: function(gid) { cardWrapper.handleGroupDragStarted(gid) }
-              onDragMoved: function(gid, mx, my) { cardWrapper.handleGroupDragMoved(gid, mx, my) }
-              onDragDropped: function(gid) { cardWrapper.handleGroupDragDropped(gid) }
             }
           }
         }
@@ -491,7 +517,7 @@ Item {
       DropGap {
         rootRef: cardWrapper.rootRef
         spacer: true
-        open: cardWrapper.dropLineRow >= 0 && cardWrapper.dropLineRow === pinnedRowRepeater.count
+        open: cardWrapper.dropLineRow >= 0 && cardWrapper.dropLineRow === pinnedRowModel.liveCount
       }
 
       // Divider between pinned apps and the minimized-tile section.
@@ -556,57 +582,66 @@ Item {
       Repeater {
         id: runningRepeater
         model: runningModel
-        delegate: DockItem {
-          id: runningDockItem
+        delegate: RowSlot {
+          id: runWrap
           required property string key
-          required property int index
-          // Looked up by key, as in the pinned run.
-          property var entry: ({})
-          Binding on entry {
-            value: root ? root.runningByKey[runningDockItem.key] : undefined
-            when: !!(root && root.runningByKey[runningDockItem.key])
-            restoreMode: Binding.RestoreNone
-          }
+          required property bool leaving
+          required property bool fresh
+          required property int slot
           rootRef: cardWrapper.rootRef
-          appId: entry.appId || ""
-          name: entry.name || ""
-          icon: entry.icon || ""
-          running: !!entry.running
-          windows: entry.windows || 0
-          windowList: entry.windowList || []
-          // Wave geometry must count only icons that actually render — a
-          // hidden (fully-tiled) entry occupies zero width in the Row.
-          readonly property int visibleIdx: root ? root.visibleRunningSlotBefore(index) : 0
-          homeCenter: root ? root.slotHomeCenter(
-            root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + visibleIdx,
-            root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx,
-            (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0),
-            root.tilesFixedWidth) : 0
-          labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx : -1
-          pinned: false
-          active: root ? (entry.appId === root.activeId) : false
-          onActivateRequested: function(aid) { if (root) root.activate(aid) }
-          onNewWindowRequested: function(aid) { if (root) root.launchApp(aid, null) }
-          onMenuRequested: function(aid, cx, cy) { if (root) root.openContext(aid, cx, cy) }
-          onDragStarted: function(aid) {
-            if (root) {
-              root.dragAppId = aid
-              root.dropBeforeId = ""
-              root.dropTargetAppId = ""
-              root.dropTargetGroupId = ""
+          // A fully tiled app leaves the run like a closed one.
+          shown: !runningDockItem.isFullyTiled
+          DockItem {
+            readonly property string key: runWrap.key
+            readonly property int index: runWrap.slot
+            id: runningDockItem
+            // Looked up by key, as in the pinned run.
+            property var entry: ({})
+            Binding on entry {
+              value: root ? root.runningByKey[runningDockItem.key] : undefined
+              when: !!(root && root.runningByKey[runningDockItem.key])
+              restoreMode: Binding.RestoreNone
             }
-          }
-          onDragMoved: function(aid, mx, my) { cardWrapper.handleDragMoved(aid, mx, my) }
-          onDragDropped: function(aid) { cardWrapper.handleDragDropped(aid) }
+            rootRef: cardWrapper.rootRef
+            appId: entry.appId || ""
+            name: entry.name || ""
+            icon: entry.icon || ""
+            running: !!entry.running
+            windows: entry.windows || 0
+            windowList: entry.windowList || []
+            // Wave geometry must count only icons that actually render — a
+            // hidden (fully-tiled) entry occupies zero width in the Row.
+            readonly property int visibleIdx: root ? root.visibleRunningSlotBefore(index) : 0
+            homeCenter: root ? root.slotHomeCenter(
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + visibleIdx,
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx,
+              (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0),
+              root.tilesFixedWidth) : 0
+            labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx : -1
+            pinned: false
+            active: root ? (entry.appId === root.activeId) : false
+            onActivateRequested: function(aid) { if (root) root.activate(aid) }
+            onNewWindowRequested: function(aid) { if (root) root.launchApp(aid, null) }
+            onMenuRequested: function(aid, cx, cy) { if (root) root.openContext(aid, cx, cy) }
+            onDragStarted: function(aid) {
+              if (root) {
+                root.dragAppId = aid
+                root.dropBeforeId = ""
+                root.dropTargetAppId = ""
+                root.dropTargetGroupId = ""
+              }
+            }
+            onDragMoved: function(aid, mx, my) { cardWrapper.handleDragMoved(aid, mx, my) }
+            onDragDropped: function(aid) { cardWrapper.handleDragDropped(aid) }
 
-          // When an unpinned app has ALL its windows minimized and tiles are
-          // showing, the tile section already represents it — hide the icon
-          // slot entirely so only the tile (with hollow dot) is visible.
-          // Live resolver: same source as the running-dot indicator, so the
-          // icon can never outlive its own tile after a lagged park.
-          readonly property bool isFullyTiled: (root && root.showMinimizedTiles)
-            && DockModel.allWindowsMinimized(entry.windowList || [], root ? root.liveWsNameOf : null, root ? root.minimizedWorkspace : "special:minimized")
-          visible: !isFullyTiled
+            // When an unpinned app has ALL its windows minimized and tiles are
+            // showing, the tile section already represents it — hide the icon
+            // slot entirely so only the tile (with hollow dot) is visible.
+            // Live resolver: same source as the running-dot indicator, so the
+            // icon can never outlive its own tile after a lagged park.
+            readonly property bool isFullyTiled: (root && root.showMinimizedTiles)
+              && DockModel.allWindowsMinimized(entry.windowList || [], root ? root.liveWsNameOf : null, root ? root.minimizedWorkspace : "special:minimized")
+          }
         }
       }
 

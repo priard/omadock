@@ -47,9 +47,10 @@ QtObject {
   // Over the running apps that are not pinned: from the divider before
   // them to the gap after the last one.
   function overRunningAt(root, card, rx) {
-    var n = card.runningRepeater.count
-    var first = n > 0 ? card.runningRepeater.itemAt(0) : null
-    var last = n > 0 ? card.runningRepeater.itemAt(n - 1) : null
+    var runs = card.liveSlots(card.runningRepeater)
+    var n = runs.length
+    var first = n > 0 ? runs[0] : null
+    var last = n > 0 ? runs[n - 1] : null
     if (!first || !last) return false
     var start = card.separatorRef.visible ? card.separatorRef.x : first.x - card.row.spacing / 2
     return rx >= start && rx <= last.x + last.width + card.row.spacing / 2
@@ -72,10 +73,11 @@ QtObject {
     // Over the middle of a group: add to it. Over the middle of another
     // pinned app: make a group of the two. Otherwise a place in the run.
     var rx = mx - card.row.x
-    var n = card.pinnedRowRepeater.count
+    var slots = card.liveSlots(card.pinnedRowRepeater)
+    var n = slots.length
     for (var i = 0; i < n; i++) {
-      var slot = card.pinnedRowRepeater.itemAt(i)
-      var it = slot ? slot.item : null
+      var slot = slots[i]
+      var it = slot.child.item
       if (!it) continue
       // A tile with a label (or a plate) is one button: its whole width is
       // the target, with the edges left for placing before or after it.
@@ -83,7 +85,7 @@ QtObject {
       var lead = it.dropGap || 0
       var centre = slot.x + lead + (slot.width - lead) / 2
       var span = slot.width - lead
-      if (slot.isGroup) {
+      if (slot.child.isGroup) {
         if (Math.abs(rx - centre) < span * 0.45) {
           root.dropTargetGroupId = it.groupId
           root.dropRowIndex = -1
@@ -102,15 +104,15 @@ QtObject {
     // it is over the running apps, its own place, where letting go does
     // nothing.
     if (idx === n && !DockModel.isPinned(root.pinnedIds, aid)) {
-      var last = card.pinnedRowRepeater.itemAt(n - 1)
+      var last = n > 0 ? slots[n - 1] : null
       if (!last || rx > last.x + last.width + root.iconSlot / 2) idx = -1
     }
     root.dropRowIndex = idx
     if (idx < 0) return
     // The first app at or after the drop, for moves that work in pin order.
     for (var j = idx; j < n; j++) {
-      var s2 = card.pinnedRowRepeater.itemAt(j)
-      if (s2 && !s2.isGroup && s2.item && s2.item.appId !== aid) {
+      var s2 = slots[j].child
+      if (!s2.isGroup && s2.item && s2.item.appId !== aid) {
         root.dropBeforeId = s2.item.appId
         break
       }
@@ -121,11 +123,11 @@ QtObject {
   // item whose centre lies right of it, so past the end of the run (over the
   // running apps, say) means its end. -1 when the run is empty.
   function rowInsertIndex(root, card, rx) {
-    var n = card.pinnedRowRepeater.count
+    var slots = card.liveSlots(card.pinnedRowRepeater)
+    var n = slots.length
     if (n === 0) return -1
     for (var i = 0; i < n; i++) {
-      var slot = card.pinnedRowRepeater.itemAt(i)
-      if (slot && rx < slot.x + slot.width / 2) return i
+      if (rx < slots[i].x + slots[i].width / 2) return i
     }
     return n
   }
