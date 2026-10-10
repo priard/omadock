@@ -54,15 +54,10 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   follow-ups from #49 (`feat/spread-fixes`, conflicts with #51 on two adjacent
   lines in DockCard.qml), #54 hover effects in the opened group and its badges
   and marks reaching the dock (`feat/group-cell-hover`): opened 2026-10-10.
-
-## Not upstream yet
-
-- `feat/popup-grid`: popup surfaces whole device pixels tall, so menus keep
-  their bottom border at 1.5x.
-- `feat/group-cell-menu`: right click in an opened group opens the app's
-  menu (Remove from Group instead of Pin) instead of ungrouping at once.
-- `feat/group-drag-fix`: a group drag stops calling the retired
-  rowIndicatorX (a TypeError per move since the drop gap landed).
+- #55 menus keep their bottom border at 1.5x (`feat/popup-grid`), #56 right
+  click in an opened group opens the app's menu (`feat/group-cell-menu`),
+  #57 group drag stops calling the retired rowIndicatorX
+  (`feat/group-drag-fix`): opened 2026-10-11.
 
 ## Fork only
 
