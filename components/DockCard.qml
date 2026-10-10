@@ -93,8 +93,8 @@ Item {
 
   // Keyed models for the pinned run and the running apps (KeyedListModel):
   // a list replaced by an equal or slightly changed one keeps its delegates.
-  KeyedListModel { id: pinnedRowModel }
-  KeyedListModel { id: runningModel }
+  KeyedListModel { id: pinnedRowModel; exitMs: cardWrapper.root ? cardWrapper.root.motion.base : 0 }
+  KeyedListModel { id: runningModel; exitMs: cardWrapper.root ? cardWrapper.root.motion.base : 0 }
 
   Connections {
     target: cardWrapper.root
