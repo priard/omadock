@@ -221,7 +221,7 @@ BorderSurface {
                   // the hover effect with the icon, like the dock's.
                   overlay: [
                     BadgeMark {
-                      rootRef: root
+                      rootRef: cellItem.root
                       anchorRef: parent
                       count: cellItem.notificationCount
                       rim: Color.menu.background
@@ -254,7 +254,7 @@ BorderSurface {
                     readonly property var winObj: cellItem.appWindows[index]
                     readonly property bool winMin: cellItem.isWinMinimized(winObj)
                     readonly property bool winActive: !winMin && cellItem.isWinActive(winObj)
-                    rootRef: root
+                    rootRef: cellItem.root
                     anchors.verticalCenter: parent.verticalCenter
                     dense: true
                     kind: winActive ? "active" : (winMin ? "minimized" : "window")
