@@ -1872,14 +1872,7 @@ Item {
     slotFixTimer.restart()
   }
 
-  function dropParkSlot(address) {
-    if (!address || !root.parkSlots || root.parkSlots[address] === undefined) return
-    var slots = {}
-    for (var k in root.parkSlots) slots[k] = root.parkSlots[k]
-    delete slots[address]
-    root.parkSlots = slots
-    root.pendingSlotFixes = (root.pendingSlotFixes || []).filter(function(a) { return a !== address })
-  }
+  function dropParkSlot(address) { return slotLogic.dropParkSlot(root, address) }
 
   function recordParkSlot(address, origin) { return slotLogic.recordParkSlot(root, address, origin) }
 

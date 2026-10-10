@@ -231,4 +231,15 @@ QtObject {
       root.hyprDispatch('hl.dsp.focus({ window = "address:' + root.luaString(target2) + '" })',
                         "focuswindow address:" + target2)
     })
-  }}
+  }
+
+  // Forget one parked window's recorded place and its pending fix.
+  function dropParkSlot(root, address) {
+    if (!address || !root.parkSlots || root.parkSlots[address] === undefined) return
+    var slots = {}
+    for (var k in root.parkSlots) slots[k] = root.parkSlots[k]
+    delete slots[address]
+    root.parkSlots = slots
+    root.pendingSlotFixes = (root.pendingSlotFixes || []).filter(function(a) { return a !== address })
+  }
+}
