@@ -250,7 +250,6 @@ QtObject {
     root.dragRemoveArmed = cardWrapper.offDockAt(my)
     var idx = root.dragRemoveArmed ? -1 : cardWrapper.rowInsertIndex(mx - card.row.x)
     root.dropRowIndex = idx
-    if (idx >= 0) root.dropIndicatorX = cardWrapper.rowIndicatorX(idx)
   }
 
   function handleGroupDragDropped(root, card, gid) {
