@@ -49,20 +49,11 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 
 ## Open
 
-- Nothing open upstream.
-
-## Not upstream yet
-
-- `feat/nested-plates`: Nested label corners (square between plates, the
-  outer ones rounded along the dock's edge) and plates in split sections.
-- `feat/side-mark-size`: full-size dots and bar in the plates' side
-  indicator column.
-- `feat/spread-fixes`: Both sides ends the right group on the right
-  edge, right-group dividers measure from the card, a stored Both sides
-  without split marks Center in settings.
-- `feat/group-cell-hover`: hover effects on the opened group's icons with
-  the badge riding them; the cells' badges and window marks reach the dock
-  (they read their own null root), plus the self-binding test rule.
+- #51 nested plate corners and plates in split sections (`feat/nested-plates`),
+  #52 full-size side column marks (`feat/side-mark-size`), #53 Both sides
+  follow-ups from #49 (`feat/spread-fixes`, conflicts with #51 on two adjacent
+  lines in DockCard.qml), #54 hover effects in the opened group and its badges
+  and marks reaching the dock (`feat/group-cell-hover`): opened 2026-10-10.
 
 ## Fork only
 
