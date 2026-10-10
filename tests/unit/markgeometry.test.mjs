@@ -26,7 +26,8 @@ test("snap: a size lands on the pixel grid, never below one", () => {
 test("cell: as wide as the widest mark, a dot or the bar", () => {
   assert.equal(G.cell(space(1), 1, false, false), 5)   // 5px dot
   assert.equal(G.cell(space(1), 1, true, false), 4)    // dense
-  assert.equal(G.cell(space(1), 1, false, true), 4)    // side column uses the dense dot
+  assert.equal(G.cell(space(1), 1, false, true), 5)    // side column draws the full dot
+  assert.equal(G.cell(space(1), 1, true, true), 5)     // ...dense or not
   assert.equal(G.cell(space(1), 2, false, false), 5)
   assert.equal(G.cell(space(1.5), 1.5, false, false), 8)   // a denser theme, at 1.5x
 })
@@ -34,7 +35,8 @@ test("cell: as wide as the widest mark, a dot or the bar", () => {
 test("dot: the mark itself, a hairline at the very least", () => {
   assert.equal(G.dot(space(1), 1, false, false), 5)
   assert.equal(G.dot(space(1), 1, true, false), 4)
-  assert.equal(G.dot(space(1), 1, false, true), 4)
+  assert.equal(G.dot(space(1), 1, false, true), 5)
+  assert.equal(G.dot(space(1), 1.5, true, true), 8 / 1.5)   // 8 device px at 1.5x, dense or not
   assert.equal(G.dot(space(1), 4, false, false), 5)
   // A theme too dense to draw a whole pixel still gets 2/dpr.
   assert.equal(G.dot(() => 1, 1, false, false), 2)
@@ -59,8 +61,8 @@ test("spacing and the overflow pill", () => {
 
 test("a plate reserves exactly the cell the row draws the column in", () => {
   // The pair that used to disagree: the label sized the column from its own copy
-  // of the number. A side column draws the dense dot, which is a bar's width, so
-  // the reserved room is one cell at every scale and density. The compact end of
+  // of the number. A side column draws the full dot and its upright bar as thick,
+  // so the reserved room is one cell at every scale and density. The compact end of
   // the range matters: below a spacing scale of about 0.4 Style.space floors a
   // 4 px mark at 1 px while the hairline floor keeps the mark at 2 px, which is
   // where the reserved room and the mark came apart.
@@ -74,7 +76,7 @@ test("a plate reserves exactly the cell the row draws the column in", () => {
     }
   }
   // ...and it is the room plus the plate's own padding that a label measures.
-  assert.deepEqual(plain(G.column(space(1), 1)), { edge: 1, width: 4, gap: 5 })
+  assert.deepEqual(plain(G.column(space(1), 1)), { edge: 1, width: 5, gap: 5 })
 })
 
 test("a mark is never bigger than the cell reserved for it", () => {
@@ -90,8 +92,8 @@ test("a mark is never bigger than the cell reserved for it", () => {
   assert.equal(G.cell(dense, 1, false, true), 2)
   assert.equal(plain(G.column(dense, 1)).width, 2)   // the plate's room holds the mark
   // At 2x the same compact theme the hairline is a whole pixel, so the floor no
-  // longer binds and the cell is the spacing floor again.
-  assert.equal(G.cell(dense, 2, true, true), 1)
+  // longer binds: the column's full dot is 2 px, the bar 1.
+  assert.equal(G.cell(dense, 2, true, true), 2)
   for (const scale of [0.2, 0.3, 0.375, 0.5, 1, 1.25, 1.5, 3]) {
     for (const dpr of [1, 1.25, 1.5, 2, 3]) {
       for (const dense of [false, true]) {
