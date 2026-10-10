@@ -265,7 +265,9 @@ expected = 5 if windows > 5 else max(1, min(windows, 5))
 if mode == "row":
     shape = widths[0] > heights[0] if windows == 1 else max(widths) >= 1.8 * min(widths)
 else:
-    shape = heights[0] > widths[0] if windows == 1 else max(heights) >= 1.8 * min(heights)
+    # A column keeps the full 5 px dot, so the dense upright bar (9 px) is only
+    # 1.75x as tall once both land on the pixel grid at 1.5x.
+    shape = heights[0] > widths[0] if windows == 1 else max(heights) >= 1.6 * min(heights)
 ok = len(marks) == expected and abs(off) <= tol and shape
 line = (f"{item_id} · {windows} window(s) → {len(marks)} mark(s) of {expected} · "
         f"centre {abs(off):.1f} px off the icon's (tol {tol})")
