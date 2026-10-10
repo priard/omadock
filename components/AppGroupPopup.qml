@@ -214,15 +214,19 @@ BorderSurface {
                   contrast: root ? root.iconContrast : 0
                   strength: root ? root.iconStrength : 1
                   showOriginal: root ? (root.iconHoverOriginal && cellMouseArea.containsMouse) : false
+                  hovered: cellHover.hovered && !cellItem.isDragging
                   hoverFx: root ? root.hoverFx : null
-                }
 
-                // Same mark as a dock badge, sitting on the menu surface.
-                BadgeMark {
-                  rootRef: root
-                  anchorRef: cellIcon
-                  count: cellItem.notificationCount
-                  rim: Color.menu.background
+                  // Same mark as a dock badge, on the menu surface; it rides
+                  // the hover effect with the icon, like the dock's.
+                  overlay: [
+                    BadgeMark {
+                      rootRef: root
+                      anchorRef: parent
+                      count: cellItem.notificationCount
+                      rim: Color.menu.background
+                    }
+                  ]
                 }
               }
 
