@@ -43,8 +43,10 @@ finishes before it stops (no snap from 13 px to 0).
 
 1. **`DockMotion.js`** (new, pure, unit-tested): `normalizeLevel(v)`;
    `plan(level)` → `{ level, fast, base, slow, layout, scale, rise, oneShots,
-   reveal, fade }` (Off: all durations 0, all flags false except `fade`
-   false too). Easing constants documented in the file.
+   reveal, fade }`. Full: every flag true. Reduced: `fade` and the
+   durations stay, `layout`, `scale`, `rise`, `oneShots`, `reveal` false. Off:
+   every duration 0 and every flag false. Easing constants documented in
+   the file.
 2. **`Dock.qml`**: `property string animations: "full"` and `readonly property
    var motion: DockMotion.plan(root.animations)`, with two lines moved out of
    Dock.qml so its ceiling holds. Config read/write in `DockConfigLogic`,
