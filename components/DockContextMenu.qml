@@ -715,10 +715,15 @@ BorderSurface {
           }
         }
 
+        // From a cell of an app group the app leaves the group for the dock
+        // instead (pinning an app the group holds would be ambiguous).
         ContextRow {
-          text: (root && root.contextPinned) ? "Unpin from Dock" : "Pin to Dock"
+          text: (root && root.contextAppGroupData) ? "Remove from Group" : (root && root.contextPinned) ? "Unpin from Dock" : "Pin to Dock"
           onTriggered: {
-            if (root) {
+            if (root && root.contextAppGroupData) {
+              root.removeAppFromGroup(root.contextAppGroupData.id, root.contextAppId)
+              root.closeContext()
+            } else if (root) {
               var deskEntry = DockModel.entryFor(root.appRows, root.contextAppId)
               if (!deskEntry && typeof DesktopEntries !== "undefined" && DesktopEntries) {
                 deskEntry = DesktopEntries.heuristicLookup(root.contextAppId) || DesktopEntries.byId(root.contextAppId)
