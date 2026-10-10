@@ -7,6 +7,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
+import "../../DockIcons.js" as DockIcons
 
 // Logic extracted from Dock.qml: stateless functions, the dock root
 // is passed in and owns all state. Bodies are verbatim.
@@ -27,7 +28,7 @@ QtObject {
     if (root.isFolderPinned(path)) return
     var next = (root.pinnedFolders || []).slice()
     var at = (index >= 0 && index <= next.length) ? index : next.length
-    next.splice(at, 0, { path: path, name: name || "Folder", icon: icon || DockModel.folderIconFor(path, "") })
+    next.splice(at, 0, { path: path, name: name || "Folder", icon: icon || DockIcons.folderIconFor(path, "") })
     root.pinnedFolders = next
     root.saveConfig()
   }

@@ -1,4 +1,11 @@
-# Shared by the live tests (sourced).
+# Shared by the live tests that drive the RUNNING dock (sourced).
+#
+# A test that needs wait_ready/omarchy-shell talks to the dock on the owner's
+# desktop: it writes the live config and exercises the code the running dock
+# loaded (the launcher sets QS_DISABLE_FILE_WATCHER=1, so that is the previous
+# release, not this working tree). Prefer tests/live/probe.sh, which runs the
+# plugin's own entry point in a second Quickshell instance against a byte-copy
+# of the config under a redirected HOME - see tests/live/presets.sh.
 
 # Quickshell reloads the plugin whenever any file in its directory changes
 # (a commit, __pycache__, an editor's swap file), and the IPC target is gone

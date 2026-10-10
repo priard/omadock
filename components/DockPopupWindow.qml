@@ -25,6 +25,14 @@ PopupWindow {
   property bool open: false
   property real centerX: 0
   property Item body: null
+  // True while a text field inside the body is being edited: the popup then
+  // has to hold the keyboard itself. Hyprland's focus grab gives the keyboard
+  // to one of the grabbed surfaces, and with several listed the one it
+  // happens to pick is arbitrary (hash order) — and when it picks the dock
+  // window the keystrokes are dropped there, because the dock's layer surface
+  // takes no keyboard. Dropping the dock window from the list while editing
+  // leaves this popup's own surface as the only candidate.
+  property bool holdsKeyboard: false
 
   signal dismissed()
 
@@ -89,7 +97,7 @@ PopupWindow {
   // dismiss area used to.
   HyprlandFocusGrab {
     active: popup.visible
-    windows: popup.dockWindow ? [popup, popup.dockWindow] : [popup]
+    windows: (popup.dockWindow && !popup.holdsKeyboard) ? [popup, popup.dockWindow] : [popup]
     onCleared: popup.dismissed()
   }
 }

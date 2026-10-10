@@ -3,6 +3,19 @@
 # alignment; Both sides sends folders and drives to the right edge; going
 # back to the dock restores it exactly. Backs up omadock.json and restores
 # it on exit. No input.
+#
+# *** INTRUSIVE - this one drives the dock on the OWNER'S DESKTOP. ***
+# It rewrites layout/alignment/splitSections in the live omadock.json (backing
+# it up and restoring it on exit) and it measures the code the running dock
+# LOADED, not this tree - the launcher sets QS_DISABLE_FILE_WATCHER=1. It
+# needs a dock that is really on screen, which is why it is not on
+# tests/live/probe.sh; everything that does not can run there instead (see
+# tests/live/presets.sh).
+#
+# The vertical difference between the two layouts is the shell's outer gap
+# (Style.gapsOut, Hyprland's gaps_out / 2), which the dock's `state` reports:
+# with gaps_out 0 the floating dock is already flush, so "lower" is asserted
+# only where there is a gap to remove.
 set -u
 cd "$(dirname "$0")/../.."
 . tests/live/common.sh
@@ -53,16 +66,26 @@ print(first, last, bottom, rx, ww)" "$ww" "$wh"
 set_cfg dock center false
 dock_before=$(ipc itemGeometry)
 read -r _ _ dock_bottom _ _ < <(measure)
+# The panel's whole point vertically is the outer gap it removes (Style.gapsOut,
+# Hyprland's gaps_out / 2). A desktop that runs edge to edge has none: the dock
+# already sits flush, so the panel can only be as low, never lower.
+gap=$(ipc state | python3 -c "import json,sys; print(json.load(sys.stdin).get('gapsOut', 0))")
+row_gap=$(ipc state | python3 -c "import json,sys; print(json.load(sys.stdin).get('itemGap', 0))")
 
 set_cfg panel left false
 read -r first last bottom rx ww < <(measure)
-[ "$bottom" -lt "$dock_bottom" ] || fail "panel not lower than the dock ($bottom >= $dock_bottom)"
+if [ "$gap" -gt 0 ]; then
+  [ "$bottom" -lt "$dock_bottom" ] || fail "panel not lower than the dock ($bottom >= $dock_bottom)"
+else
+  [ "$bottom" -le "$dock_bottom" ] || fail "panel higher than the dock ($bottom > $dock_bottom)"
+fi
 [ "$first" -le 60 ] || fail "panel left: first icon at $first"
 left_first=$first
 
 set_cfg panel right false
 read -r first last bottom rx ww < <(measure)
 [ $((ww - last)) -le 12 ] || fail "panel right: last icon ends $((ww - last)) px from the edge"
+right_inset=$((ww - last))
 
 set_cfg panel center false
 read -r first last bottom rx ww < <(measure)
@@ -73,7 +96,10 @@ set_cfg panel spread false
 read -r first last bottom rx ww < <(measure)
 if [ "$rx" -ge 0 ]; then
   [ "$first" -le 60 ] || fail "panel spread: first icon at $first"
-  [ $((ww - last)) -le 12 ] || fail "panel spread: last icon ends $((ww - last)) px from the edge"
+  # Both sides rests the right group one row gap short of the right-aligned
+  # place - the spacing the trailing drop gap keeps (DockLayout.spreadGap).
+  tol=$((right_inset + row_gap + 2))
+  [ $((ww - last)) -le "$tol" ] || fail "panel spread: last icon ends $((ww - last)) px from the edge (allowed $tol)"
   [ "$rx" -gt $((ww / 2)) ] || fail "panel spread: folders start at $rx"
 fi
 

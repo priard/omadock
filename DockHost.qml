@@ -78,6 +78,7 @@ Item {
     id: sharedStore
     property var minimizedOrigins: ({})
     property var parkedAt: ({})
+    property var parkSlots: ({})
   }
 
   Variants {
@@ -147,6 +148,12 @@ Item {
         if (d[i].restoreLast()) return
     }
 
+    function restoreAddress(address: string): void {
+      var d = host.orderedDocks()
+      for (var i = 0; i < d.length; i++)
+        if (d[i].restoreAddress(address)) return
+    }
+
     function toggleVisibility(): void {
       var d = host.orderedDocks()
       if (d.length === 0) return
@@ -207,6 +214,33 @@ Item {
       return (id !== "" && d[0].applyPreset(id)) ? "ok" : "not found"
     }
 
+    // The preset list, read-only: every preset the dock holds and which of
+    // them the look on screen matches right now. `builtin: true` marks a look
+    // that ships with the dock (DockPresets.js) rather than one saved in
+    // omadock.json; shipped presets cannot be renamed, updated or removed.
+    function presets(): string {
+      var d = host.orderedDocks()
+      if (d.length === 0) return "[]"
+      var active = d[0].activePresetId
+      return JSON.stringify((d[0].presets || []).map(function(p) {
+        return { id: p.id, name: p.name, active: p.id === active, builtin: p.builtin === true }
+      }))
+    }
+
+    // Saves the look the dock has right now ("Save current look") under a
+    // name; returns the new preset's id, or "" when six are already saved.
+    function savePreset(name: string): string {
+      var d = host.orderedDocks()
+      return d.length > 0 ? String(d[0].savePreset(String(name))) : ""
+    }
+
+    // Removes one preset: "ok", or "not found" when no preset has that id.
+    function deletePreset(id: string): string {
+      var d = host.orderedDocks()
+      if (d.length === 0) return "not found"
+      return d[0].deletePreset(String(id)) ? "ok" : "not found"
+    }
+
     // Read-only: item rectangles of the focused monitor's dock (window
     // coordinates), used by tests/bench/bench.py and the live tests.
     function itemGeometry(): string {
@@ -225,6 +259,8 @@ Item {
         activePreset: d[0].activePresetId || "",
         layout: d[0].layout,
         align: d[0].placement.align,
+        gapsOut: d[0].outerGap,
+        itemGap: d[0].gapWidth,
         items: JSON.parse(d[0].itemGeometry()).length,
         docks: d.length
       })

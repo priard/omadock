@@ -2,7 +2,7 @@ import QtQuick
 import Quickshell
 import qs.Commons
 import qs.Ui
-import "../DockModel.js" as DockModel
+import "../DockLabels.js" as DockLabels
 
 // The open folder stack: a fixed header (Back, folder name, entry count), a
 // scrolling body and a fixed footer. The body is a list ("stack" view) or a
@@ -132,7 +132,7 @@ BorderSurface {
         anchors.rightMargin: Style.space(8)
         anchors.verticalCenter: parent.verticalCenter
         text: ((root ? root.activeStackName : "") || "Folder")
-          + ((root && root.activeStackTotalCount > 0) ? "  (" + DockModel.stackCountLabel(root.activeStackTotalCount, root.activeStackTruncated) + ")" : "")
+          + ((root && root.activeStackTotalCount > 0) ? "  (" + DockLabels.stackCountLabel(root.activeStackTotalCount, root.activeStackTruncated) + ")" : "")
         textFormat: Text.PlainText
         color: Util.alpha(Color.menu.text, 0.7)
         font.family: Style.font.family
@@ -264,7 +264,7 @@ BorderSurface {
     // The listing is capped (scripts/list-folder.py); say so instead of
     // silently truncating.
     ContextRow {
-      readonly property string moreLabel: root ? DockModel.stackMoreLabel(root.activeStackTotalCount, root.activeStackEntries.length, root.activeStackTruncated) : ""
+      readonly property string moreLabel: root ? DockLabels.stackMoreLabel(root.activeStackTotalCount, root.activeStackEntries.length, root.activeStackTruncated) : ""
       visible: moreLabel !== ""
       text: moreLabel + " — open in File Manager"
       onTriggered: {

@@ -14,7 +14,7 @@
 <br />
 
 <p align="center">
-  <img src="assets/preview-desktop.png" alt="omadock on an Omarchy desktop (Ristretto theme) with app, group and folder name labels below the icons" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
+  <img src="assets/preview-desktop.png" alt="omadock on an Omarchy desktop (Ristretto theme) with a btop system monitor maximized above the dock: pinned apps, app groups and folder stacks along the bottom edge, the running marks under the icons whose apps have open windows" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
 </p>
 
 <p align="center">
@@ -68,7 +68,7 @@ To everyone who donates — really, truly, thank you. 🙏
 Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live window previews, app groups, multi-monitor docks. Beautiful, opinionated, and strictly **0.00% background CPU**.
 
 <p align="center">
-  <img src="assets/screenshot-transparent.png" alt="omadock close-up: name labels under the icons over the translucent gradient dock" width="700" />
+  <img src="assets/screenshot-transparent.png" alt="omadock close-up: the running marks - a dot per open window, the focused app's accent bar - dead-centre under their icons on the translucent gradient dock" width="700" />
 </p>
 
 ### ✨ Key Highlights
@@ -365,6 +365,30 @@ The dock follows your Omarchy theme's palette and wallpaper — three of the twe
 omarchy-shell omadock applyPreset "Night"
 ```
 
+### Shipped looks
+
+Seven looks ride with the dock and sit ahead of the presets you save — a fresh install with no `omadock.json` still offers every one of them. A shipped look and a saved preset can never appear as two rows under one name: the list carries a name once, and where they collide the preset you saved keeps it (it is the row you can rename, update or delete), so the shipped look of that name sits that one out rather than the other way round. They are read-only (no Update or Delete, and the name cannot be edited), so removing your own presets never removes them. `DockPresets.js` holds the definitions; the shipped keys are the ones that differ from the defaults, and every other key is filled from `DockModel.DEFAULT_LOOK` when the list is built, so a look key added later cannot leak the value the dock happens to hold.
+
+| Preset | The look | Built from |
+| :--- | :--- | :--- |
+| `thepathless:ristretto` | Dot-matrix icons on a Forest gradient with film grain, long custom dividers, the Glitch hover, and no rim or shadow | The maintainer's own dock |
+| `Glass` | Aurora gradient fill with grain, a rim that stays visible over it, long theme-coloured dividers and the Lift hover | [#13](https://github.com/thepathless/omadock/pull/13), [#45](https://github.com/thepathless/omadock/pull/45), [#17](https://github.com/thepathless/omadock/pull/17), [#19](https://github.com/thepathless/omadock/pull/19) by [@priard](https://github.com/priard) |
+| `Pixel` | Pixel icons on a B/W tint with a coarse grid and the tone controls that keep a poster-like icon readable | [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
+| `Mono` | The transparent dock — icons only, no card, rim or panel — in monochrome with the accent tint and the Glow hover | [#12](https://github.com/thepathless/omadock/pull/12), [#13](https://github.com/thepathless/omadock/pull/13), [#19](https://github.com/thepathless/omadock/pull/19) by [@priard](https://github.com/priard) |
+| `Panels` | Split sections: one panel per dock section over a quiet Mono gradient, with a pixel-snapped gap | [#14](https://github.com/thepathless/omadock/pull/14) and [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
+| `Nameplates` | Names always on, joined to their icon by a plate, with the window marks in the upright column beside the name | [#47](https://github.com/thepathless/omadock/pull/47) by [@priard](https://github.com/priard) |
+| `Silkscreen` | The same names in the bundled Silkscreen pixel font — small, on a pill, drawn with the outline that reads on any fill | [#47](https://github.com/thepathless/omadock/pull/47) by [@priard](https://github.com/priard) |
+
+The same list is scriptable end to end — list it, save the look on screen under a chosen name, remove one by id:
+
+```bash
+omarchy-shell omadock presets                       # [{"id":"…","name":"…","active":true,"builtin":false}]
+omarchy-shell omadock savePreset "Night"           # -> the new preset's id
+omarchy-shell omadock deletePreset <id>             # -> ok | not found
+```
+
+A name that is already taken — by one of your presets or by a shipped look — falls back to `Preset 1`, `Preset 2` and so on, so the call still returns an id. When you save a copy of a shipped look under a name of your own, the row you saved is the one marked `active`; the shipped row answers only when no preset of yours matches the look on screen.
+
 ## 🖱️ Controls Cheat Sheet
 
 | Gesture / Trigger | Target | Action Executed |
@@ -578,6 +602,10 @@ Additional IPC methods available:
 - `openSettings`: Open the settings panel on the focused monitor's dock.
 - `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.
 - `closeSettings`: Close the settings panel.
+- `applyPreset("<name>")`: Apply a saved appearance preset by name; returns `ok` or `not found`.
+- `presets()`: JSON list of every preset the dock holds — the shipped looks and the saved ones — each with `active` set on the one the look on screen matches, and `builtin: true` on a look that ships with the dock.
+- `savePreset("<name>")`: Save the look the dock has right now as a preset; returns its id, or an empty string when six are already saved. Shipped looks do not count against those six.
+- `deletePreset("<id>")`: Remove one saved preset; returns `ok` or `not found` (a shipped look is never removable).
 
 > [!NOTE]
 > The `-p /usr/share/omarchy/shell` flag is mandatory to target the active Omarchy system shell instance.
@@ -614,7 +642,7 @@ Run <code>omarchy restart shell</code> in your terminal to instantly reload the 
 
 ## 🛠️ Diagnostics & Validation
 
-Every pull request runs the test suites, a QML syntax gate, the security grep, a check that the compiled shaders match their sources and the manifest schema check in CI. Pull requests must target the `experimental` branch — `main` only receives verified release batches — and CI enforces the base branch.
+Every pull request runs the test suites, a QML syntax gate, the security grep, the maintainability structure check (file-size cap and logic-module purity), a check that the compiled shaders match their sources and the manifest schema check in CI. Pull requests must target the `experimental` branch — `main` only receives verified release batches — and CI enforces the base branch.
 
 ```bash
 # Validate manifest compliance against Omarchy 4.0.3+ standards
@@ -623,19 +651,55 @@ omarchy plugin validate ~/Projects/omadock
 # Same manifest gate CI runs (a faithful mirror of the command above)
 ./tests/manifest-check.sh .
 
-# Test suites (Node: model, perf, hardening and DockModel behaviour; Python: script helpers, drop check, the CappedFileView read gate)
-node --check DockModel.js
+# Test suites (Node: model, perf, hardening, marks and DockModel behaviour; Python: script helpers, drop check, the QML rules and the CappedFileView read gate)
+node --check DockModel.js && node --check DockLabels.js && node --check DockLayout.js && node --check DockMarks.js && node --check DockMarkGeometry.js
 node --test tests/unit/*.test.js tests/unit/*.test.mjs
 python3 -m unittest discover -s tests/unit -p 'test_*.py'
 
 # Load-time smoke test (probes the running shell)
 ./tests/smoke-test.sh
 
-# Live checks against the running dock (no clicks or keys; they back up
-# and restore omadock.json): every IPC call round-trips, malformed configs
-# neither break the dock nor get rewritten by a save
-./tests/live/ipc-roundtrip.sh
-./tests/live/config-fuzz.sh
+# Live checks that never touch this desktop: they run the plugin's own
+# DockHost.qml in a SECOND Quickshell instance - the tests table below says what
+# that harness is and does, once. Each suite's own header lists what it covers,
+# and each covers a surface the running dock cannot show (it executes the code
+# it loaded). PROBE_CFG_SRC=<file> copies another config in, e.g. a
+# fresh-install one; PROBE_BODY=<file> replaces the body of the probe's
+# ShellRoot with a fixture that reaches inside the dock
+./tests/live/presets.sh
+
+# A session must leave nothing behind: three fresh probe sessions are started
+# and stopped, then their helpers and scratch directories are counted. A dock
+# spawns helpers through Process and they do not exit with the shell - the
+# harness used to leak one per session (80 had accumulated on this desktop)
+./tests/live/teardown.sh
+
+# The label shortening survives its own metrics being destroyed: a real dock
+# label's two TextMetrics are destroyed from outside and reshorten() is called
+# (this is the fault logged at DockLabel.qml:97 in the wild)
+./tests/live/label-metrics.sh
+
+# Live checks against the RUNNING dock on this desktop - INTRUSIVE. They write
+# the live omadock.json in place (backing it up and restoring it) and they
+# drive the code the running dock loaded, not this tree: the launcher sets
+# QS_DISABLE_FILE_WATCHER=1, so a change to these files only reaches them after
+# a restart. Keep them for what a second instance cannot show - real window
+# geometry, the marks on screen, the settings overlay's own state. Prefer the
+# suite above for anything else
+./tests/live/ipc-roundtrip.sh   # opens the full-screen settings overlay
+./tests/live/layout.sh          # rewrites layout/alignment in the live config
+./tests/live/config-fuzz.sh     # writes malformed configs over the live file
+
+# Live check of the running marks: opens its own windows with a terminal
+# emulator this desktop is not already showing, screenshots the dock and
+# measures the ink of each mark against the centre line of the icon it
+# belongs to (exit 2: nothing was measured - a skip is never a pass)
+./tests/live/indicators.sh
+
+# Live check of the tiling-place bookkeeping: opens its own windows on a
+# borrowed workspace, parks and restores them through the dock's IPC, and
+# closes exactly those on the way out
+./tests/live/place-restore.sh
 
 # Performance: CPU, RAM and VRAM in fixed scenarios, dock on/off cost,
 # comparisons and long soak runs (see tests/bench/README.md)
@@ -665,6 +729,7 @@ qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 | `shaders/` | Hover/icon-style fragment shaders with precompiled `.qsb` bundles. |
 | `tests/unit/` | Node and Python unit suites — what CI runs on every PR. |
 | `tests/` | `smoke-test.sh` (live-shell probe) and `manifest-check.sh` (CI manifest gate). |
+| `tests/live/` | Live suites. `probe.sh` is the harness: a second Quickshell instance running this tree's `DockHost.qml` against a byte-copy of the config under a redirected HOME, off screen (autohide, `exclusiveZone: 0`), re-checking the owner's config md5 and shell PID at exit - and `probe_start` returns only once the dock has applied the config copy, so a suite's first read never races the load. Nothing is restarted and nothing is clicked. `presets.sh`, `teardown.sh` (a session leaves no process or directory behind) and `label-metrics.sh` (the shortening search survives its metrics being destroyed, via `PROBE_BODY`) run on it and are the non-intrusive ones; `ipc-roundtrip.sh`, `layout.sh` and `config-fuzz.sh` are marked INTRUSIVE because they drive the dock on this desktop and write the live config (see the note at the top of each). |
 | `assets/` | README imagery. |
 | `.github/workflows/ci.yml` | CI: test suites, QML syntax gate, manifest schema. |
 
@@ -682,6 +747,81 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 ## 📋 Releases & Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.3.4 — 2026-10-09
+
+- **The live harness was leaving litter on the machine it promises not to disturb** — a dock spawns helpers through `Process` (`scripts/drive-removal-watch.py`, the folder scanner) and a helper does not exit with the Quickshell process that spawned it: it is reparented to the user's systemd and keeps polling with no parent. Stopping only the shell therefore leaked **one helper per probe session**, and **80** had accumulated on this desktop before it was noticed. `probe_stop` now kills the probe's whole process group (the session is started with `setsid --fork`, so the group is the shell and everything it spawned) and hunts any descendant that left the group by PID; `probe_cleanup` fails, with the command lines named, if a process of the session or its scratch directory survived. Measured: three sessions leaked three helpers before (with `probe_cleanup` returning 0 throughout), zero after, with the live dock's own helper untouched.
+- **That rule is a test now, not a habit** — `tests/live/teardown.sh` starts fresh sessions, stops them, and counts what is still running afterwards by two independent views: any process left in a session's process group, and any helper that outlived its session (excluding the live dock's own, which must still be there). Run against the previous harness it fails, naming both leaked processes; against this one it passes. Because `probe_cleanup` itself now fails on a survivor, every live suite fails on the next leak instead of accumulating more; `PROBE_BODY` was added to the harness so a test can put its own QML inside the probe's `ShellRoot`.
+- **A queued name shortening could read metrics that were already destroyed** — `components/DockLabel.qml` shortens a tile's name with a search that writes into the label's own `TextMetrics` (`probe.text = t`), and the call is deferred, so it can land in the window where a delegate's children have been destroyed and the label itself has not. There the write is a null dereference. This is not hypothetical: the quickshell logs hold **seven** occurrences today, every one at `DockLabel.qml:97` — `TypeError: Value is null and could not be converted to an object (exception occurred during delayed function evaluation)` — and the live suite's clean-log check failed on one of them. `reshorten()` now returns unless its metrics exist (a no-op on the ordinary path), and `tests/live/label-metrics.sh` manufactures the state on demand with the real dock: it destroys a real label's two `TextMetrics` from outside, proves the deletion landed (the label's children go 9 → 7), and calls `reshorten()`. Without the guard the call throws the exact wild message; with it the call is a no-op and the label keeps the name it had. The same test first pins the ordinary path (a 38-character name really is shortened to `A Deliberately Long`), so a guard that broke shortening could not pass.
+- **Verification** — 180 node + 102 python tests, `node --check` over every root module, `qmllint` with zero errors, the structure and security gates, `omarchy plugin validate`, the manifest check, the shader gate and the dock smoke test, all green; `tests/live/presets.sh` green on both harness paths; `tests/live/teardown.sh` green at three sessions (and red against the previous harness, naming the leaks); `tests/live/label-metrics.sh` red without the guard and green with it, twice. `omadock.json` (md5 `f16967d3…`) and the shell PID (805789) were unchanged throughout, nothing was shown on screen and no shell restart was needed.
+
+### v4.3.3 — 2026-10-09
+
+- **The 4.3.2 fix was only half a fix, and CI said so** — that release removed the gate's staging file from an `EXIT` trap, which covers a killed read on **bash** and not on **dash**. The new leak test failed on the CI runner, where `/bin/sh` is dash: one staging file survived every kill, each holding the content of a watched file, up to that file's ceiling. It reproduces on a real dash (3 of 3 kills leaked under dash, 0 of 3 under bash), and the gate spawns `sh`, so the trap only ever worked on a host whose `/bin/sh` is bash. The trap now names the signals — `TERM INT HUP` alongside `EXIT` — which every POSIX shell runs, and both flavours are clean after it (0 of 3 either way).
+- **The test stopped assuming the host's shell** — the kill test runs against every POSIX shell the machine offers (`sh`, plus `dash` when it is installed; on CI both are dash), so a shell-dependent cleanup cannot pass again by being measured on the wrong shell. It also runs the kill against a `TMPDIR` with a space and against one that cannot be used, and it asserts the staging file is gone in each. Against the gate that shipped as v4.3.2 the test fails on the space (both shells); against this one it passes everywhere.
+- **The gate's script is extracted, never re-typed** — the tests lift the shell script straight out of `CappedFileView.qml` so they exercise what the dock runs. The extractor took only single-quoted elements, which would have quietly dropped any line written the other way and left the rest passing; it now reads both quote styles and unescapes them, and the older `CappedFileView` case in `tests/unit/test_helpers.py` shares that one extractor instead of carrying its own.
+- **The cleanup command is expanded, not pasted together** — the trap body had the staging file's path interpolated into it, so the shell re-read the finished string as a command line: a `TMPDIR` holding a space split the path into two names and `rm` removed neither, leaking one staging file per killed read for the hosts that name such a directory. The path is now quoted inside the payload and expanded when the trap runs, so it is never re-parsed — a space, either quote character, a missing or unwritable `TMPDIR` all clean up (the kill was repeated across all of those shapes: no staging file left behind in any, and the killed read still answers 2, so nothing is applied).
+- **Note on process** — v4.3.2 was published while its CI run was red, which is the one thing a release gate exists to prevent. The failure was a real defect rather than a flaky test, so the release stands as a correction rather than a re-tag, and its GitHub release notes carry a line pointing here. The other 4.3.2 changes — the `TMPDIR` fallback, the harness process filter, the six-preset config — were verified again here and are unchanged.
+- **Verification** — 180 node + 102 python tests (the python suite also run with a real `dash` on `PATH`, so both shells are covered locally), `node --check` over every root module, `qmllint` with zero errors, the structure and security gates, `omarchy plugin validate`, the manifest check and the dock smoke test, all green. The live suite passes on the maintainer's config, a fresh install and a maximum-six-presets config; two 30-round save/delete storms leave **0 staging files**, and the 20-round storm reports 0 anomalies and 0 parse failures with `omadock.json` (md5 `f16967d3…`) and the shell PID unchanged.
+
+### v4.3.2 — 2026-10-09
+
+- **Two defects in the read path v4.3.1 introduced, both found by an adversarial pass over that release** — (1) the staging file the new gate uses leaked whenever a read was killed part-way. `CappedFileView.reload()` stops an in-flight gate when a newer read supersedes it, so every superseded read could leave a file behind — measured 6 of 6 under a controlled kill, each one holding the content of a watched file (up to the file's ceiling, 1 MiB for the config). The gate now removes its staging file from a trap, so a killed read cleans up exactly like a finished one; a SIGKILL cannot be caught, but then nothing survives to read it. (2) A temporary directory that cannot be written turned every read into "nothing happened" — which switches the dock off its own config: no edit applies, and a restart would come up on defaults. An unusable `TMPDIR` is enough to do it. Staging now falls back to `/tmp`.
+- **The boundaries are pinned now, not assumed** — `tests/unit/test_capped_gate.py` grew from 5 to 10 tests covering the cases the pass walked through: an empty file reads as empty rather than as a refusal, a file four megabytes over a 64 KiB ceiling is refused without being read whole, an unreadable file is refused, an unusable temporary directory still reads, and a read killed mid-way leaves nothing behind. Run against the gate that shipped as v4.3.1, three of them fail — the leak and both temporary-directory cases — which is what makes them regression tests rather than decoration.
+- **Two defects in the test harness the same release added** — the probe harness reported the owner's own dock as one of its leftover processes when it had never started (a bare `pgrep` with an empty directory matched `quickshell -n -p /usr/share/omarchy/shell`), and the preset suite turned red on an ordinary config that already held the maximum six saved presets. The harness now identifies its processes only once it has a directory, and the suite makes room on its disposable copy (printed as `(six presets already saved - removed preset_0 from the copy)`) instead of weakening the save assertion.
+- **Verification** — 180 node + 102 python tests, `node --check` over every root module, `qmllint` with zero errors, the structure and security gates, `omarchy plugin validate`, the manifest check and the dock smoke test, all green. The live suite passes on the maintainer's config, on a fresh install and on a config holding the maximum six saved presets; the 20-round save/delete storm reports **0 anomalies, 0 parse failures and 0 runtime errors**, and no staging file or probe directory is left behind. `omadock.json` (md5 `f16967d3…`) and the running shell's PID were unchanged in every run — no shell restart.
+
+### v4.3.1 — 2026-10-09
+
+- **A config read that caught the file mid-write handed the dock a truncated document** — the pre-read gate behind every watched file sized the path, then read exactly that many bytes. `omadock.json` is written atomically (a temporary file and one rename) and it grows as you work, so a rename landing between the two steps made the gate emit the first `len(old)` bytes of the **new** file — a prefix of a JSON document, which is not JSON. The dock's answer to a parse failure is defaults, so the list of presets it holds in memory emptied right after one was saved and the look fell back with it; the file on disk was always intact. It showed up as a live test that failed roughly one round in three with `Failed parsing omadock.json` in the dock's log. The gate now reads **at most one byte past the ceiling and counts what actually came out**: a file replaced mid-read is emitted whole instead of as a prefix of itself, and a file over the cap is still refused the same way it was (nothing enters the shell beyond the ceiling). Pinned by `tests/unit/test_capped_gate.py`, which slows the read, replaces the file with a longer one inside that window through a real rename, and demands the whole new document — it answers `{"autohide": true,` without the fix.
+- **A read older than the dock's own write is no longer applied** — the write is asynchronous even though the file is replaced in one step, so a read that started before it could land after it holding the file as it was: a preset that had just been saved disappeared from the list, pins that had just been made came back. The read layer now remembers the content of its own last write and holds back any read that does not carry it, asking again a bounded number of times (four, well under half a second) so **an edit made outside the dock still wins** — the live suite fails if one stops landing, which is the case a hold-off like this can break. Both failures are the same shape: content that is true of a file the dock wrote, applied at the wrong moment.
+- **The live preset surface now has its own suite, and it does not touch this desktop** — `tests/live/presets.sh` runs on the non-intrusive harness (`tests/live/probe.sh`, usable by any suite; the tests table describes it once, with the hooks it takes). It covers `presets()` shape (one row per name, no name both shipped and saved, every saved preset listed), `applyPreset` **by name** for every shipped look including `Nameplates` and `Silkscreen` with their label keys read back out of the config, the id-is-not-a-name trap, `deletePreset` `ok`/`not found` with the config rewrite, save-then-remove leaving every other preset and config key untouched, a hostile 10 000-character preset name stored bounded at 40 characters and stripped of control and bidi characters, an outside edit still reaching the dock, and a clean log. This is why the dock no longer executes stale code under test: the launcher runs Quickshell with QML watching off, so driving the running dock tests the **previous** release. `ipc-roundtrip.sh`, `layout.sh` and `config-fuzz.sh` remain for what a second instance cannot show and are now marked INTRUSIVE at the top of each.
+- **Verification** — 180 node + 97 python tests, `node --check` over every root module, `qmllint` with zero errors, the structure and security gates, `omarchy plugin validate`, the manifest check and the dock smoke test, all green; the new live suite passes on the owner's config and on a fresh install (`PROBE_CFG_SRC`), and the 20-round save/delete storm that exposed the torn read now reports **0 anomalies and 0 parse failures** (it was 6 anomalies with parse failures before). `omadock.json` (md5 `f16967d3…`) and the running shell's PID were unchanged in every run, with no probe process or temporary directory left behind — no shell restart, and the desktop keeps running the code it loaded until its next restart.
+
+### v4.3.0 — 2026-10-09
+
+- **Two looks that show the names, because that is the look the pull-request record asked for** — the dock has carried name labels since [#47](https://github.com/thepathless/omadock/pull/47) (names beside the icons, a `Plate` that joins icon and name into one button, the window marks in an upright column, a bundled Silkscreen pixel font, ink that reads on any fill), and a preset has been able to hold all thirteen label keys the whole time — but not one of the five shipped looks turned them on, so the only way to see any of it was to build it by hand in Settings. Two shipped looks now do: **`Nameplates`** (names always on, joined by a plate, marks in the upright column) and **`Silkscreen`** (the same names in the pixel font, small on a pill, outlined), both read-only like every shipped look and both credited to [@priard](https://github.com/priard). Applying one is a click in *Settings → Presets* or the dock's right-click menu, and the label keys are applied through `DockLabels.pickLabelLook`, exactly as a saved preset's are.
+- **What the record did *not* support, so it is not shipped** — panel layout ([#49](https://github.com/thepathless/omadock/pull/49)) is not a look key (`LOOK_KEYS` has no `layout`), so a preset holding it would silently do nothing; it stays a placement setting reachable from any look. [#13](https://github.com/thepathless/omadock/pull/13)'s "Zen / Arc-style gradient" has no matching gradient — `Dock.qml`'s palette is fixed (aurora, sunset, ocean, forest, rose, lavender, ember, citrus, mono and the theme) — and Wave magnification and launch bounce ([#2](https://github.com/thepathless/omadock/pull/2)) are motion, not a look. Inventing a look to fill the gap would be worse than five.
+- **A shipped look's label values are now pinned by a test** — `pickLabelLook` keeps a label value only when it is one the labels accept and otherwise falls back to what the dock already holds, so a misspelled enum in a shipped look would ship a look that does nothing. `tests/unit/shippedpresets.test.mjs` now checks every label key of every shipped look against the label lists, and asserts at least one look shows names.
+- **Deleting a preset, proved on the real surface** — remove one over IPC against a copy of a live config and the list shrinks by exactly that row (7 → 5 for two removals), the other presets and all 93 config keys survive, no shipped look is written into `omadock.json`, a shipped look and a repeat removal both answer `not found`, and removing the preset the look on screen matches hands the active mark to the shipped look of that name. `omadock.json` (md5 `f16967d3…`) and the running shell's PID were unchanged throughout — no shell restart.
+- **Verification** — 180 node + 95 python tests, `node --check` over every root module, `qmllint` with zero errors, the structure and security gates, `omarchy plugin validate`, the manifest check and the dock smoke test, all green.
+
+### v4.2.3 — 2026-10-09
+
+- **The dock's biggest file got 203 lines smaller, without changing a thing it does** — `DockModel.js` is a composition root, and a composition root here may only shrink over time. Three groups of functions that nothing else in the file called have moved to the modules that own their concern, each move leaving the code itself untouched: the icon helpers (a folder path's icon name, a removable drive's icon, the icon-index parse, and the place/mimetype resolution a file in a folder stack shows) now live in **`DockIcons.js`**, and the three label text formatters (the workspace tooltip label, a folder stack's count and its "more" line) live in **`DockLabels.js`**. `DockModel.js` went 1529 → 1326 lines and its ceiling was lowered with every move, so it can never quietly grow back. Every caller now imports the module that owns the function, and the values each moved function produces are pinned by tests written against the old code before the move — the Yaru place paths and the monochrome Adwaita fallback that keeps vantablack and white themes black-and-white, the mimetype fallbacks, the "5+" capped count, "+ 7+ more", and a workspace with no number printing nothing.
+- **The two `thepathless:ristretto` rows on this desktop were a stale screen, not a bug in the list** — the duplicate was fixed in v4.2.1, but this machine runs Quickshell with QML file watching disabled, so a running dock keeps the code it loaded and only shows a fix after the next shell restart. Checked against the owner's own `omadock.json`: today's code lists **7 rows with one `thepathless:ristretto`** — the saved preset, marked active, with the shipped copy of that name stepping aside — and no duplicate names at all.
+- **Verification** — 179 node + 95 python tests, `qmllint` with zero errors, `node --check` over every root module, the structure and security gates, `omarchy plugin validate`, the manifest check and the dock smoke test, all green. The runtime proof ran a second Quickshell instance over this tree against a copy of the owner's config, with the owner's desktop untouched: the dock mapped, answered `state` and `presets()`, and logged no exceptions, while `omadock.json` (md5 `f16967d3…`) and the running shell's PID were unchanged.
+
+### v4.2.2 — 2026-10-09
+
+- **The preset row you saved keeps the active mark** — a saved preset and a shipped look can be key-for-key equal without sharing a name (the copy of a shipped look you save under a name of your own), and the shipped looks lead the list. The plain first match the dock used lit up the read-only shipped row and left your own editable copy reading as inactive. The choice now lives in `DockPresets.activeId()`: the row the user saved wins the tie and a shipped look answers only when no preset of yours matches. `Dock.qml` delegates to it, which also moves five lines out of the composition root (ratchet 2418 → 2412).
+- **The live preset guard asserts the rule, not more** — it failed on *any* repeated name, so a hand-edited or restored `omadock.json` holding `Mine` and `mine` turned the round-trip test red over data this release never changed. It now fails only when one name is a shipped look and a saved preset at once — the bug it was written for — and still fails when a saved preset is missing from the list, so it stays closed on both halves of that bug.
+- **Docs** — the `savePreset` example no longer asks for a name a shipped look already holds (a taken name falls back to `Preset 1`, `Preset 2`, …), and the `presets()` payload in the example shows the `builtin` field it documents.
+
+### v4.2.1 — 2026-10-09
+
+- **One row per preset name** — a preset saved before a look of the same name shipped (so the saved one did not exist yet, and saving refuses a name that is taken) was listed beside it, which read as the dock showing a duplicate. The preset list now carries a name once, and the collision rule lives where the list is built: `DockPresets.merge()` drops a shipped look whose name a saved preset holds. The saved preset is the one that keeps the name, because it is the row you can rename, update or delete — hiding it instead would spend one of your six slots on a row you cannot see, and rewriting or deleting it to settle a name would throw away a preset you made. Nothing in `omadock.json` is touched: the saved entry stays exactly as it is, and a fresh install, which has no saved presets, still offers every shipped look.
+
+### v4.2.0 — 2026-10-09
+
+- **Five looks ship with the dock** — `thepathless:ristretto` (the maintainer's own look), **Glass**, **Pixel**, **Mono** and **Panels** are always in the preset list, ahead of the presets you save, so a fresh install with no `omadock.json` still offers every one of them. They are read-only (no Update or Delete, and the name cannot be edited) and `presets()` marks them `builtin: true`. `DockPresets.js` holds the definitions — each one the keys that differ from `DockModel.DEFAULT_LOOK`, every other key filled from the defaults when the list is built — and the looks are made of vocabulary this repository's pull requests contributed: transparency and the panel switches (#12), the gradient fill, film grain, the pixel/dots/mono icon styles and the tone controls (#13), split sections (#14), theme-coloured dividers (#17), the Lift, Glow and Glitch hover effects (#19) and the rim that stays visible over a gradient (#45). `DockConfigLogic` merges them in front of the saved presets on load and writes only the saved ones back, so a shipped look never lands in a user's config.
+- **The preset list is scriptable end to end** — `presets()`, `savePreset("<name>")` and `deletePreset("<id>")` join `applyPreset()` on the IPC surface: save the look the dock has right now under a name, list what is there, remove one by id (the round-trip lives in `tests/live/presets.sh`, which runs it in a second Quickshell instance and never touches this desktop). Shipped looks do not count against the six saved presets and are never removable.
+- **Selecting a preset no longer parks the dock over the active window's bottom edge** — the card lifts by the room its drop shadow needs, and the panel's reserved band did not include that lift, so on any shadow-enabled look the card's top edge sat a few pixels inside window space and covered the bottom of whatever was underneath. The band now includes the shadow room (`Dock.qml`), the window keeps its full height, and the dock's own look is unchanged — measured live, a preset that turns the shadow on grows the reserved band 58 → 64 px with the card's top edge landing exactly on the band boundary.
+- **Verification** — 170 node + 95 python tests, `qmllint` with zero errors, the structure and security gates, `omarchy plugin validate` and the manifest check, the live IPC round-trip (save → list → apply → remove, shipped looks included) and the dock smoke test, all green on this release; the shipped `thepathless:ristretto` matches the maintainer's live look on all fifty look keys.
+
+### v4.1.1 — 2026-10-09
+
+- **Selecting a preset no longer parks the dock over the active window's bottom edge** — the card lifts by the room its drop shadow needs, and the panel's reserved band did not include that lift, so on any shadow-enabled look the card's top edge sat a few pixels inside window space and covered the bottom of whatever was underneath (most visibly after choosing a preset). The reserved band now includes the shadow room (`Dock.qml`), so the window keeps its full height and the dock's own look is unchanged. Measured live: on a preset apply the reserved band grew 62 → 68 px while the window's bottom border stayed fully visible (0 → 720 border pixels inside the dock's columns).
+
+### v4.1.0 — 2026-10-09
+
+- **Name labels** (thanks [@priard](https://github.com/priard), #47) — every app, app group, folder and drive can carry its name beside the icon: `Always` keeps them out, `On hover` slides one out over its neighbours on an opaque pill after a short rest on the icon. Always-on names take a `Pill` behind the text or a `Plate` that joins icon and name into one button, with the window marks in an upright `Before icon` / `After name` column, a bundled Silkscreen pixel font, ink that reads on any fill, and **Rename…** in the right-click menu (blank restores the default).
+- **Panel layout and Both sides alignment** (thanks [@priard](https://github.com/priard), #49) — `"layout": "panel"` spans the bottom edge as one full-width bar whose icons follow `center`, `left`, `right` or `spread`; Both sides sends the pinned folders and drives to the right edge. Split sections, drag gaps and dividers follow the placement, and the read-only `state` IPC reports the layout for scripts and tests.
+- **Presets keep their shape over time** (thanks [@priard](https://github.com/priard), #48) — a preset saved before a look key existed now carries that key's default, so applying an old preset no longer leaves the key at whatever the dock happens to hold.
+- **A parked window comes back to its workspace and its place** (thanks [@lordwotton29](https://github.com/lordwotton29), #50) — parking records the workspace's rectangles before the move and puts each window back on restore (exchanging windows when Hyprland rebuilt the tree differently), the restore target follows the **Restore on** setting (`Current workspace` or `Original workspace`), and the folder section can hold **command buttons** beside the pinned folders (`pinnedButtons`, bounded and shape-checked like the rest of the config).
+- **Dock internals** — `Dock.qml` handed its behaviour to `components/logic/` modules; app groups scroll-cycle their member preview on the wheel and focus a member on click; the manifest description leads with "Dock for Omarchy" so marketplace search finds it.
+- **Running marks sit dead-centre under their icon** — the marks row declared eight grid slots for at most five marks, and a grid reserves a gap for every slot it declares, so a lone dot or accent bar sat half a gap (2 px) left of the icon it belongs to; the row now settles its mark count in one place (`DockMarks.js`), which its dots, its grid and the overflow pill all read, how big a mark is and how much room a label plate reserves have the same single owner (`DockMarkGeometry.js`), which the row, the indicators and the plate all read, and a live test measures the marks' ink against their icons in the four shapes they take (a lone accent bar, the bar beside a dot, the upright column on a plate, and the pill past five windows). A mark is never bigger than the cell reserved for it either: the cell **is** the widest mark a row draws, so the hairline floor that keeps a mark visible has a single owner and a compact theme shrinks a mark and its cell together (`tests/unit/markgeometry.test.mjs` pins the pair across the compact scale too).
+- **Verification** — the live suite now runs against the desktop it is on: the layout test derives its panel/edge thresholds from the shell's own outer gap and row spacing (reported by `state`), and the place test pins the two settings it asserts. Verified on this desktop: 164 node + 95 python tests, `qmllint`, `omarchy plugin validate`, config fuzz, IPC round-trip, layout, place-restore and indicator live tests, dock smoke test, and 2–3 jiffies / 6 s idle across three steady-state windows.
 
 ### v4.0.3 — 2026-10-04
 

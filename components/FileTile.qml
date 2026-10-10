@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Effects
 import Quickshell
 import qs.Commons
-import "../DockModel.js" as DockModel
+import "../DockIcons.js" as DockIcons
 
 // One entry in a folder stack's grid view: a large icon, or a preview when
 // the entry has one (images themselves, or a thumbnail a file manager already
@@ -30,7 +30,7 @@ Item {
   readonly property string fileUri: "file://" + tile.path.split("/").map(encodeURIComponent).join("/")
   readonly property string resolvedIconSource: {
     var _tv = tile.themeVersion
-    return DockModel.resolveFileItemIcon(tile.icon, tile.currentIconThemeName, tile.folderColor, tile.appLibrary || null)
+    return DockIcons.resolveFileItemIcon(tile.icon, tile.currentIconThemeName, tile.folderColor, tile.appLibrary || null)
   }
   readonly property bool isIconSymbolic: resolvedIconSource.indexOf("symbolic") >= 0
   readonly property bool hasPreview: tile.thumb !== "" && preview.status !== Image.Error

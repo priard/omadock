@@ -1,6 +1,8 @@
 import QtQuick
 import qs.Commons
 import qs.Ui
+import "../DockMarks.js" as DockMarks
+import "../DockMarkGeometry.js" as DockMarkGeometry
 
 // The running-indicator row under a dock item: one mark per window — the
 // focused window's mark turns into the accent bar, parked windows become
@@ -32,18 +34,24 @@ Item {
   // Passed to each mark (DockIndicator.moveKey).
   property real moveKey: 0
 
-  readonly property int totalWindowCount: (marks.windows && marks.windows.length > 0) ? marks.windows.length : (marks.running ? 1 : 0)
-  readonly property int maxVisibleDots: marks.totalWindowCount > 5 ? 4 : Math.min(marks.totalWindowCount, 5)
-  readonly property bool dense: marks.totalWindowCount >= 5
-  // Sizes on the output's pixel grid (see DockIndicator), so a dot and the
-  // accent bar share one centre line: each mark sits in a cell as wide
-  // across the row (or column) as the largest mark, centred by whole
-  // device pixels. Left to the Grid, the half-pixel offset rounded the bar
-  // against one side of the dots.
+  // How many marks this item has, and how the row draws them, is policy: it
+  // comes from DockMarks.js, which the unit tests pin. The dots the repeater
+  // repeats, the slots the Grid declares, the pill's visibility and the count
+  // it shows all read this one plan, so a declared slot can never outnumber a
+  // drawn mark: a Grid reserves a gap for every slot it declares, and a spare
+  // one shifted a lone dot (or accent bar) half a gap - 2 px - off the icon's
+  // centre.
+  readonly property var plan: DockMarks.plan(marks.windows, marks.running)
+  // How big a mark is, and how much room it needs, is policy too: it comes from
+  // DockMarkGeometry.js, which the unit tests pin, and the indicators and the
+  // label's reserved room read the same module. Sizes are on the output's pixel
+  // grid (see DockIndicator), so a dot and the accent bar share one centre
+  // line: each mark sits in a cell as wide across the row (or column) as the
+  // largest mark, centred by whole device pixels. Left to the Grid, the
+  // half-pixel offset rounded the bar against one side of the dots.
   readonly property real dpr: marks.root ? marks.root.outputScale : 1
-  function snap(v) { return Math.max(1, Math.round(v * marks.dpr)) / marks.dpr }
-  readonly property real cross: Math.max(marks.snap(Style.space((marks.dense || marks.vertical) ? 4 : 5)), marks.snap(Style.space(4)))
-  readonly property real dynamicSpacing: marks.snap(marks.dense ? Style.space(2) : Style.space(3))
+  readonly property real cross: DockMarkGeometry.cell(Style.space, marks.dpr, marks.plan.dense, marks.vertical)
+  readonly property real dynamicSpacing: DockMarkGeometry.rowSpacing(Style.space, marks.dpr, marks.plan.dense)
 
   visible: marks.running
   width: indicatorRow.width
@@ -62,14 +70,14 @@ Item {
   Grid {
     id: indicatorRow
     spacing: marks.dynamicSpacing
-    columns: marks.vertical ? 1 : 8
-    rows: marks.vertical ? 8 : 1
+    columns: marks.vertical ? 1 : marks.plan.slots
+    rows: marks.vertical ? marks.plan.slots : 1
     flow: marks.vertical ? Grid.TopToBottom : Grid.LeftToRight
     horizontalItemAlignment: Grid.AlignHCenter
     verticalItemAlignment: Grid.AlignVCenter
 
     Repeater {
-      model: marks.maxVisibleDots
+      model: marks.plan.dots
       // Active window: accent bar; open window: dot; minimized: hollow dot.
       delegate: Item {
         id: cell
@@ -89,7 +97,7 @@ Item {
           vertical: marks.vertical
           inkOverride: marks.markInk
           kind: cell.winActive ? "active" : (cell.winMinimized ? "minimized" : "window")
-          dense: marks.dense
+          dense: marks.plan.dense
           urgent: marks.urgent
           pulse: marks.pulse
           moveKey: marks.moveKey
@@ -99,9 +107,9 @@ Item {
 
     // Compact overflow pill when 6+ windows are open
     Rectangle {
-      visible: marks.totalWindowCount > 5
-      width: overflowText.implicitWidth + Style.space(4)
-      height: Style.space(5)
+      visible: marks.plan.overflow
+      width: DockMarkGeometry.pillWidth(Style.space, overflowText.implicitWidth)
+      height: DockMarkGeometry.pillHeight(Style.space)
       radius: (marks.root && marks.root.indicatorSquare) ? 0 : height / 2
       color: Util.alpha(marks.root ? marks.root.dockForeground : Color.bar.text, 0.20)
       border.color: Qt.rgba(0, 0, 0, 0.35)
@@ -110,7 +118,7 @@ Item {
       Text {
         id: overflowText
         anchors.centerIn: parent
-        text: "+" + (marks.totalWindowCount - marks.maxVisibleDots)
+        text: "+" + (marks.plan.total - marks.plan.dots)
         textFormat: Text.PlainText
         color: marks.markInk.a > 0 ? marks.markInk : (marks.root ? marks.root.dockForeground : Color.bar.text)
         font.family: Style.font.family

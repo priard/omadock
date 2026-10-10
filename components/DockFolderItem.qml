@@ -3,7 +3,7 @@ import QtQuick.Effects
 import Quickshell
 import qs.Commons
 import qs.Ui
-import "../DockModel.js" as DockModel
+import "../DockIcons.js" as DockIcons
 
 Item {
   id: fitem
@@ -12,6 +12,12 @@ Item {
   readonly property var root: rootRef
 
   property string folderPath: ""
+  // A pinned slot with a command is a button, not a folder: the click runs the
+  // command and no file listing is built for it.
+  property string command: ""
+  readonly property bool isButton: fitem.command !== ""
+  // What this slot opens: a button opens nothing.
+  readonly property string activeFolderPath: fitem.isButton ? "" : fitem.folderPath
   property string name: ""
   property string icon: "folder"
   property real homeCenter: 0
@@ -39,7 +45,8 @@ Item {
   }
 
   signal openStackRequested(string path, string name, real cx, real cy)
-  signal menuRequested(string path, string name, real cx, real cy)
+  // command: "" for a folder, the button's own command for a button slot.
+  signal menuRequested(string path, string name, real cx, real cy, string command)
   signal dragStarted(string path)
   signal dragMoved(string path, real x, real y)
   signal dragDropped(string path)
@@ -56,7 +63,9 @@ Item {
     height: parent.height
   }
 
-  readonly property bool isOpen: root ? root.activeStackFolder === fitem.folderPath : false
+  // A button never opens a stack, and two empty strings must not count as
+  // a match (that lit the "open" indicator under every button).
+  readonly property bool isOpen: root ? (fitem.activeFolderPath !== "" && root.activeStackFolder === fitem.activeFolderPath) : false
 
   property real magnifyScale: {
     if (!root) return 1
@@ -67,7 +76,7 @@ Item {
 
   readonly property string resolvedSource: {
     var _tv = root ? root.themeVersion : 0
-    return DockModel.resolveThemedFolderIcon(fitem.icon, root ? root.currentIconThemeName : "Yaru", root ? root.folderColor : "theme", root ? root.appLibrary : null)
+    return DockIcons.resolveThemedFolderIcon(fitem.icon, root ? root.currentIconThemeName : "Yaru", root ? root.folderColor : "theme", root ? root.appLibrary : null)
   }
   readonly property bool isSymbolic: resolvedSource.indexOf("-symbolic.svg") >= 0 || resolvedSource.indexOf("symbolic") >= 0
   // On a label plate a symbolic icon takes the label's ink, which reads on the plate.
@@ -170,16 +179,23 @@ Item {
     cursorShape: dragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
     mapTarget: root ? root.dockCard : null
 
-    onDragStarted: fitem.dragStarted(fitem.folderPath)
-    onDragMoved: function(x, y) { fitem.dragMoved(fitem.folderPath, x, y) }
-    onDragFinished: fitem.dragDropped(fitem.folderPath)
+    // A button is not a folder: it is not dragged around the folder row.
+    onDragStarted: if (!fitem.isButton) fitem.dragStarted(fitem.folderPath)
+    onDragMoved: function(x, y) { if (!fitem.isButton) fitem.dragMoved(fitem.folderPath, x, y) }
+    onDragFinished: if (!fitem.isButton) fitem.dragDropped(fitem.folderPath)
 
     onTapped: function(mouse) {
       var targetWin = root ? root.contentItemRef : null
+      if (mouse.button === Qt.LeftButton && fitem.isButton) {
+        // argv form, as the folder popup does with xdg-open; the command comes
+        // from the user's own config and is length-bounded in DockModel.
+        Quickshell.execDetached(["sh", "-c", fitem.command])
+        return
+      }
       if (mouse.button === Qt.RightButton) {
         var mappedPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!mappedPos) return
-        fitem.menuRequested(fitem.folderPath, fitem.name, mappedPos.x, 0)
+        fitem.menuRequested(fitem.folderPath, fitem.name, mappedPos.x, 0, fitem.command)
       } else {
         var centerPos = targetWin ? fitem.mapToItem(targetWin, fitem.iconCenterX, 0) : null
         if (!centerPos) return
@@ -204,7 +220,7 @@ Item {
   // Hover tooltip — uses our own HoverTooltip so textFormat: Text.PlainText is enforced.
   HoverTooltip {
     dockRoot: root
-    text: fitem.name + " (Folder)"
+    text: fitem.isButton ? fitem.name : (fitem.name + " (Folder)")
     hovered: area.containsMouse
     blocked: (!root || !root.showTooltips || root.activeStackFolder !== "")
       || (root && !root.labelTooltipNeeded("folder", false, false, label.shortened))

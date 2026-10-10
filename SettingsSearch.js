@@ -73,6 +73,8 @@ var SETTINGS_SEARCH = [
   { key: "autohide", page: "behavior", label: "Autohide", terms: ["hide", "reveal", "visibility", "intelligent"] },
   { key: "revealDelay", page: "behavior", label: "Reveal delay", terms: ["autohide", "delay"] },
   { key: "minimizeMode", page: "behavior", label: "Minimize on click", terms: ["park", "click"] },
+  { key: "restoreWorkspace", page: "behavior", label: "Restore on", terms: ["minimize", "park", "windows", "origin"] },
+  { key: "restoreSlot", page: "behavior", label: "Restore original slot", terms: ["minimize", "park", "position", "layout"] },
   { key: "keepPointer", page: "behavior", label: "Keep pointer in place", terms: ["mouse", "cursor"] },
   { key: "wheelStepDelay", page: "behavior", label: "Wheel step delay", terms: ["scroll", "wheel"] },
   { key: "badges", page: "behavior", label: "Notification badges", terms: ["badge", "notification", "count", "dot"] },

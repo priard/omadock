@@ -297,7 +297,8 @@ QtObject {
   }
 
   function restoreContextTile(root) {
-    root.restoreWindowBatch(root.contextTileWins || [])
+    // "Restore here" means the workspace you are on, whatever the config says.
+    root.restoreWindowBatch(root.contextTileWins || [], null, false)
   }
 
   function restoreContextTileOriginal(root) {

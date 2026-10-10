@@ -7,6 +7,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
+import "../../DockIcons.js" as DockIcons
 import "../../DockLabels.js" as DockLabels
 
 // Logic extracted from Dock.qml: stateless functions, the dock root
@@ -136,10 +137,14 @@ QtObject {
     })
   }
 
-  function openFolderContext(root, path, name, cx, cy) {
+  function openFolderContext(root, path, name, cx, cy, command) {
     root.closeFolderStack()
     root.contextFolderPath = path
     root.contextFolderName = name || "Folder"
+    // A command button is not a folder: the rows below act on a path it does
+    // not have, and unpinning it drops a pinnedButtons entry instead.
+    root.contextIsButton = (command || "") !== ""
+    root.contextButtonCommand = command || ""
     root.contextX = cx
     root.contextY = cy
     root.contextAppId = "__folder_context__"
@@ -221,7 +226,7 @@ QtObject {
       }
     }
     if (!found) {
-      next.push({ path: path, name: name || "Folder", icon: icon || DockModel.folderIconFor(path, "") })
+      next.push({ path: path, name: name || "Folder", icon: icon || DockIcons.folderIconFor(path, "") })
     }
     root.pinnedFolders = next
     root.saveConfig()
@@ -233,6 +238,24 @@ QtObject {
     if (next === root.pinnedFolders) return
     root.pinnedFolders = next
     root.saveConfig()
+  }
+
+  // Unpinning a command button drops the pinnedButtons entry its tile was
+  // drawn from: there is no folder path to unpin. Matched by the name and
+  // command the menu was opened with; identical entries are one button.
+  function unpinButton(root, name, command) {
+    var list = root.pinnedButtons || []
+    var next = []
+    var removed = false
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i]
+      if (!removed && b && b.name === name && b.command === command) { removed = true; continue }
+      next.push(b)
+    }
+    if (!removed) return false
+    root.pinnedButtons = next
+    root.saveConfig()
+    return true
   }
 
   function moveFolder(root, path, insertIndex) {

@@ -5,6 +5,7 @@ import qs.Commons
 import qs.Ui
 import "logic"
 import "../DockModel.js" as DockModel
+import "../DockIcons.js" as DockIcons
 import "../DockLabels.js" as DockLabels
 import "../DockLayout.js" as DockLayout
 
@@ -102,8 +103,8 @@ Item {
 
   // With shadows on, the card lifts by the room the drop shadow needs below
   // it (the gapsOut margin the layout already models); without one it sits
-  // where it always has. The window's height and the reserved screen space
-  // do not change — the shadow only overlaps what is underneath.
+  // where it always has. The panel's reserved band carries the same lift
+  // (Dock.qml exclusiveZone), so the card's top edge never crosses into it.
   readonly property real shadowRoom: (root && !root.placement.panel && root.showShadow && root.showBackground && root.shadowStrength > 0) ? Style.space(5) : 0
   anchors.bottom: parent ? parent.bottom : undefined
   anchors.bottomMargin: (root && root.dockVisible) ? root.edgeGap + cardWrapper.shadowRoom : -(dockCard.height + (root ? root.edgeGap : 0) + cardWrapper.shadowRoom + 10)
@@ -637,12 +638,14 @@ Item {
 
         Repeater {
           id: foldersRepeater
-          model: root ? root.pinnedFolders : []
+          // Folders first, then the command buttons: the section keeps one row.
+          model: root ? root.pinnedFolders.concat(root.pinnedButtons) : []
           delegate: DockFolderItem {
             rootRef: cardWrapper.rootRef
-            folderPath: modelData.path
+            folderPath: modelData.path || ""
+            command: modelData.command || ""
             name: modelData.name || "Folder"
-            icon: modelData.icon || DockModel.folderIconFor(modelData.path, "")
+            icon: modelData.icon || (modelData.command ? "application-x-executable" : DockIcons.folderIconFor(modelData.path, ""))
             slotIndex: index
             dropLineHere: cardWrapper.dropLineFolder === index
             homeCenter: root ? root.slotHomeCenter(
@@ -654,8 +657,8 @@ Item {
             onOpenStackRequested: function(fpath, fname, cx, cy) {
               if (root) root.openFolderStack(fpath, fname, cx)
             }
-            onMenuRequested: function(fpath, fname, cx, cy) {
-              if (root) root.openFolderContext(fpath, fname, cx, cy)
+            onMenuRequested: function(fpath, fname, cx, cy, cmd) {
+              if (root) root.openFolderContext(fpath, fname, cx, cy, cmd)
             }
             onDragStarted: function(fpath) { cardWrapper.handleFolderDragStarted(fpath) }
             onDragMoved: function(fpath, mx, my) { cardWrapper.handleFolderDragMoved(fpath, mx, my) }
@@ -715,8 +718,8 @@ Item {
             fstype: modelData.fstype || ""
             icon: modelData.icon || "drive-removable-media"
             homeCenter: root ? root.slotHomeCenter(
-              root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + root.pinnedFolders.length + (root.hasDriveSeparator ? 1 : 0) + index,
-              root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + root.pinnedFolders.length + index,
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + root.folderSlots + (root.hasDriveSeparator ? 1 : 0) + index,
+              root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + root.folderSlots + index,
               (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0) + (root.hasDriveSeparator ? 1 : 0),
               root.tilesFixedWidth + cardWrapper.spreadShift) : 0
             onOpenStackRequested: function(fpath, fname, cx, cy) {

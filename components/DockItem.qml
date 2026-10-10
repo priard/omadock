@@ -3,6 +3,7 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 import "../DockModel.js" as DockModel
+import "../DockLabels.js" as DockLabels
 
 Item {
   id: item
@@ -121,7 +122,7 @@ Item {
   readonly property string workspaceHint: {
     if (!item.running || item.minimized || item.onFocusedWorkspace) return ""
     var ws = (item.windowList && item.windowList.length > 0) ? item.windowList[0].workspaceName : ""
-    return ws ? DockModel.workspaceShort(ws, ws) : ""
+    return ws ? DockLabels.workspaceShort(ws, ws) : ""
   }
 
   readonly property bool starting: (root && root.launchPending) ? (root.launchPending[item.appId] !== undefined) : false

@@ -25,7 +25,7 @@ jobs:
           python-version: "3.12"
 
       - name: DockModel syntax
-        run: node --check DockModel.js && node --check DockLabels.js && node --check DockLayout.js
+        run: node --check DockModel.js && node --check DockLabels.js && node --check DockLayout.js && node --check DockMarks.js && node --check DockMarkGeometry.js && node --check DockPresets.js && node --check DockIcons.js
 
       - name: Node test suites
         run: node --test tests/unit/*.test.js tests/unit/*.test.mjs

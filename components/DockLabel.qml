@@ -3,6 +3,7 @@ import QtQuick.Effects
 import qs.Commons
 import qs.Ui
 import "../DockLabels.js" as DockLabels
+import "../DockMarkGeometry.js" as DockMarkGeometry
 
 // The name beside a dock tile's icon (apps, app groups, folders). Policy
 // comes from root.labelStyle() (DockLabelLogic); this item shortens the name
@@ -53,13 +54,15 @@ Item {
   readonly property bool hasMarks: !!(label.marksFrom && label.marksFrom.running) || label.backgroundMarks
   property real marksLevel: label.sideMarks && label.hasMarks ? 1 : 0
   Behavior on marksLevel { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-  // The column keeps the plate's own padding to the plate's edge (the
-  // room a name has at the far end), a fixed width, and a gap to the art
-  // or the name.
-  readonly property real markEdge: label.pad + Style.space(1)
-  // As wide as the column's marks (DockIndicatorRow.cross).
-  readonly property real markWidth: label.root ? Math.max(1, Math.round(Style.space(4) * label.root.outputScale)) / label.root.outputScale : Style.space(4)
-  readonly property real markGap: Style.space(5)
+  // The column keeps the plate's own padding to the plate's edge (the room a
+  // name has at the far end), the marks' own width and a gap to the art or the
+  // name: the sizes are the ones the row draws with, from DockMarkGeometry.js,
+  // so the room reserved here can never disagree with the marks (the unit tests
+  // pin the pair).
+  readonly property var markRoom: DockMarkGeometry.column(Style.space, label.root ? label.root.outputScale : 1)
+  readonly property real markEdge: label.pad + label.markRoom.edge
+  readonly property real markWidth: label.markRoom.width
+  readonly property real markGap: label.markRoom.gap
   readonly property real markSpan: label.markEdge + label.markWidth + label.markGap
   // Before the icon, the room sits ahead of the art (less the margin the
   // plate already has there): the tile shifts its icon by this much.
@@ -88,7 +91,14 @@ Item {
   TextMetrics { id: textWidth; font: textItem.font; text: label.shortText }
 
   function reshorten() {
-    if (!label.style) return
+    // A deferred call can land in the window where this label's children have
+    // been destroyed and the label itself has not (a delegate being torn
+    // down): the metrics the search writes into are gone by then, and the
+    // write is a null dereference - the fault logged at this line in the wild
+    // ("Value is null and could not be converted to an object", during
+    // delayed function evaluation). Nothing to measure with, nothing to
+    // shorten: leave the name as it is.
+    if (!label.style || !probe || !textWidth) return
     // Max width is for the name; the indicator column comes on top of it.
     var limit = label.style.maxWidth - label.pad * 2 - label.gap - (label.plate ? Style.space(1) : label.trail)
     var r = DockLabels.shortenName(label.fullText, function(t) { probe.text = t; return probe.advanceWidth <= limit })

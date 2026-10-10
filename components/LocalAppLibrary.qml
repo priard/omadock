@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import "../DockModel.js" as DockModel
+import "../DockIcons.js" as DockIcons
 
 // Fallback standalone application library for host capability gates (e.g.
 // Omarchy 4.x scoped plugins) plus the absolute-path icon index (see
@@ -141,7 +142,7 @@ import "../DockModel.js" as DockModel
       // GUI-thread calls on every start and theme change.
       stdout: StdioCollector { id: iconIndexOut; waitForEnd: true }
       onExited: {
-        localAppLibrary.iconIndex = DockModel.parseIconIndex(iconIndexOut.text)
+        localAppLibrary.iconIndex = DockIcons.parseIconIndex(iconIndexOut.text)
         localAppLibrary.appsChanged()
       }
     }
