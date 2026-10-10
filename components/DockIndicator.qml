@@ -50,8 +50,8 @@ Rectangle {
   // tests pin - the dock's classic 5px dots (4px dense), 12x4 accent bars (9x4
   // dense) and the room a plate reserves, all in one place. A fix for
   // fractional-scale borders once thinned every mark a pixel with it; the sizes
-  // there are the look the dock ships, and a side column on a plate uses the
-  // dense dot: beside a name the full dot read heavy.
+  // there are the look the dock ships, and a side column on a plate keeps the
+  // full dot with an upright bar as thick: the dense dot looked lost there.
   readonly property real dotSize: DockMarkGeometry.dot(Style.space, mark.dpr, dense, vertical)
   readonly property real barHeight: DockMarkGeometry.barThickness(Style.space, mark.dpr)
 

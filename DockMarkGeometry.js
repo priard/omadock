@@ -18,8 +18,8 @@
 // `hairline`, and every mark that is drawn applies it.
 
 // Style.space units. The dock's classic marks: a 5 px dot (4 px when the marks
-// are dense, or stand in a side column), a 12x4 accent bar (9x4 dense) and 3 px
-// between marks (2 px dense).
+// are dense under the icon; a side column keeps 5), a 12x4 accent bar (9x4
+// dense) and 3 px between marks (2 px dense).
 var DOT = 5
 var DOT_DENSE = 4
 var BAR = 4
@@ -35,8 +35,10 @@ var PILL_HEIGHT = 5
 var EDGE = 1
 var GAP = 5
 
-// The dot's spacing: dense marks and a side column use the smaller one.
-function dotSpace(dense, vertical) { return (dense || vertical) ? DOT_DENSE : DOT }
+// The dot's spacing: dense marks use the smaller one; a side column keeps
+// the full dot, dense or not, so a couple of dots beside a plate do not
+// look lost (the upright bar there is as thick as the dot).
+function dotSpace(dense, vertical) { return (vertical || !dense) ? DOT : DOT_DENSE }
 
 // Whole device pixels, never below one: at a fractional output scale a mark
 // lost or gained a row of pixels depending on where it landed.
