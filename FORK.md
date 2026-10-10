@@ -51,6 +51,13 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 
 - Nothing open upstream.
 
+## Not upstream yet
+
+- `feat/nested-plates`: Nested label corners (square between plates, the
+  outer ones rounded along the dock's edge) and plates in split sections.
+- `feat/side-mark-size`: full-size dots and bar in the plates' side
+  indicator column.
+
 ## Fork only
 
 - `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
