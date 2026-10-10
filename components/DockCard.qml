@@ -640,7 +640,7 @@ Item {
             visible: !(root && (root.placement.split || root.placement.align === "spread"))
             anchors.horizontalCenter: parent.horizontalCenter
             y: root && root.dividerGeometry === "long"
-              ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
+              ? dockCard.dividerTop - row.y - rightRow.y - parent.y : (root ? root.iconCenterOffset : 0)
             width: dockCard.dividerWidth
             height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
             color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
@@ -709,7 +709,7 @@ Item {
             visible: !(root && root.placement.split)
             anchors.horizontalCenter: parent.horizontalCenter
             y: root && root.dividerGeometry === "long"
-              ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
+              ? dockCard.dividerTop - row.y - rightRow.y - parent.y : (root ? root.iconCenterOffset : 0)
             width: dockCard.dividerWidth
             height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
             color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
