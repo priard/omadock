@@ -15,6 +15,18 @@ Column {
   SectionLabel { text: "Motion" }
 
   ChoiceRow {
+    key: "animations"
+    label: "Animations"
+    hint: "Reduced keeps short fades and drops movement and bounces. Off changes everything at once."
+    options: [
+      { value: "full", label: "Full" },
+      { value: "reduced", label: "Reduced" },
+      { value: "off", label: "Off" }
+    ]
+    value: root ? root.animations : "full"
+    onPicked: function(v) { root.setOption("animations", v) }
+  }
+  ChoiceRow {
     key: "hoverEffect"
     label: "Hover effect"
     options: [

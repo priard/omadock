@@ -4,6 +4,7 @@ import "../../DockPresets.js" as DockPresets
 import "../../Buttons.js" as Buttons
 import "../../DockLabels.js" as DockLabels
 import "../../DockLayout.js" as DockLayout
+import "../../DockMotion.js" as DockMotion
 
 // Config and preset logic, extracted from Dock.qml so the root file only
 // declares state and wiring. Every function is stateless: the dock root is
@@ -141,6 +142,7 @@ QtObject {
     root.restoreWorkspace = (parsed && parsed.restoreWorkspace === "origin") ? "origin" : "current"
     root.restoreSlot = !!(parsed && parsed.restoreSlot === true)
     root.keepPointer = parsed ? parsed.keepPointer !== false : true
+    root.animations = DockMotion.normalizeLevel(parsed ? parsed.animations : "full")
     root.showUrgentHint = parsed ? parsed.showUrgentHint !== false : true
     root.urgentOnNotification = parsed ? parsed.urgentOnNotification !== false : true
     root.showNotificationBadges = parsed ? parsed.showNotificationBadges !== false : true
@@ -240,6 +242,7 @@ QtObject {
     conf.restoreWorkspace = root.restoreWorkspace
     conf.restoreSlot = root.restoreSlot
     conf.keepPointer = root.keepPointer
+    conf.animations = root.animations
     conf.showUrgentHint = root.showUrgentHint
     conf.urgentOnNotification = root.urgentOnNotification
     conf.showNotificationBadges = root.showNotificationBadges

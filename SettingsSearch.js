@@ -62,6 +62,7 @@ var SETTINGS_SEARCH = [
   { key: "iconHoverReveal", page: "icons", label: "Dithered reveal", terms: ["dither", "reveal"] },
   { key: "iconSize", page: "icons", label: "Icon size", terms: ["big", "small", "scale"] },
   { key: "itemSpacing", page: "icons", label: "Spacing", terms: ["gap", "distance"] },
+  { key: "animations", page: "motion", label: "Animations", terms: ["motion", "reduce", "reduced", "off", "speed", "transitions"] },
   { key: "hoverEffect", page: "motion", label: "Hover effect", terms: ["zoom", "wave", "lift", "glow", "glitch", "magnify"] },
   { key: "launchBounce", page: "motion", label: "Launch bounce", terms: ["animation", "starting"] },
   { key: "showShadow", page: "motion", label: "Shadow", terms: ["drop", "elevation", "shadow"] },

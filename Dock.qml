@@ -10,6 +10,7 @@ import qs.Ui
 import "DockModel.js" as DockModel
 import "DockLabels.js" as DockLabels
 import "DockLayout.js" as DockLayout
+import "DockMotion.js" as DockMotion
 import "components"
 import "components/logic"
 
@@ -893,6 +894,8 @@ Item {
   // Hyprland warps the pointer into a window it activates (and on workspace
   // switches); keepPointer suppresses that for focus changes the dock makes.
   property bool keepPointer: true
+  property string animations: "full"      // full | reduced | off (DockMotion)
+  readonly property var motion: DockMotion.plan(root.animations)
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
   property bool urgentOnNotification: true
@@ -1872,14 +1875,7 @@ Item {
     slotFixTimer.restart()
   }
 
-  function dropParkSlot(address) {
-    if (!address || !root.parkSlots || root.parkSlots[address] === undefined) return
-    var slots = {}
-    for (var k in root.parkSlots) slots[k] = root.parkSlots[k]
-    delete slots[address]
-    root.parkSlots = slots
-    root.pendingSlotFixes = (root.pendingSlotFixes || []).filter(function(a) { return a !== address })
-  }
+  function dropParkSlot(address) { return slotLogic.dropParkSlot(root, address) }
 
   function recordParkSlot(address, origin) { return slotLogic.recordParkSlot(root, address, origin) }
 
