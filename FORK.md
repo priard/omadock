@@ -55,6 +55,13 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   lines in DockCard.qml), #54 hover effects in the opened group and its badges
   and marks reaching the dock (`feat/group-cell-hover`): opened 2026-10-10.
 
+## Not upstream yet
+
+- `feat/popup-grid`: popup surfaces whole device pixels tall, so menus keep
+  their bottom border at 1.5x.
+- `feat/group-cell-menu`: right click in an opened group opens the app's
+  menu (Remove from Group instead of Pin) instead of ungrouping at once.
+
 ## Fork only
 
 - `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
