@@ -61,6 +61,8 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   their bottom border at 1.5x.
 - `feat/group-cell-menu`: right click in an opened group opens the app's
   menu (Remove from Group instead of Pin) instead of ungrouping at once.
+- `feat/group-drag-fix`: a group drag stops calling the retired
+  rowIndicatorX (a TypeError per move since the drop gap landed).
 
 ## Fork only
 
