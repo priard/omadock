@@ -243,10 +243,11 @@ BorderSurface {
               }
 
               // Running/minimized state, one mark per window like the dock:
-              // active bar, open dot, parked hollow dot.
+              // active bar, open dot, parked hollow dot, at the dock's own
+              // size and spacing (DockMarkGeometry).
               Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                spacing: Style.space(2)
+                spacing: Style.space(3)
                 visible: cellItem.appWindows.length > 0
                 Repeater {
                   model: Math.min(3, cellItem.appWindows.length)
@@ -256,7 +257,6 @@ BorderSurface {
                     readonly property bool winActive: !winMin && cellItem.isWinActive(winObj)
                     rootRef: cellItem.root
                     anchors.verticalCenter: parent.verticalCenter
-                    dense: true
                     kind: winActive ? "active" : (winMin ? "minimized" : "window")
                   }
                 }
