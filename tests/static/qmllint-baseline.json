@@ -12,7 +12,6 @@
  "components/DockContextMenu.qml::missing-property": 2,
  "components/DockContextMenu.qml::unused-imports": 1,
  "components/DockDriveItem.qml::unused-imports": 1,
- "components/DockFolderItem.qml::unused-imports": 1,
  "components/DockIconButton.qml::unused-imports": 1,
  "components/DockItem.qml::incompatible-type": 1,
  "components/DockPopupWindow.qml::missing-type": 3,
@@ -33,6 +32,7 @@
  "components/WindowCardStack.qml::missing-property": 4,
  "components/logic/DockContextLogic.qml::unused-imports": 3,
  "components/logic/DockDragLogic.qml::unused-imports": 1,
+ "components/logic/DockEventLogic.qml::unused-imports": 4,
  "components/logic/DockFolderLogic.qml::unused-imports": 4,
  "components/logic/DockGroupCycleLogic.qml::unused-imports": 1,
  "components/logic/DockGroupsLogic.qml::unused-imports": 5,
@@ -42,6 +42,7 @@
  "components/logic/DockPinLogic.qml::unused-imports": 3,
  "components/logic/DockScreenLogic.qml::unused-imports": 5,
  "components/logic/DockSettingsLogic.qml::unused-imports": 4,
+ "components/logic/DockSlotLogic.qml::unused-imports": 4,
  "components/logic/DockStateLogic.qml::unused-imports": 3,
  "components/logic/DockStyleLogic.qml::unused-imports": 5,
  "components/logic/DockWindowLogic.qml::unused-imports": 3,
@@ -49,5 +50,6 @@
  "components/settings/SettingsGroups.qml::unresolved-type": 2,
  "components/settings/SettingsLabels.qml::unresolved-type": 1,
  "components/settings/SettingsPresets.qml::unresolved-type": 1,
- "components/settings/SliderRow.qml::unresolved-type": 1
+ "components/settings/SliderRow.qml::unresolved-type": 1,
+ "tests/live/label-metrics-shell.qml::syntax": 1
 }

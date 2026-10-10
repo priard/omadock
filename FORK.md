@@ -42,22 +42,14 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   switch, #45 rim over a gradient fill, #46 badge placed by x/y: merged
   2026-10-05/07, on upstream `main` with the Dock.qml split and labels.
 
+- #47 side labels, #48 preset keys default when missing, #49 panel
+  layout and Both sides alignment: merged 2026-10-09, released in v4.1.0
+  (with #50 from another contributor: parked windows restore to their
+  workspace and place, command buttons in the folder section).
+
 ## Open
 
-- #47 side labels (`feat/side-labels`), opened 2026-10-07.
-- #49 panel layout and Both sides alignment (`feat/panel-layout`, cut
-  from `feat/side-labels`, depends on #47), opened 2026-10-07.
-
-## Not upstream yet
-
-- `feat/side-labels`: names beside the icons (always, or over the
-  neighbours on hover), readable auto colour, pill/plate backgrounds with
-  corner options, indicator column on plates, tooltips only when they add
-  something, Labels settings page, in-place Rename in the right-click
-  menu for apps, groups and folders, icon block centred vertically.
-- `feat/panel-layout`: Dock / Panel layout (full-width bar on the bottom
-  edge) and the Both sides alignment (apps left, folders and drives
-  right), `setLayout` IPC.
+- Nothing open upstream.
 
 ## Fork only
 
