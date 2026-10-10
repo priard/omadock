@@ -57,6 +57,9 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   outer ones rounded along the dock's edge) and plates in split sections.
 - `feat/side-mark-size`: full-size dots and bar in the plates' side
   indicator column.
+- `feat/spread-fixes`: Both sides ends the right group on the right
+  edge, right-group dividers measure from the card, a stored Both sides
+  without split marks Center in settings.
 
 ## Fork only
 
