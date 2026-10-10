@@ -907,7 +907,7 @@ Item {
   property string labelShape: "dock"      // dock | pill | rounded | square
   property string labelIndicators: "before" // before | after | under (always-on plates)
   property string labelPlateHeight: "icon"  // icon | dock (always-on plates)
-  readonly property bool labelPlates: root.labelMode === "always" && root.labelBackground === "plate" && !root.placement.split
+  readonly property bool labelPlates: root.labelMode === "always" && root.labelBackground === "plate"
   readonly property var plateSpacing: labelLogic.plateSpacing(root)
   readonly property bool labelSideMarks: DockLabels.sideMarks(root.labelMode, root.labelBackground, root.labelIndicators)
   property string labelReveal: "slide"    // slide | typewriter | scramble
