@@ -339,9 +339,17 @@ BorderSurface {
                   return
                 }
                 if (mouse.button === Qt.RightButton) {
-                  // Right click: ungroup this app from the folder
-                  if (root && appGroupPopup.activeGroup) {
-                    root.removeAppFromGroup(appGroupPopup.activeGroup.id, cellItem.appId)
+                  // Right click: the app's own menu, as on the dock, over this
+                  // cell. The group closes first: the menu's surface takes the
+                  // focus grab and would dismiss it anyway. Closing destroys
+                  // this cell, so everything the menu needs is read before.
+                  if (root && appGroupPopup.activeGroup && appGroupPopup.popupWindow) {
+                    var dock = root
+                    var group = appGroupPopup.activeGroup
+                    var app = cellItem.appId
+                    var at = appGroupPopup.popupWindow.toDockWindow(cellItem, cellItem.width / 2, 0)
+                    dock.closeAppGroup()
+                    dock.openContext(app, at.x, at.y, group)
                   }
                 } else if (mouse.button === Qt.LeftButton) {
                   // Launch, focus, or park the app. The popup stays open so

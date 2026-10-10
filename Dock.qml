@@ -2101,7 +2101,7 @@ Item {
 
   function syncContextWindows() { return contextLogic.syncContextWindows(root) }
 
-  function openContext(appId, x, y) { return contextLogic.openContext(root, appId, x, y) }
+  function openContext(appId, x, y, group) { return contextLogic.openContext(root, appId, x, y, group) }
 
   function closeContext() { return contextLogic.closeContext(root) }
 

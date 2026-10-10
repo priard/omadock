@@ -257,7 +257,11 @@ QtObject {
     }
   }
 
-  function openContext(root, appId, x, y) {
+  // group: the app group the menu was opened from (a cell of the opened
+  // group), whose menu offers Remove from Group instead of Pin; null on
+  // the dock.
+  function openContext(root, appId, x, y, group) {
+    root.contextAppGroupData = group || null
     root.contextAppId = appId
     var entry = root.entryForId(appId)
     root.contextName = entry ? entry.name : appId
