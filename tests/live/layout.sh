@@ -96,9 +96,9 @@ set_cfg panel spread false
 read -r first last bottom rx ww < <(measure)
 if [ "$rx" -ge 0 ]; then
   [ "$first" -le 60 ] || fail "panel spread: first icon at $first"
-  # Both sides rests the right group one row gap short of the right-aligned
-  # place - the spacing the trailing drop gap keeps (DockLayout.spreadGap).
-  tol=$((right_inset + row_gap + 2))
+  # Both sides rests the right group where the right alignment puts it
+  # (DockLayout.spreadGap floors the gap to the pixel grid: 1 px).
+  tol=$((right_inset + 1))
   [ $((ww - last)) -le "$tol" ] || fail "panel spread: last icon ends $((ww - last)) px from the edge (allowed $tol)"
   [ "$rx" -gt $((ww / 2)) ] || fail "panel spread: folders start at $rx"
 fi

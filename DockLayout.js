@@ -55,10 +55,12 @@ function rowOffset(align, innerWidth, rowWidth, dpr) {
   return 0
 }
 
-// Width of the gap between the left group and the right one; the gap item
-// has the row spacing on both sides.
-function spreadGap(innerWidth, leftWidth, rightWidth, spacing, dpr) {
-  var w = Math.max(0, innerWidth - leftWidth - rightWidth - 2 * spacing)
+// Width of the gap between the left group and the right one, so the right
+// group ends on the inner edge. gapX is where the gap item starts (the row
+// spacing after the left group is already in it); one more spacing stands
+// between the gap and the right group.
+function spreadGap(innerWidth, gapX, rightWidth, spacing, dpr) {
+  var w = Math.max(0, innerWidth - gapX - rightWidth - spacing)
   return dpr > 0 ? Math.max(0, Math.floor(w * dpr) / dpr) : w
 }
 

@@ -62,8 +62,17 @@ test("rowOffset per alignment, clamped at 0 on overflow", () => {
 })
 
 test("spreadGap fills what is left between the groups, never negative", () => {
-  assert.equal(L.spreadGap(1000, 300, 200, 4), 492)
+  // The gap item starts at x 300 (the row spacing after the left group is
+  // already in that x); one more spacing separates it from the right group.
+  assert.equal(L.spreadGap(1000, 300, 200, 4), 496)
   assert.equal(L.spreadGap(400, 300, 200, 4), 0)
+})
+
+test("spreadGap puts the right group's end on the inner edge", () => {
+  for (const [inner, gapX, right, spacing] of [[1000, 300, 200, 4], [5108, 1210.5, 640, 6], [2000, 4, 300, 12]]) {
+    const gap = L.spreadGap(inner, gapX, right, spacing)
+    assert.equal(gapX + gap + spacing + right, inner, `${inner} ${gapX} ${right} ${spacing}`)
+  }
 })
 
 test("spreadHomeShift moves resting right-group centres by the free width", () => {
