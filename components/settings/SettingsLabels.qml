@@ -124,10 +124,11 @@ Column {
     ChoiceRow {
       key: "labelShape"
       label: "Corners"
-      hint: "Dock follows the dock's own corners: square docks get square labels."
+      hint: "Dock follows the dock's own corners. Nested squares plates off against each other and rounds the outer ones along the dock's edge."
       visible: root ? (root.labelBackground !== "none" || root.labelMode === "hover") : true
       options: [
         { value: "dock", label: "Dock" },
+        { value: "nested", label: "Nested" },
         { value: "pill", label: "Pill" },
         { value: "rounded", label: "Rounded" },
         { value: "square", label: "Square" }

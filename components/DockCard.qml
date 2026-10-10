@@ -42,6 +42,17 @@ Item {
   // trailing drop ghost is a zero-width item the row still spaces.
   readonly property real spreadShift: (root && root.placement.align === "spread")
     ? DockLayout.spreadHomeShift(innerWidth, root.baseRowWidth + DockLabels.extrasTotal(root.labelExtras) + row.spacing) : 0
+  // Which label plates stand at their panel's edge, by label slot
+  // (DockLabels.plateEdges): the row's sections in order, cut where split
+  // sections cut the card into panels (as segments does).
+  readonly property var plateEdges: (root && root.labelPlates) ? DockLabels.plateEdges([
+    { n: root.appsSlots, labelled: true, cut: false },
+    { n: root.pinnedSection.length + root.groupSlots, labelled: true, cut: false },
+    { n: root.tileElements, labelled: false, cut: root.placement.split && root.hasLeftTileSeparator },
+    { n: root.visibleRunningCount, labelled: true, cut: root.placement.split && root.hasSeparator },
+    { n: root.folderSlots, labelled: true, cut: root.placement.split && (root.hasFolderSeparator || root.placement.align === "spread") },
+    { n: root.driveSlots, labelled: false, cut: root.placement.split && root.hasDriveSeparator }
+  ]) : []
   // Where the accent line of a drag inside the dock stands (DropGap): the
   // insert index in the pinned run or among the folders, -1 for none.
   readonly property int dropLineRow: (root && !root.dragRemoveArmed && root.dropRowIndex >= 0

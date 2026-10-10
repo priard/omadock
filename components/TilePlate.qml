@@ -33,7 +33,15 @@ Rectangle {
   readonly property var box: (root && tile) ? root.labelPlateBox(tile.height) : null
   y: box ? box.y : artTop - vMargin
   height: box ? box.h : art + vMargin * 2
-  radius: style ? Math.min(height * 0.32, DockLabels.labelRadius(style.shape, height, style.dockRatio)) : 0
+  readonly property real baseRadius: style ? Math.min(height * 0.32, DockLabels.labelRadius(style.shape, height, style.dockRatio)) : 0
+  // The Omarchy button is label slot 0 (Dock.appsSlots).
+  readonly property var corners: DockLabels.plateCorners(style ? style.shape : "dock", height, baseRadius,
+    style ? style.nestedRadius : 0, (root && root.dockCardComp) ? root.dockCardComp.plateEdges[0] : null)
+  radius: baseRadius
+  topLeftRadius: corners.tl
+  topRightRadius: corners.tr
+  bottomLeftRadius: corners.bl
+  bottomRightRadius: corners.br
   color: root ? Util.alpha(root.labelFillFor(ink, false), 0.55 + 0.25 * level) : "transparent"
   transform: Translate { y: (plate.root && plate.root.hoverEffect === "lift") ? -plate.art * 0.16 * plate.level : 0 }
 }

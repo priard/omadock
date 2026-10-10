@@ -96,7 +96,7 @@ var SETTINGS_SEARCH = [
   { key: "labelWeight", page: "labels", label: "Weight", terms: ["labels", "bold", "thick", "font", "readable"] },
   { key: "labelColor", page: "labels", label: "Color", terms: ["labels", "colour", "accent", "contrast", "readable", "auto"] },
   { key: "labelBackground", page: "labels", label: "Background", terms: ["labels", "pill", "plate", "button"] },
-  { key: "labelShape", page: "labels", label: "Corners", terms: ["labels", "shape", "square", "sharp", "pill", "rounded", "radius"] },
+  { key: "labelShape", page: "labels", label: "Corners", terms: ["labels", "shape", "square", "sharp", "pill", "rounded", "radius", "nested"] },
   { key: "labelIndicators", page: "labels", label: "Indicators", terms: ["labels", "dots", "windows", "running", "plate", "column", "side"] },
   { key: "labelPlateHeight", page: "labels", label: "Plate height", terms: ["labels", "plate", "tall", "full", "stretch", "dock"] },
   { key: "labelReveal", page: "labels", label: "Reveal", terms: ["labels", "animation", "typewriter", "scramble", "slide"] },

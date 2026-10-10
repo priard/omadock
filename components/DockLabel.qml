@@ -248,7 +248,16 @@ Item {
       : label.mirror
       ? label.width + label.artMargin + artSize + hMargin + label.lead - edge
       : label.width - edge - x
-    radius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
+    readonly property real baseRadius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
+    // Nested corners know the plate's place in its panel only in a plate row.
+    readonly property var corners: DockLabels.plateCorners(label.style ? label.style.shape : "dock", height, baseRadius,
+      label.style ? label.style.nestedRadius : 0,
+      (spacing && label.root.dockCardComp) ? label.root.dockCardComp.plateEdges[label.slot] : null)
+    radius: baseRadius
+    topLeftRadius: corners.tl
+    topRightRadius: corners.tr
+    bottomLeftRadius: corners.bl
+    bottomRightRadius: corners.br
     color: label.style ? Util.alpha(label.fill, label.overlay ? 1 : 0.55 + 0.25 * label.hoverLevel) : "transparent"
     opacity: label.progress
     // Lifts with the icon and the name, like one button.
