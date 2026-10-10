@@ -320,3 +320,91 @@ test("grid helpers land on whole device pixels", () => {
   assert.equal(L.gridInt(45, 1.5), 46)
   assert.equal(L.gridInt(46, 1.5), 46)
 })
+
+test("plateEdges: one panel without split, its outermost items are the edges", () => {
+  // Omarchy button, three pinned, no tiles, two running, two folders, no drives.
+  const e = plain(L.plateEdges([
+    { n: 1, labelled: true, cut: false }, { n: 3, labelled: true, cut: false },
+    { n: 0, labelled: false, cut: false }, { n: 2, labelled: true, cut: false },
+    { n: 2, labelled: true, cut: false }, { n: 0, labelled: false, cut: false }]))
+  assert.equal(e.length, 8)
+  assert.deepEqual(e[0], { left: true, right: false })
+  for (let i = 1; i < 7; i++) assert.deepEqual(e[i], { left: false, right: false })
+  assert.deepEqual(e[7], { left: false, right: true })
+})
+
+test("plateEdges: a drive at the edge leaves the last plate square", () => {
+  const e = plain(L.plateEdges([
+    { n: 1, labelled: true, cut: false }, { n: 2, labelled: true, cut: false },
+    { n: 1, labelled: false, cut: false }]))
+  assert.equal(e.length, 3)
+  assert.deepEqual(e[2], { left: false, right: false })
+})
+
+test("plateEdges: split cuts each section into its own panel", () => {
+  // button + 2 pinned | 2 running | 2 folders
+  const e = plain(L.plateEdges([
+    { n: 1, labelled: true, cut: false }, { n: 2, labelled: true, cut: false },
+    { n: 0, labelled: false, cut: false }, { n: 2, labelled: true, cut: true },
+    { n: 2, labelled: true, cut: true }, { n: 0, labelled: false, cut: false }]))
+  assert.deepEqual(e.map((x) => [x.left, x.right]), [
+    [true, false], [false, false], [false, true],
+    [true, false], [false, true],
+    [true, false], [false, true]])
+})
+
+test("plateEdges: unlabelled tiles in their own split panel", () => {
+  // 2 pinned | 2 tiles | 1 running: the pinned run ends a panel, the running one is alone.
+  const e = plain(L.plateEdges([
+    { n: 0, labelled: true, cut: false }, { n: 2, labelled: true, cut: false },
+    { n: 2, labelled: false, cut: true }, { n: 1, labelled: true, cut: true }]))
+  assert.deepEqual(e.map((x) => [x.left, x.right]), [[true, false], [false, true], [true, true]])
+})
+
+test("plateEdges: a pending cut carries to the next section with items", () => {
+  // Both sides + split, no folders, a drive: the cut before folders lands before the drive,
+  // so the last running plate rounds on the right.
+  const e = plain(L.plateEdges([
+    { n: 1, labelled: true, cut: false }, { n: 1, labelled: true, cut: false },
+    { n: 0, labelled: false, cut: false }, { n: 0, labelled: true, cut: true },
+    { n: 0, labelled: true, cut: true }, { n: 1, labelled: false, cut: false }]))
+  assert.deepEqual(e.map((x) => [x.left, x.right]), [[true, false], [false, true]])
+})
+
+test("plateEdges: without the Omarchy button the first pinned app takes the left edge", () => {
+  const e = plain(L.plateEdges([{ n: 0, labelled: true, cut: false }, { n: 2, labelled: true, cut: false }]))
+  assert.deepEqual(e.map((x) => [x.left, x.right]), [[true, false], [false, true]])
+})
+
+test("plateEdges: empty row and a cut before the first item", () => {
+  assert.deepEqual(plain(L.plateEdges([])), [])
+  assert.deepEqual(plain(L.plateEdges([{ n: 1, labelled: true, cut: true }])), [{ left: true, right: true }])
+})
+
+test("plateCorners: any shape but nested rounds all four corners alike", () => {
+  assert.deepEqual(plain(L.plateCorners("dock", 40, 6, 9, { left: true, right: false })), { tl: 6, tr: 6, bl: 6, br: 6 })
+  assert.deepEqual(plain(L.plateCorners("pill", 40, 12.8, 9, null)), { tl: 12.8, tr: 12.8, bl: 12.8, br: 12.8 })
+})
+
+test("plateCorners: nested without edges (pill, hover) looks like dock", () => {
+  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, null)), { tl: 6, tr: 6, bl: 6, br: 6 })
+  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, undefined)), { tl: 6, tr: 6, bl: 6, br: 6 })
+})
+
+test("plateCorners: nested squares inner corners and rounds the edge side", () => {
+  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, { left: false, right: false })), { tl: 0, tr: 0, bl: 0, br: 0 })
+  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, { left: true, right: false })), { tl: 9, tr: 0, bl: 9, br: 0 })
+  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, { left: false, right: true })), { tl: 0, tr: 9, bl: 0, br: 9 })
+  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, { left: true, right: true })), { tl: 9, tr: 9, bl: 9, br: 9 })
+})
+
+test("plateCorners: nested outer radius stops at a pill end and never goes negative", () => {
+  // Pill dock 72 high, gap 6: R - gap = 30 = half of a 60 px plate, not the 0.32 h cap.
+  assert.deepEqual(plain(L.plateCorners("nested", 60, 19.2, 30, { left: true, right: false })), { tl: 30, tr: 0, bl: 30, br: 0 })
+  assert.equal(L.plateCorners("nested", 40, 6, 50, { left: true, right: false }).tl, 20)
+  assert.equal(L.plateCorners("nested", 40, 6, -3, { left: true, right: false }).tl, 0)
+})
+
+test("readLabelConfig accepts the nested corners", () => {
+  assert.equal(L.readLabelConfig({ labelMode: "always", labelShape: "nested" }).labelShape, "nested")
+})

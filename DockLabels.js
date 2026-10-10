@@ -9,7 +9,7 @@ var LABEL_SIZES = ["small", "medium", "large"]
 var LABEL_WEIGHTS = ["regular", "medium", "bold"]
 var LABEL_COLORS = ["auto", "theme", "accent"]
 var LABEL_BACKGROUNDS = ["none", "pill", "plate"]
-var LABEL_SHAPES = ["dock", "pill", "rounded", "square"]
+var LABEL_SHAPES = ["dock", "pill", "rounded", "square", "nested"]
 var LABEL_INDICATORS = ["before", "after", "under"]
 var LABEL_PLATE_HEIGHTS = ["icon", "dock"]
 var LABEL_REVEALS = ["slide", "typewriter", "scramble"]
@@ -234,12 +234,56 @@ function sideMarks(mode, background, indicators) {
 
 // Corner radius of a label background of height h. "dock" keeps the
 // dock's own corner-to-height ratio, so a square dock gets square labels
-// and a pill dock pill ones.
+// and a pill dock pill ones. "nested" draws as "dock" wherever a
+// background has no panel edge to follow (pills, hover labels).
 function labelRadius(shape, h, dockRatio) {
   if (shape === "pill") return h / 2
   if (shape === "rounded") return h / 4
   if (shape === "square") return 0
   return Math.min(h / 2, h * Math.max(0, Number(dockRatio) || 0))
+}
+
+// Which plates stand at their panel's edge, by label slot. sections is the
+// row in order (DockCard), each { n, labelled, cut }: n visible items,
+// labelled when those items have label slots, cut when split sections start
+// a new panel before them. A cut before an empty section carries to the
+// next one with items. Counted, not measured, so the magnification wave
+// cannot move an edge.
+function plateEdges(sections) {
+  var items = []
+  var panel = 0
+  var pending = false
+  for (var i = 0; i < (sections || []).length; i++) {
+    var s = sections[i]
+    if (s.cut) pending = true
+    for (var k = 0; k < (s.n || 0); k++) {
+      if (pending && items.length > 0) panel++
+      pending = false
+      items.push({ panel: panel, labelled: !!s.labelled })
+    }
+  }
+  var out = []
+  for (var j = 0; j < items.length; j++) {
+    if (!items[j].labelled) continue
+    out.push({
+      left: j === 0 || items[j - 1].panel !== items[j].panel,
+      right: j === items.length - 1 || items[j + 1].panel !== items[j].panel
+    })
+  }
+  return out
+}
+
+// A plate's corner radii { tl, tr, bl, br }. Every shape but "nested", and
+// "nested" without edges, rounds all four by radius. "nested" squares the
+// plate off inside its panel and, on a side at the panel's edge, uses outer
+// (the panel's radius less the gap) so the two curves run parallel, up to
+// a pill end.
+function plateCorners(shape, h, radius, outer, edges) {
+  if (shape !== "nested" || !edges) return { tl: radius, tr: radius, bl: radius, br: radius }
+  var r = Math.max(0, Math.min(h / 2, Number(outer) || 0))
+  var l = edges.left ? r : 0
+  var rr = edges.right ? r : 0
+  return { tl: l, tr: rr, bl: l, br: rr }
 }
 
 var LABEL_LOOK_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "labelWeight", "labelColor",
