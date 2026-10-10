@@ -39,9 +39,9 @@ Item {
   readonly property real rowOffset: (root && stretch) ? DockLayout.rowOffset(root.placement.align, innerWidth, row.implicitWidth, plateDpr) : 0
   // Both sides: how far the right group rests past a packed row, from the
   // resting widths, so the magnification wave never measures itself. The
-  // trailing drop ghost is a zero-width item the row still spaces.
+  // gap and the spacing after it together take the card's free width.
   readonly property real spreadShift: (root && root.placement.align === "spread")
-    ? DockLayout.spreadHomeShift(innerWidth, root.baseRowWidth + DockLabels.extrasTotal(root.labelExtras) + row.spacing) : 0
+    ? DockLayout.spreadHomeShift(innerWidth, root.baseRowWidth + DockLabels.extrasTotal(root.labelExtras)) : 0
   // Where the accent line of a drag inside the dock stands (DropGap): the
   // insert index in the pinned run or among the folders, -1 for none.
   readonly property int dropLineRow: (root && !root.dragRemoveArmed && root.dropRowIndex >= 0
