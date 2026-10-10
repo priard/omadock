@@ -60,6 +60,9 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 - `feat/spread-fixes`: Both sides ends the right group on the right
   edge, right-group dividers measure from the card, a stored Both sides
   without split marks Center in settings.
+- `feat/group-cell-hover`: hover effects on the opened group's icons with
+  the badge riding them; the cells' badges and window marks reach the dock
+  (they read their own null root), plus the self-binding test rule.
 
 ## Fork only
 
