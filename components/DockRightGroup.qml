@@ -51,14 +51,14 @@ Row {
   anchors.verticalCenter: parent.verticalCenter
   // Also while its last rows and dividers are on their way out.
   visible: root ? (root.hasFolderSeparator || root.folderSlots > 0 || root.driveSlots > 0 || trailingDropGap.open
-    || folderRowModel.count > 0 || driveRowModel.count > 0 || folderSeparator.visible || driveSeparator.visible) : true
+    || folderRowModel.count > 0 || driveRowModel.count > 0 || folderSeparator.visible || driveSeparator.visible || overflowSlot.visible) : true
 
   RowDivider {
     id: folderSeparator
     rootRef: group.wrapper.rootRef
     cardRef: group.cardRef
     rowY: group.outerRow.y + group.y
-    shown: root ? root.hasFolderSeparator : false
+    shown: root ? (root.hasFolderSeparator && root.fitHostRef.shown.folders + root.fitHostRef.shown.drives > 0) : false
     lineHidden: !!(root && (root.placement.split || root.placement.align === "spread"))
   }
 
@@ -72,6 +72,8 @@ Row {
       required fresh
       required property int slot
       rootRef: group.wrapper.rootRef
+      // Moved into "»" by the dock's fit (DockFitHost).
+      shown: !(group.root && group.root.fitHostRef.hidden["folder:" + foldersRepeaterWrap.key])
       DockFolderItem {
         // Looked up by key; kept while the row leaves.
         property var modelData: ({})
@@ -130,7 +132,7 @@ Row {
     rootRef: group.wrapper.rootRef
     cardRef: group.cardRef
     rowY: group.outerRow.y + group.y
-    shown: root ? root.hasDriveSeparator : false
+    shown: root ? (root.hasDriveSeparator && root.fitHostRef.shown.folders > 0 && root.fitHostRef.shown.drives > 0) : false
     lineHidden: !!(root && root.placement.split)
   }
 
@@ -144,6 +146,7 @@ Row {
       required fresh
       required property int slot
       rootRef: group.wrapper.rootRef
+      shown: !(group.root && group.root.fitHostRef.hidden["drive:" + drivesRepeaterWrap.key])
       DockDriveItem {
         // Looked up by key; kept while the row leaves.
         property var modelData: ({})
@@ -176,5 +179,13 @@ Row {
         }
       }
     }
+  }
+
+  // "»": the items the dock's fit moved out of the row (DockFitHost).
+  RowSlot {
+    id: overflowSlot
+    rootRef: group.wrapper.rootRef
+    shown: !!(group.root && group.root.fitHostRef.plan.overflowFrom >= 0)
+    DockOverflowTile { rootRef: group.wrapper.rootRef }
   }
 }

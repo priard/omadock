@@ -42,17 +42,19 @@ Item {
   // resting widths, so the magnification wave never measures itself. The
   // gap and the spacing after it together take the card's free width.
   readonly property real spreadShift: (root && root.placement.align === "spread")
-    ? DockLayout.spreadHomeShift(innerWidth, root.baseRowWidth + DockLabels.extrasTotal(root.labelExtras)) : 0
+    ? DockLayout.spreadHomeShift(innerWidth, (root.fitHostRef.plan.overflowFrom >= 0) ? root.fitHostRef.plan.width : root.baseRowWidth + DockLabels.extrasTotal(root.labelExtras)) : 0
   // Which label plates stand at their panel's edge, by label slot
   // (DockLabels.plateEdges): the row's sections in order, cut where split
   // sections cut the card into panels (as segments does).
   readonly property var plateEdges: (root && root.labelPlates) ? DockLabels.plateEdges([
-    { n: root.appsSlots, labelled: true, cut: false },
-    { n: root.pinnedSection.length + root.groupSlots, labelled: true, cut: false },
-    { n: root.tileElements, labelled: false, cut: root.placement.split && root.hasLeftTileSeparator },
-    { n: root.visibleRunningCount, labelled: true, cut: root.placement.split && root.hasSeparator },
-    { n: root.folderSlots, labelled: true, cut: root.placement.split && (root.hasFolderSeparator || root.placement.align === "spread") },
-    { n: root.driveSlots, labelled: true, cut: root.placement.split && root.hasDriveSeparator }
+    { n: root.fitHostRef.shown.button, labelled: true, cut: false },
+    { n: root.fitHostRef.shown.pinned, labelled: true, cut: false },
+    { n: root.fitHostRef.shown.tiles, labelled: false, cut: root.placement.split && root.hasLeftTileSeparator },
+    { n: root.fitHostRef.shown.running, labelled: true, cut: root.placement.split && root.hasSeparator },
+    { n: root.fitHostRef.shown.folders, labelled: true, cut: root.placement.split && (root.hasFolderSeparator || root.placement.align === "spread") },
+    { n: root.fitHostRef.shown.drives, labelled: true, cut: root.placement.split && root.hasDriveSeparator },
+    // The "»" tile ends the row (DockOverflowTile).
+    { n: root.fitHostRef.plan.overflowFrom >= 0 ? 1 : 0, labelled: true, cut: false }
   ]) : []
   // Where the accent line of a drag inside the dock stands (DropGap): the
   // insert index in the pinned run or among the folders, -1 for none.
@@ -435,7 +437,7 @@ Item {
 
       RowSlot {
         rootRef: cardWrapper.rootRef
-        shown: root ? root.showAppsButton : true
+        shown: root ? (root.showAppsButton && !root.fitHostRef.hidden["button"]) : true
         DockIconButton {
           rootRef: cardWrapper.rootRef
           homeCenter: root ? root.slotHomeCenter(0, 0, false) : 0
@@ -464,6 +466,8 @@ Item {
           required fresh
           required property int slot
           rootRef: cardWrapper.rootRef
+          // Moved into "»" by the dock's fit (DockFitHost).
+          shown: !(root && root.fitHostRef.hidden["pin:" + rowWrap.key])
           Loader {
             id: rowSlot
             readonly property string key: rowWrap.key
@@ -552,7 +556,7 @@ Item {
         rootRef: cardWrapper.rootRef
         cardRef: dockCard
         rowY: row.y
-        shown: root ? root.hasLeftTileSeparator : false
+        shown: root ? (root.hasLeftTileSeparator && root.fitHostRef.shown.tiles > 0 && root.fitHostRef.shown.pinned > 0) : false
         lineHidden: !!(root && root.placement.split)
       }
 
@@ -570,6 +574,7 @@ Item {
           required fresh
           required property int slot
           rootRef: cardWrapper.rootRef
+          shown: !(root && root.fitHostRef.hidden["tile:" + minimizedTilesRepeaterWrap.key])
           PreviewTile {
             // Looked up by key; kept while the row leaves.
             property var modelData: ({})
@@ -591,7 +596,7 @@ Item {
         rootRef: cardWrapper.rootRef
         cardRef: dockCard
         rowY: row.y
-        shown: root ? root.hasSeparator : false
+        shown: root ? (root.hasSeparator && root.fitHostRef.shown.running > 0) : false
         lineHidden: !!(root && root.placement.split)
       }
 
@@ -606,7 +611,7 @@ Item {
           required property int slot
           rootRef: cardWrapper.rootRef
           // A fully tiled app leaves the run like a closed one.
-          shown: !runningDockItem.isFullyTiled
+          shown: !runningDockItem.isFullyTiled && !(root && root.fitHostRef.hidden["run:" + runWrap.key])
           DockItem {
             readonly property string key: runWrap.key
             readonly property int index: runWrap.slot
