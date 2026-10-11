@@ -187,12 +187,35 @@ Item {
     if (label.slot >= 0) label.root.setLabelExtra(label.slot, label.owner, label.extra, label.mirror ? label.extra - label.lead : label.lead)
   }
   onExtraChanged: label.syncExtra()
-  onSlotChanged: label.syncExtra()
-  Component.onCompleted: { label.reshorten(); label.syncExtra() }
+  onSlotChanged: { label.syncExtra(); label.syncNatural() }
+  Component.onCompleted: { label.reshorten(); label.syncExtra(); label.syncNatural() }
   Component.onDestruction: {
     if (label.root && label._slot >= 0) label.root.setLabelExtra(label._slot, label.owner, 0)
+    if (label.fitHost && label._nslot >= 0) label.fitHost.setNatural(label._nslot, label.owner, null)
     if (label.root && label.counted) label.root.labelsOpen -= 1
   }
+
+  // The full width for the fit planner (DockFit.js, DockFitHost): from the
+  // full name and the targets (never the animated progress or marks level),
+  // so it does not depend on the plan it feeds.
+  readonly property var fitHost: label.root ? label.root.fitHostRef : null
+  TextMetrics { id: fullWidth; font: textItem.font; text: label.fullText }
+  readonly property real trailTarget: label.plate ? Style.space(1) + ((label.marksAfter && label.hasMarks) ? label.markSpan - label.pad : 0) : label.artMargin + Style.space(3)
+  readonly property var natural: (label.shown && !label.overlay) ? {
+    text: fullWidth.advanceWidth,
+    inner: label.pad * 2 + label.gap + (label.plate ? Style.space(1) : label.trailTarget),
+    outer: label.pad * 2 + label.gap + label.trailTarget
+      + ((label.sideMarks && !label.marksAfter && label.hasMarks) ? Math.max(0, label.markSpan - label.artMargin) : 0),
+    folded: (label.sideMarks && label.backgroundMarks) ? Math.max(0, label.markSpan - label.artMargin) : 0
+  } : null
+  property int _nslot: -1
+  function syncNatural() {
+    if (!label.fitHost) return
+    if (label._nslot >= 0 && label._nslot !== label.slot) label.fitHost.setNatural(label._nslot, label.owner, null)
+    label._nslot = label.slot
+    if (label.slot >= 0) label.fitHost.setNatural(label.slot, label.owner, label.natural)
+  }
+  onNaturalChanged: label.syncNatural()
 
   // ---- reveal (typewriter / scramble swap the text; slide just grows)
   property real revealT: 1

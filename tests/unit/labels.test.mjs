@@ -476,3 +476,11 @@ test("plateEdges: drives with plates of their own take the edge after the folder
   assert.deepEqual(e[3], { left: false, right: false })
   assert.deepEqual(e[4], { left: false, right: true })
 })
+
+test("withNatural keeps one entry per slot and only its owner clears it", () => {
+  let m = L.withNatural({}, 3, "a", { text: 50, inner: 20, outer: 24, folded: 0 })
+  assert.deepEqual(plain(m), { 3: { owner: "a", text: 50, inner: 20, outer: 24, folded: 0 } })
+  assert.equal(L.withNatural(m, 3, "a", { text: 50, inner: 20, outer: 24, folded: 0 }), m)
+  assert.equal(L.withNatural(m, 3, "b", null), m)
+  assert.deepEqual(plain(L.withNatural(m, 3, "a", null)), {})
+})

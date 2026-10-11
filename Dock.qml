@@ -199,6 +199,8 @@ Item {
   DockPersistLogic { id: persistLogic }
   DockGroupCycleLogic { id: groupCycleLogic }
   DockLabelLogic { id: labelLogic }
+  DockFitHost { id: fitHost; dockRoot: root }
+  readonly property var fitHostRef: fitHost
 
   // Fallback standalone application library for host capability gates (e.g. Omarchy 4.x scoped plugins)
 

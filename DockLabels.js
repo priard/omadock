@@ -116,6 +116,28 @@ function withExtra(extras, slot, owner, width, before) {
   return next
 }
 
+// Each label's full, unshortened width for the dock's fit planner
+// (DockFit.js): text is the name's advance, inner what the max-width budget
+// spends besides it, outer what the open label adds besides it, folded the
+// room a folded label keeps. Same ownership rule as withExtra; unchanged
+// input returns the same object.
+function withNatural(map, slot, owner, entry) {
+  var cur = map ? map[slot] : undefined
+  if (!entry) {
+    if (!cur || cur.owner !== owner) return map
+    var cleared = {}
+    for (var c in map) if (Number(c) !== Number(slot)) cleared[c] = map[c]
+    return cleared
+  }
+  var e = { owner: owner, text: Math.ceil(entry.text || 0), inner: Math.ceil(entry.inner || 0),
+    outer: Math.ceil(entry.outer || 0), folded: Math.ceil(entry.folded || 0) }
+  if (cur && cur.owner === owner && cur.text === e.text && cur.inner === e.inner && cur.outer === e.outer && cur.folded === e.folded) return map
+  var next = {}
+  for (var k in map) next[k] = map[k]
+  next[slot] = e
+  return next
+}
+
 function extrasBefore(extras, slot) {
   var sum = 0
   for (var k in extras) if (Number(k) < slot) sum += extras[k].width || 0
