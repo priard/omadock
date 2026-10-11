@@ -71,6 +71,7 @@ Item {
       gap: Style.space(8)
       shown: true
       level: life.level
+      rises: life.rises
       body: bubbleSurface
 
       BorderSurface {

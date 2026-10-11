@@ -9,7 +9,8 @@ import qs.Commons
 // the target, and changes size inside it (a window preview arriving and
 // taking the window's shape). A surface that resized with its content was
 // shown at the old position for a frame, so the preview jumped.
-// `level` (0..1, from TooltipLife) fades the body and lifts it a little.
+// `level` (0..1, from TooltipLife) fades the body and, when `rises`
+// (TooltipLife.rises: Full only), lifts it a little.
 PopupWindow {
   id: tip
 
@@ -18,6 +19,7 @@ PopupWindow {
   property Item body: null
   property real gap: Style.space(6)
   property real level: 1
+  property bool rises: true
 
   readonly property var hostWindow: target ? target.QsWindow.window : null
   readonly property real maxWidth: Style.space(640)
@@ -42,7 +44,7 @@ PopupWindow {
   Binding {
     target: tip.body
     property: "y"
-    value: Math.round(tip.implicitHeight - (tip.body ? tip.body.height : 0) + (1 - tip.level) * Style.space(6))
+    value: Math.round(tip.implicitHeight - (tip.body ? tip.body.height : 0) + (tip.rises ? (1 - tip.level) * Style.space(6) : 0))
   }
   Binding {
     target: tip.body

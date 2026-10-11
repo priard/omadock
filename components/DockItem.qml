@@ -584,6 +584,7 @@ Item {
         gap: Style.space(10)
         shown: true
         level: itemTooltipLife.level
+        rises: itemTooltipLife.rises
         body: itemTooltipSurface
 
         BorderSurface {
