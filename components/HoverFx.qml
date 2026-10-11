@@ -41,6 +41,8 @@ Item {
   readonly property bool glitching: fx.effect === "glitch" && glitchAnim.running
   onHoveredChanged: {
     if (!fx.hovered) return
+    // The ripple and the glitch burst are one-shots (DockMotion).
+    if (!fx.motion || !fx.motion.oneShots) return
     if (fx.effect === "glow") ringAnim.restart()
     if (fx.effect === "glitch") {
       fx.glitchSeed = Math.random() * 10

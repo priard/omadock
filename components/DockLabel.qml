@@ -174,6 +174,8 @@ Item {
     duration: Math.min(300, 25 * Math.max(1, label.shortText.length))
   }
   function reveal(styleName) {
+    // Typing and scrambling are one-shot motion (DockMotion reveal).
+    if (!label.motion || !label.motion.reveal) { label.revealT = 1; return }
     label.revealStyle = styleName
     label.seed = Math.random() * 100
     eraseAnim.stop()
@@ -185,6 +187,8 @@ Item {
     if (!label.style) return
     // Reveals belong to hover labels; always-on labels just stand there.
     if (!label.style.hover) return
+    // Without reveal motion the name stands there whole.
+    if (!label.motion || !label.motion.reveal) { revealAnim.stop(); eraseAnim.stop(); label.revealT = 1; return }
     if (label.wantOpen) label.reveal(label.style.reveal)
     else if (label.style.reveal === "typewriter") { revealAnim.stop(); label.revealStyle = "typewriter"; eraseAnim.restart() }
   }

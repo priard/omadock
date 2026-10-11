@@ -217,7 +217,7 @@ Item {
         border.width: 1.5
         z: -1
         SequentialAnimation on opacity {
-          running: gitem.isDropTarget
+          running: gitem.isDropTarget && !!gitem.motion && gitem.motion.oneShots
           loops: Animation.Infinite
           NumberAnimation { from: 0.5; to: 1.0; duration: 350; easing.type: Easing.InOutQuad }
           NumberAnimation { from: 1.0; to: 0.5; duration: 350; easing.type: Easing.InOutQuad }
