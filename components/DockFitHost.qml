@@ -30,7 +30,7 @@ Item {
   // ---- the plan
   // A room in px that replaces the measured one (-1: measure).
   property real availableOverride: -1
-  property var plan: ({ level: 0, labelMax: 0, fold: "none", t: 1, gap: 0, iconSize: 0, overflowFrom: -1, width: 0 })
+  property var plan: ({ level: 0, labelMax: 0, fold: "none", t: 1, gap: 0, iconSize: 0, overflowFrom: -1, width: 0, rest: 0 })
   property var hidden: ({})
   property var shown: ({ button: 1, pinned: 0, tiles: 0, running: 0, folders: 0, drives: 0 })
   property var hiddenItems: []
@@ -110,9 +110,14 @@ Item {
     return out
   }
 
+  // Each item's last label report (DockFit.retainLabels).
+  property var _labelCache: ({})
   function recompute() {
     if (!root || host.frozen) return
-    var list = host.items()
+    var kept = DockFit.retainLabels(host.items(), host._labelCache, host.hidden)
+    host._labelCache = kept.cache
+    var list = kept.items
+    var spread = root.placement.align === "spread"
     var input = {
       available: host.room(), items: list,
       labels: root.labelMode === "always", labelMax: root.labelMaxWidth, labelMin: 80,
@@ -120,7 +125,10 @@ Item {
       slotPad: Style.space(10), gapMax: host.gapAt(1), gapMin: host.gapAt(0),
       sepMax: host.separatorWidthAt(1), sepMin: host.separatorWidthAt(0),
       tileFactor: 1.5, wave: root.waveHover, dpr: root.labelPlates ? root.outputScale : 0,
-      margin: Style.space(8)
+      margin: Style.space(8),
+      // Both sides: the gap item is always in the row (DockCard), one more
+      // spacing and its floor of one device pixel (DockLayout.spreadGap).
+      fixedGaps: spread ? 1 : 0, fixedWidth: spread ? (root.labelPlates ? 1 / root.outputScale : 1) : 0
     }
     var next = DockFit.plan(input, host.plan.iconSize > 0 ? host.plan : null)
     var hid = {}

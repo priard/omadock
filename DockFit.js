@@ -37,12 +37,12 @@ function _folded(item, fold) {
   return false
 }
 
-function _labelWidth(input, item, cand) {
+function _labelWidth(input, item, cand, exact) {
   var l = item.label
   if (!input.labels || !l) return 0
   // A plate row's tile lands on the device grid: one device pixel more,
   // so the prediction is never narrower than what is drawn.
-  var grid = input.dpr > 0 ? 1 / input.dpr : 0
+  var grid = (input.dpr > 0 && !exact) ? 1 / input.dpr : 0
   if (_folded(item, cand.fold)) return l.folded > 0 ? l.folded + grid : 0
   return Math.min(l.text, Math.max(0, cand.labelMax - l.inner)) + l.outer + grid
 }
@@ -62,7 +62,10 @@ function _kept(items, cut) {
   return clean
 }
 
-function rowWidth(input, cand) {
+// exact: the packed row as drawn at rest, without the Wave reserve, the grid
+// allowance and the Both sides gap item (DockCard.spreadShift measures the
+// right group's shift with it).
+function rowWidth(input, cand, exact) {
   var slot = _slot(input, cand.iconSize)
   var gap = _gap(input, cand.t)
   var sep = input.sepMin + cand.t * (input.sepMax - input.sepMin)
@@ -73,11 +76,17 @@ function rowWidth(input, cand) {
     var it = kept[i]
     if (it.kind === "separator") w += sep
     else if (it.kind === "tile") w += Math.round(slot * input.tileFactor)
-    else w += slot + _labelWidth(input, it, cand)
+    else w += slot + _labelWidth(input, it, cand, exact)
   }
   if (cand.overflowFrom >= 0) { w += slot; count++ }
+  // Items the row always holds whatever the cut (Both sides' gap item: one
+  // more spacing, and its one-pixel floor).
+  if (!exact) {
+    w += (input.fixedWidth || 0)
+    count += (input.fixedGaps || 0)
+  }
   w += Math.max(0, count - 1) * gap
-  if (input.wave && count > 0) w += Math.ceil(slot * WAVE_GROWTH)
+  if (input.wave && count > 0 && !exact) w += Math.ceil(slot * WAVE_GROWTH)
   return w
 }
 
@@ -151,7 +160,24 @@ function _solve(input, room) {
 
 function _done(input, c, level) {
   return { level: level, labelMax: c.labelMax, fold: c.fold, t: c.t, gap: _gap(input, c.t),
-    iconSize: c.iconSize, overflowFrom: c.overflowFrom, width: rowWidth(input, c) }
+    iconSize: c.iconSize, overflowFrom: c.overflowFrom, width: rowWidth(input, c), rest: rowWidth(input, c, true) }
+}
+
+// The items with a label width for every hidden one: a delegate the fit
+// hides drops its own report (it leaves the row), and planning it at 0
+// would let it back in, where it reports again and no longer fits. cache
+// (id -> label) holds the last report of each item.
+function retainLabels(items, cache, hidden) {
+  var next = {}
+  var out = []
+  for (var i = 0; i < (items || []).length; i++) {
+    var it = items[i]
+    var label = it.label
+    if (!label && hidden && hidden[it.id] && cache && cache[it.id]) label = cache[it.id]
+    if (label) next[it.id] = label
+    out.push(label === it.label ? it : Object.assign({}, it, { label: label }))
+  }
+  return { items: out, cache: next }
 }
 
 // The plan for this input. prev: the plan in force; a gentler plan than it

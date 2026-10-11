@@ -42,7 +42,7 @@ Item {
   // resting widths, so the magnification wave never measures itself. The
   // gap and the spacing after it together take the card's free width.
   readonly property real spreadShift: (root && root.placement.align === "spread")
-    ? DockLayout.spreadHomeShift(innerWidth, (root.fitHostRef.plan.overflowFrom >= 0) ? root.fitHostRef.plan.width : root.baseRowWidth + DockLabels.extrasTotal(root.labelExtras)) : 0
+    ? DockLayout.spreadHomeShift(innerWidth, (root.fitHostRef.plan.overflowFrom >= 0) ? root.fitHostRef.plan.rest : root.baseRowWidth + DockLabels.extrasTotal(root.labelExtras)) : 0
   // Which label plates stand at their panel's edge, by label slot
   // (DockLabels.plateEdges): the row's sections in order, cut where split
   // sections cut the card into panels (as segments does).

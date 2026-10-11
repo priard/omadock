@@ -157,3 +157,32 @@ test("tiles are one and a half slots wide", () => {
   const i = input({ items: [{ id: "tile:x", kind: "tile" }, { id: "tile:y", kind: "tile" }] })
   assert.equal(F.rowWidth(i, { labelMax: 140, fold: "none", t: 1, iconSize: 48, overflowFrom: -1 }), 87 + 87 + 4)
 })
+
+test("retainLabels keeps a hidden item's last label width", () => {
+  const items = [{ id: "pin:a", kind: "app", label: lab(50) }, { id: "pin:b", kind: "app", label: null }]
+  const cache = { "pin:b": lab(70) }
+  const out = plain(F.retainLabels(items, cache, { "pin:b": true }))
+  assert.equal(out.items[1].label.text, 70)
+  assert.equal(out.cache["pin:a"].text, 50)
+  // An item no longer hidden that has no label of its own gets none.
+  assert.equal(plain(F.retainLabels(items, cache, {})).items[1].label, null)
+})
+
+test("fixed gaps and width count in every cut (the Both sides gap item)", () => {
+  const i = input({ fixedGaps: 1, fixedWidth: 1 })
+  assert.equal(F.rowWidth(i, { labelMax: 140, fold: "none", t: 1, iconSize: 48, overflowFrom: -1 }), FULL + 4 + 1)
+  assert.equal(F.rowWidth(i, { labelMax: 140, fold: "none", t: 1, iconSize: 48, overflowFrom: 0 }), 34 + 24 + 4 + 1)
+})
+
+test("rest is the drawn width: no Wave reserve, no grid allowance", () => {
+  const p = plain(F.plan(input({ wave: true, dpr: 1.5, available: 10000 }), null))
+  const slot = p.iconSize + 10
+  assert.ok(p.rest < p.width)
+  assert.ok(p.width - p.rest >= Math.ceil(slot * 0.4 * 2.18))
+})
+
+test("rest is the packed row: the Both sides gap item is not in it", () => {
+  const p = plain(F.plan(input({ fixedGaps: 1, fixedWidth: 1 }), null))
+  assert.equal(p.width, FULL + 4 + 1)
+  assert.equal(p.rest, FULL)
+})
