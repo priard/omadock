@@ -71,7 +71,7 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   dock reload has invalidated its context (the DockLabel.qml null
   TypeError). Synced with v4.4.2 the same day.
 
-- `feat/spread-gap-floor` (no PR yet): the Both sides gap bottoms out at
+- #62 `feat/spread-gap-floor`: the Both sides gap bottoms out at
   one device pixel, so a Row no longer drops it with its spacing and the
   right group does not jump when magnification uses up a small gap.
 
