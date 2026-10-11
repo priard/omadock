@@ -254,10 +254,12 @@ Item {
       ? label.width + label.artMargin + artSize + hMargin + label.lead - edge
       : label.width - edge - x
     readonly property real baseRadius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
-    // Nested corners know the plate's place in its panel only in a plate row.
+    // Nested corners (and an edge corner that would poke out of the panel's
+    // curve) know the plate's place in its panel only in a plate row.
     readonly property var corners: DockLabels.plateCorners(label.style ? label.style.shape : "dock", height, baseRadius,
       label.style ? label.style.nestedRadius : 0,
-      (spacing && label.root.dockCardComp) ? label.root.dockCardComp.plateEdges[label.slot] : null)
+      (spacing && label.root.dockCardComp) ? label.root.dockCardComp.plateEdges[label.slot] : null,
+      label.style ? label.style.plateFit : 0)
     radius: baseRadius
     topLeftRadius: corners.tl
     topRightRadius: corners.tr

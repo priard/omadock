@@ -278,12 +278,31 @@ function plateEdges(sections) {
 // plate off inside its panel and, on a side at the panel's edge, uses outer
 // (the panel's radius less the gap) so the two curves run parallel, up to
 // a pill end.
-function plateCorners(shape, h, radius, outer, edges) {
-  if (shape !== "nested" || !edges) return { tl: radius, tr: radius, bl: radius, br: radius }
-  var r = Math.max(0, Math.min(h / 2, Number(outer) || 0))
-  var l = edges.left ? r : 0
-  var rr = edges.right ? r : 0
+//
+// fit (plateFitRadius) is the smallest corner that stays inside the panel's
+// curve: with any other shape, an edge corner smaller than that (a square
+// plate at a pill dock's end) would poke out, so it takes outer instead.
+function plateCorners(shape, h, radius, outer, edges, fit) {
+  var nested = Math.max(0, Math.min(h / 2, Number(outer) || 0))
+  if (!edges) return { tl: radius, tr: radius, bl: radius, br: radius }
+  if (shape !== "nested") {
+    var edge = radius < (Number(fit) || 0) ? Math.max(radius, nested) : radius
+    var el = edges.left ? edge : radius
+    var er = edges.right ? edge : radius
+    return { tl: el, tr: er, bl: el, br: er }
+  }
+  var l = edges.left ? nested : 0
+  var rr = edges.right ? nested : 0
   return { tl: l, tr: rr, bl: l, br: rr }
+}
+
+// The smallest corner radius a plate g in from a curve of radius R can have
+// without poking out of it: the corner's arc, centred r + g in, must stay
+// within R of the curve's centre along the diagonal, which gives
+// r >= R - g * sqrt2 / (sqrt2 - 1).
+function plateFitRadius(R, g) {
+  var need = (Number(R) || 0) - (Number(g) || 0) * Math.SQRT2 / (Math.SQRT2 - 1)
+  return Math.max(0, need)
 }
 
 var LABEL_LOOK_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "labelWeight", "labelColor",

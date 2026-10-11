@@ -408,3 +408,27 @@ test("plateCorners: nested outer radius stops at a pill end and never goes negat
 test("readLabelConfig accepts the nested corners", () => {
   assert.equal(L.readLabelConfig({ labelMode: "always", labelShape: "nested" }).labelShape, "nested")
 })
+
+test("plateFitRadius: the smallest edge corner that stays inside the panel's curve", () => {
+  // A corner of radius r, g in from a curve of radius R, fits once r >= R - g*sqrt2/(sqrt2-1).
+  assert.ok(Math.abs(L.plateFitRadius(36, 6) - (36 - 6 * Math.SQRT2 / (Math.SQRT2 - 1))) < 1e-9)
+  assert.equal(L.plateFitRadius(16, 6), 0)    // a rounded dock: even a square corner fits
+  assert.equal(L.plateFitRadius(0, 6), 0)     // square dock, panel
+})
+
+test("plateCorners: a chosen corner that would stick out of the panel's curve rounds with it", () => {
+  // Pill dock, R 36, gap 6: square plates would poke out at the ends; the edge side takes the
+  // nested radius (30, parallel to the curve), the inner side keeps the choice.
+  const fit = L.plateFitRadius(36, 6)
+  assert.deepEqual(plain(L.plateCorners("square", 60, 0, 30, { left: true, right: false }, fit)), { tl: 30, tr: 0, bl: 30, br: 0 })
+  assert.deepEqual(plain(L.plateCorners("rounded", 60, 15, 30, { left: false, right: true }, fit)), { tl: 15, tr: 30, bl: 15, br: 30 })
+  // A choice that already fits stays as chosen, on every side.
+  assert.deepEqual(plain(L.plateCorners("dock", 60, 19.2, 30, { left: true, right: true }, fit)), { tl: 19.2, tr: 19.2, bl: 19.2, br: 19.2 })
+  // A rounded dock: a square plate fits, nothing changes.
+  assert.deepEqual(plain(L.plateCorners("square", 40, 0, 10, { left: true, right: true }, L.plateFitRadius(16, 6))), { tl: 0, tr: 0, bl: 0, br: 0 })
+  // Inside the row (no edge) and without edges (pills, hover): the choice.
+  assert.deepEqual(plain(L.plateCorners("square", 60, 0, 30, { left: false, right: false }, fit)), { tl: 0, tr: 0, bl: 0, br: 0 })
+  assert.deepEqual(plain(L.plateCorners("square", 60, 0, 30, null, fit)), { tl: 0, tr: 0, bl: 0, br: 0 })
+  // Never past a pill end.
+  assert.equal(L.plateCorners("square", 40, 0, 30, { left: true, right: false }, fit).tl, 20)
+})

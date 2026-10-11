@@ -45,6 +45,8 @@ QtObject {
       dockRatio: (root && dockH > 0) ? root.effectiveCardRadius / dockH : 0.25,
       // Nested corners: the panel's drawn radius less the plate gap.
       nestedRadius: (root && dockH > 0 && root.labelPlates) ? Math.max(0, Math.min(root.effectiveCardRadius, dockH / 2) - root.plateSpacing.gap) : 0,
+      // The smallest edge corner that stays inside the panel's curve.
+      plateFit: (root && dockH > 0 && root.labelPlates) ? DockLabels.plateFitRadius(Math.min(root.effectiveCardRadius, dockH / 2), root.plateSpacing.gap) : 0,
       reveal: root ? root.labelReveal : "slide",
       effect: root ? root.labelEffect : "none",
       maxWidth: root ? root.labelMaxWidth : 140

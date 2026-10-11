@@ -37,7 +37,8 @@ Rectangle {
   readonly property real baseRadius: style ? Math.min(height * 0.32, DockLabels.labelRadius(style.shape, height, style.dockRatio)) : 0
   // The Omarchy button is label slot 0 (Dock.appsSlots).
   readonly property var corners: DockLabels.plateCorners(style ? style.shape : "dock", height, baseRadius,
-    style ? style.nestedRadius : 0, (root && root.dockCardComp) ? root.dockCardComp.plateEdges[0] : null)
+    style ? style.nestedRadius : 0, (root && root.dockCardComp) ? root.dockCardComp.plateEdges[0] : null,
+    style ? style.plateFit : 0)
   radius: baseRadius
   topLeftRadius: corners.tl
   topRightRadius: corners.tr
