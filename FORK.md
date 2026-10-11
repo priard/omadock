@@ -61,15 +61,10 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   gone (Hyprland 0.56.2 aborted on a capture of a disconnected DP-1). #58
   and #59 conflict on adjacent added lines in ci.yml, PreviewTile and
   WindowCardStack: keep both.
-
-## Not upstream yet
-
-- `feat/pill-plates`: plates at a pill dock's ends round with them instead
-  of poking out (any Corners choice); Square takes Nested's look and Nested
-  goes (stored nested reads as square); Pill plates get real round ends with
-  room for the icon and the name.
-- `feat/drive-plates`: removable drives wear a plate without a name, like
-  the Omarchy button.
+- #60 `feat/pill-plates`: plates fit a pill dock's ends, Square takes
+  Nested's look (Nested goes), real Pill plates, drive plates (opened
+  2026-10-11; conflicts with #59 in DockCard: plateSlot moves to
+  DockRightGroup).
 
 ## Fork only
 
