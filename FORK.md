@@ -75,6 +75,13 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   one device pixel, so a Row no longer drops it with its spacing and the
   right group does not jump when magnification uses up a small gap.
 
+- `feat/motion-followups` (no PR yet, cut from #59's branch): the
+  deferred animation minors - easings and the Reduced autohide pause read
+  the Behavior's target, a popup opened and closed in one turn is let go,
+  going window marks keep their own clock and their cell shrinks, leaving
+  rows take no input, narrowing dividers leave the drag zones, tooltips
+  rise at Full only, the duration scan covers every QML folder.
+
 ## Fork only
 
 - `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
