@@ -33,6 +33,12 @@ PopupWindow {
   // takes no keyboard. Dropping the dock window from the list while editing
   // leaves this popup's own surface as the only candidate.
   property bool holdsKeyboard: false
+  // The popup's life (PopupLife, owned by the dock so it outlives this
+  // window): it fades and rises in, and fades out showing its last frame.
+  property var life: null
+  readonly property real level: popup.life ? popup.life.level : 1
+  readonly property bool closing: !!(popup.life && popup.life.closing)
+  readonly property real rise: (popup.dockRoot && popup.dockRoot.motion.rise) ? Math.round((1 - popup.level) * Style.space(6)) : 0
 
   signal dismissed()
 
@@ -60,8 +66,8 @@ PopupWindow {
     return h
   }
 
-  // Input only over the menu itself.
-  mask: Region { item: popup.body }
+  // Input only over the menu itself, and none while it fades out.
+  mask: Region { item: popup.closing ? null : popup.body }
 
   // The body at the bottom of the surface, centred over centerX and kept
   // inside the surface (which may itself be clamped at a screen edge).
@@ -74,8 +80,37 @@ PopupWindow {
   Binding {
     target: popup.body
     property: "y"
-    value: Math.round(popup.implicitHeight - (popup.body ? popup.body.height : 0))
+    value: Math.round(popup.implicitHeight - (popup.body ? popup.body.height : 0)) + popup.rise
   }
+  Binding {
+    target: popup.contentItem
+    property: "opacity"
+    value: popup.level
+  }
+
+  // The body's last frame. It keeps rendering (almost transparent) while the
+  // popup is open, because a hidden ShaderEffectSource stops updating; on
+  // close it freezes and takes the body's place, since the body empties the
+  // moment the popup's state clears.
+  ShaderEffectSource {
+    id: frozen
+    parent: popup.contentItem
+    sourceItem: popup.body
+    live: !popup.closing
+    opacity: popup.closing ? 1 : 0.001
+    property real lastX: 0
+    property real lastY: 0
+    property real lastW: 0
+    property real lastH: 0
+    x: frozen.lastX
+    y: frozen.lastY + popup.rise
+    width: frozen.lastW
+    height: frozen.lastH
+  }
+  Binding { target: frozen; property: "lastX"; value: popup.body ? popup.body.x : 0; when: !popup.closing; restoreMode: Binding.RestoreNone }
+  Binding { target: frozen; property: "lastY"; value: popup.body ? popup.body.y - popup.rise : 0; when: !popup.closing; restoreMode: Binding.RestoreNone }
+  Binding { target: frozen; property: "lastW"; value: popup.body ? popup.body.width : 0; when: !popup.closing; restoreMode: Binding.RestoreNone }
+  Binding { target: frozen; property: "lastH"; value: popup.body ? popup.body.height : 0; when: !popup.closing; restoreMode: Binding.RestoreNone }
 
   anchor.window: dockWindow
   anchor.rect.width: 1
@@ -104,7 +139,7 @@ PopupWindow {
   // A click outside the menu and the dock closes it, as the full-surface
   // dismiss area used to.
   HyprlandFocusGrab {
-    active: popup.visible
+    active: popup.visible && !popup.closing
     windows: (popup.dockWindow && !popup.holdsKeyboard) ? [popup, popup.dockWindow] : [popup]
     onCleared: popup.dismissed()
   }

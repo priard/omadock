@@ -1864,16 +1864,9 @@ Item {
   // what its first press parked. Always the recorded origin.
   function restoreAddress(address) { return windowLogic.restoreWindow(root, address, "", true) }
 
-  // Recorded-place bookkeeping: the queue and the timer stay here, the logic in
+  // Recorded-place bookkeeping: the timer stays here, the logic in
   // DockSlotLogic (which other modules reach through these).
-  function scheduleSlotFix(address) {
-    if (!address) return
-    var queue = root.pendingSlotFixes ? root.pendingSlotFixes.slice() : []
-    if (queue.indexOf(address) < 0) queue.push(address)
-    root.pendingSlotFixes = queue
-    root.slotFixFocus = address
-    slotFixTimer.restart()
-  }
+  function scheduleSlotFix(address) { return slotLogic.scheduleSlotFix(root, address, slotFixTimer) }
 
   function dropParkSlot(address) { return slotLogic.dropParkSlot(root, address) }
 
@@ -2322,12 +2315,14 @@ Item {
     // ------------------------------------------------------------ Folder Stack Popover
     // Created only while open: idle popup windows cost a QQuickWindow each,
     // and several hidden ones next to the dock broke its hover handling.
+    PopupLife { id: stackLife; dockRoot: root; want: root.activeStackFolder !== "" && root.dockVisible }
     LazyLoader {
       id: folderStackLoader
-      active: root.activeStackFolder !== "" && root.dockVisible
+      active: stackLife.alive
 
       DockPopupWindow {
         id: folderStackWindow
+        life: stackLife
         dockRoot: root
         open: true
         centerX: root.activeStackX
@@ -2344,12 +2339,14 @@ Item {
     // ------------------------------------------------------------ App Group Popover
     // Created only while open: idle popup windows cost a QQuickWindow each,
     // and several hidden ones next to the dock broke its hover handling.
+    PopupLife { id: groupLife; dockRoot: root; want: root.activeAppGroupId !== "" && root.dockVisible }
     LazyLoader {
       id: appGroupLoader
-      active: root.activeAppGroupId !== "" && root.dockVisible
+      active: groupLife.alive
 
       DockPopupWindow {
         id: appGroupWindow
+        life: groupLife
         dockRoot: root
         open: true
         centerX: root.activeAppGroupX
@@ -2371,12 +2368,14 @@ Item {
     // ------------------------------------------------------------ context menu
     // Created only while open: idle popup windows cost a QQuickWindow each,
     // and several hidden ones next to the dock broke its hover handling.
+    PopupLife { id: contextLife; dockRoot: root; want: root.contextAppId !== "" }
     LazyLoader {
       id: contextMenuLoader
-      active: root.contextAppId !== ""
+      active: contextLife.alive
 
       DockPopupWindow {
         id: contextMenuWindow
+        life: contextLife
         dockRoot: root
         open: true
         centerX: root.contextX

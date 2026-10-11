@@ -20,8 +20,6 @@ BorderSurface {
   readonly property bool canGoBack: root ? root.activeStackTrail.length > 0 : false
 
   visible: isOpen
-  opacity: isOpen ? 1 : 0
-  Behavior on opacity { NumberAnimation { duration: 120 } }
 
   z: 100
   color: Color.menu.background
