@@ -34,7 +34,10 @@ Item {
   property var hidden: ({})
   property var shown: ({ button: 1, pinned: 0, tiles: 0, running: 0, folders: 0, drives: 0 })
   property var hiddenItems: []
-  readonly property bool frozen: false
+  // A drag on the dock keeps the plan, so its drop zones do not move; the
+  // plan catches up after the drop.
+  readonly property bool frozen: !!host.root && host.root.dockDragActive
+  onFrozenChanged: if (!host.frozen) host.schedule()
 
   // Whether the plan folds a name of this kind.
   function folds(kind, pinned, running) {
@@ -219,6 +222,20 @@ Item {
     host.overflowOpen = true
   }
   function closeOverflow() { host.overflowOpen = false }
+  // A stack or an opened group anchored on an item that just moved into
+  // "»" has nothing left to point at.
+  onHiddenChanged: {
+    var dock = host.root
+    if (!dock) return
+    if (dock.activeAppGroupId !== "" && host.hidden["pin:group:" + dock.activeAppGroupId]) dock.closeAppGroup()
+    var stack = dock.activeStackFolder
+    if (stack === "") return
+    if (host.hidden["folder:path:" + stack]) { dock.closeFolderStack(); return }
+    var drives = dock.mountedDrives || []
+    for (var i = 0; i < drives.length; i++) {
+      if (drives[i] && drives[i].mountpoint === stack && host.hidden["drive:" + DockKeys.driveKey(drives[i])]) { dock.closeFolderStack(); return }
+    }
+  }
   // Nothing left to show: the row fits again.
   onHiddenItemsChanged: if (host.hiddenItems.length === 0) host.overflowOpen = false
   // Another popup taking over, or the dock hiding, closes it.

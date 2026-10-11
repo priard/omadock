@@ -215,6 +215,7 @@ Flexible screen placement tailored to your workflow:
 - **`"center"`, `"left"`, `"right"`, `"spread"`** along the bottom edge, with smooth cubic transitions. `"spread"` (Both sides) keeps the apps at the left edge and puts folders and drives at the right; it needs the panel layout or Split sections.
 - **Panel layout** (`"layout": "panel"`): a full-width bar on the bottom edge with square corners; alignment moves the icons inside it.
 - **Popovers, tooltips, and menus** self-reposition so nothing clips at screen edges.
+- **Always fits the screen**: a dock that would be wider than its monitor makes room on its own, in this order: shorter labels, labels folded to their icons (closed pinned apps first), tighter spacing, smaller icons (down to half their size). Only then do items at the end of the row move into a **»** tile, which opens them in a popup (click and right click work as on the dock).
 
 #### 🖥️ Multi-Monitor Docks
 
