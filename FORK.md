@@ -82,7 +82,7 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   to its icon (plate kept) and widens the tile once the launch bounce
   lands. Cherry-picked into priard 2026-10-11.
 
-- `feat/dock-fit` (no PR yet; cut from feat/pinned-labels + the #59
+- #64 `feat/dock-fit` (cut from feat/pinned-labels + the #59
   rivals fix): the dock always fits its screen. Cascade: shorter labels,
   folded labels, spacing, icons down to max(24, size/2), then » overflow
   popup. Spec/plan in docs/superpowers. In priard 2026-10-11 (plus two
