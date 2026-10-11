@@ -114,8 +114,15 @@ Item {
     label.shortText = r.text
     label.shortened = r.shortened
   }
-  onFullTextChanged: Qt.callLater(label.reshorten)
-  onStyleChanged: Qt.callLater(label.reshorten)
+  // Deferred through a child Timer, not Qt.callLater: a queued callLater
+  // still runs after the label is torn down, and when the dock's whole
+  // instance goes (a plugin reload, a shell restart) its context is already
+  // invalid there - the DockLabels import reads as null and the call throws
+  // the same fault at the shortenName line, past the guard above. The Timer
+  // dies with the label, so nothing is left queued.
+  Timer { id: reshortenLater; interval: 0; onTriggered: label.reshorten() }
+  onFullTextChanged: reshortenLater.restart()
+  onStyleChanged: reshortenLater.restart()
 
   // ---- open state. Hover mode opens after a short dwell so a sweep across
   // the dock does not ripple; with another label still open or closing it
