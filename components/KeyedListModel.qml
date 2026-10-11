@@ -8,23 +8,26 @@ import "../DockKeys.js" as DockKeys
 // kept, and they look their data up by key.
 //
 // A key that goes away stays for exitMs, marked leaving, so its delegate can
-// animate out (DockKeys.target); the first sync marks nothing fresh, so the
-// dock does not animate in at startup. Roles: key, leaving, fresh, slot.
+// animate out (DockKeys.target); rows that arrive while the dock starts
+// (settleMs) are not fresh, so it does not animate in at startup. Roles: key, leaving, fresh, slot.
 ListModel {
   id: model
 
   property int exitMs: 0
   property int liveCount: 0
   property var _rows: []
-  property bool _synced: false
+  // Rows that arrive in the first moments are the dock starting (the config
+  // and the first window list come in asynchronously): they are not fresh.
+  readonly property real _bornAt: Date.now()
+  readonly property int settleMs: 1500
 
   property Timer _expiry: Timer {
     onTriggered: model._apply(DockKeys.expire(model._rows, Date.now()))
   }
 
   function sync(keys) {
-    model._apply(DockKeys.target(model._rows, keys || [], !model._synced, Date.now(), model.exitMs))
-    model._synced = true
+    var now = Date.now()
+    model._apply(DockKeys.target(model._rows, keys || [], now - model._bornAt < model.settleMs, now, model.exitMs))
   }
 
   function _apply(rows) {

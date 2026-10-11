@@ -20,16 +20,36 @@ Item {
   default property alias content: holder.data
   readonly property Item child: holder.children.length > 0 ? holder.children[0] : null
 
-  property real appear: (slot.fresh || !slot.wanted) ? 0 : 1
+  // Set by hand, not bound: a delegate's required roles (fresh, leaving)
+  // arrive after its bindings and onCompleted first ran.
+  property real appear: 1
+  property bool _snap: false
   Behavior on appear {
-    enabled: !!slot.motion && slot.motion.base > 0
+    enabled: !slot._snap && !!slot.motion && slot.motion.base > 0
     NumberAnimation {
       duration: slot.motion ? slot.motion.base : 0
       easing.type: slot.wanted ? Easing.OutCubic : Easing.InCubic
     }
   }
-  Component.onCompleted: slot.appear = slot.wanted ? 1 : 0
-  onWantedChanged: slot.appear = slot.wanted ? 1 : 0
+  // A write past the Behavior.
+  function _start(from) {
+    slot._snap = true
+    slot.appear = from
+    slot._snap = false
+  }
+  // The model's roles reach a new delegate only after it completes (and
+  // without a change signal), so the slot waits one turn, drawn as nothing,
+  // and then knows whether it is fresh.
+  property bool _settled: false
+  Component.onCompleted: {
+    slot._start(0)
+    Qt.callLater(function() {
+      slot._settled = true
+      if (!slot.fresh) slot._start(slot.wanted ? 1 : 0)
+      else slot.appear = slot.wanted ? 1 : 0
+    })
+  }
+  onWantedChanged: if (slot._settled) slot.appear = slot.wanted ? 1 : 0
 
   readonly property real full: slot.child ? slot.child.width : 0
   width: (slot.motion && slot.motion.layout) ? slot.full * slot.appear : (slot.appear > 0.001 ? slot.full : 0)
