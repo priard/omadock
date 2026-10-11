@@ -10,6 +10,11 @@ Item {
 
   property var dockRoot: null
   property bool want: false
+  // The dock's other popup lives. One opening ends a rival still fading
+  // out at once: the fading window unmapping later clears the new popup's
+  // focus grab (Hyprland), which dismissed it (a right click in an opened
+  // group showed the app's menu for a moment).
+  property var rivals: []
   readonly property var motion: dockRoot ? dockRoot.motion : null
 
   property bool alive: false
@@ -31,6 +36,7 @@ Item {
 
   onWantChanged: {
     if (life.want) {
+      for (var i = 0; i < life.rivals.length; i++) if (life.rivals[i] && life.rivals[i].closing) life.rivals[i].cut()
       life.alive = true
       life.level = 1
     } else if (!life.motion || life.motion.base <= 0) {
@@ -42,6 +48,13 @@ Item {
       // change will come to end the life.
       if (life.level === 0) life.alive = false
     }
+  }
+  // Gone now, no fade.
+  function cut() {
+    levelMotion.enabled = false
+    life.level = 0
+    levelMotion.enabled = true
+    life.alive = false
   }
   onLevelChanged: if (life.level === 0 && !life.want) life.alive = false
 }
