@@ -1,4 +1,5 @@
 import QtQuick 6.11
+import Quickshell
 import qs.Commons
 import "../DockFit.js" as DockFit
 import "../DockKeys.js" as DockKeys
@@ -174,4 +175,51 @@ Item {
   onLabelNaturalsChanged: host.schedule()
   onAvailableOverrideChanged: host.schedule()
   Component.onCompleted: host.schedule()
+
+  // ---- the overflow popup, opened by the "»" tile (DockOverflowTile)
+  // The dock's other popup lives (PopupLife rivals): opening one ends
+  // another still fading out, so its window cannot clear the new grab.
+  property var rivals: []
+  property bool overflowOpen: false
+  property real overflowX: 0
+  readonly property alias overflowLife: overflowLifeObj
+  function openOverflow(cx) {
+    if (host.overflowOpen) { host.overflowOpen = false; return }
+    root.closeContext()
+    root.closeFolderStack()
+    root.closeAppGroup()
+    host.overflowX = cx
+    host.overflowOpen = true
+  }
+  function closeOverflow() { host.overflowOpen = false }
+  // Nothing left to show: the row fits again.
+  onHiddenItemsChanged: if (host.hiddenItems.length === 0) host.overflowOpen = false
+  // Another popup taking over, or the dock hiding, closes it.
+  Connections {
+    target: host.root
+    function onContextAppIdChanged() { if (host.root.contextAppId !== "") host.overflowOpen = false }
+    function onActiveStackFolderChanged() { if (host.root.activeStackFolder !== "") host.overflowOpen = false }
+    function onActiveAppGroupIdChanged() { if (host.root.activeAppGroupId !== "") host.overflowOpen = false }
+    function onDockVisibleChanged() { if (!host.root.dockVisible) host.overflowOpen = false }
+  }
+
+  PopupLife { id: overflowLifeObj; dockRoot: host.root; rivals: host.rivals; want: host.overflowOpen && !!host.root && host.root.dockVisible }
+  LazyLoader {
+    active: overflowLifeObj.alive
+    DockPopupWindow {
+      id: overflowWindow
+      life: overflowLifeObj
+      dockRoot: host.root
+      open: true
+      centerX: host.overflowX
+      body: overflowBody
+      onDismissed: host.closeOverflow()
+      OverflowPopup {
+        id: overflowBody
+        rootRef: host.root
+        hostRef: host
+        popupWindow: overflowWindow
+      }
+    }
+  }
 }
