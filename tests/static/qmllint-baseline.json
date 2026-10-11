@@ -13,6 +13,8 @@
  "components/DockContextMenu.qml::missing-property": 2,
  "components/DockContextMenu.qml::unused-imports": 1,
  "components/DockDriveItem.qml::unused-imports": 1,
+ "components/DockFitHost.qml::incompatible-type": 1,
+ "components/DockFitHost.qml::unresolved-type": 1,
  "components/DockIconButton.qml::unused-imports": 1,
  "components/DockItem.qml::incompatible-type": 1,
  "components/DockPopupWindow.qml::missing-type": 3,
