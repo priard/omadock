@@ -75,6 +75,8 @@ Item {
     height: slot.height
     x: Math.round((slot.width - slot.full) / 2)
     opacity: slot.appear
+    // A leaving element takes no clicks, hovers or drops during its exit.
+    enabled: slot.wanted
     scale: (slot.motion && slot.motion.scale) ? 0.6 + 0.4 * slot.appear : 1
     transformOrigin: Item.Bottom
   }
