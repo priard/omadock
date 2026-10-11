@@ -67,8 +67,16 @@ Item {
   readonly property real markSpan: label.markEdge + label.markWidth + label.markGap
   // Before the icon, the room sits ahead of the art (less the margin the
   // plate already has there): the tile shifts its icon by this much.
-  readonly property real lead: (label.sideMarks && !label.marksAfter)
-    ? Math.round(label.progress * label.marksLevel * Math.max(0, label.markSpan - label.artMargin)) : 0
+  // A pill plate's round end keeps clear of the art: the room its curve
+  // takes at the art's top and bottom (DockLabels.pillRoom), past the margin
+  // the slot already has, and the same for the name at the far end.
+  readonly property bool pillPlate: label.plate && !!label.style && label.style.shape === "pill"
+  readonly property real pillLead: label.pillPlate
+    ? Math.max(0, Math.ceil(DockLabels.pillRoom(plateRect.height / 2, (label.root ? label.root.baseIconArt : 0) / 2)) + Style.space(1) - label.artMargin) : 0
+  readonly property real pillTrail: label.pillPlate ? Math.ceil(DockLabels.pillRoom(plateRect.height / 2, textItem.implicitHeight / 2)) : 0
+  readonly property real lead: Math.round(label.progress * Math.max(
+    (label.sideMarks && !label.marksAfter) ? label.marksLevel * Math.max(0, label.markSpan - label.artMargin) : 0,
+    label.pillLead))
   // Empty room between the icon slot's edge and the drawn art.
   readonly property real artMargin: label.root ? (label.root.iconSlot - label.root.baseIconArt) / 2 : Style.space(7)
   // The name is placed from the art's edge, not the slot's: a pill sits
@@ -79,7 +87,7 @@ Item {
   // inside its art; the name ends with about the same room, so a label
   // keeps the spacing an icon would before the next item, a divider or the
   // dock's edge. A plate is its own frame and needs only a little.
-  readonly property real trail: label.plate ? Style.space(1) + (label.marksAfter ? label.marksLevel * (label.markSpan - label.pad) : 0) : label.artMargin + Style.space(3)
+  readonly property real trail: label.plate ? Style.space(1) + Math.max(label.marksAfter ? label.marksLevel * (label.markSpan - label.pad) : 0, label.pillTrail) : label.artMargin + Style.space(3)
   readonly property real naturalWidth: label.shown && label.shortText !== ""
     ? Math.ceil(textWidth.advanceWidth) + label.pad * 2 + label.gap + label.trail : 0
 
@@ -253,7 +261,8 @@ Item {
       : label.mirror
       ? label.width + label.artMargin + artSize + hMargin + label.lead - edge
       : label.width - edge - x
-    readonly property real baseRadius: label.style ? Math.min(height * 0.32, DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
+    // Capped so the curve keeps off the icon; a pill makes room instead (pillLead).
+    readonly property real baseRadius: label.style ? Math.min(height * (label.pillPlate ? 0.5 : 0.32), DockLabels.labelRadius(label.style.shape, height, label.style.dockRatio)) : 0
     // Nested corners (and an edge corner that would poke out of the panel's
     // curve) know the plate's place in its panel only in a plate row.
     readonly property var corners: DockLabels.plateCorners(label.style ? label.style.shape : "dock", height, baseRadius,

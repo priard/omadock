@@ -381,32 +381,28 @@ test("plateEdges: empty row and a cut before the first item", () => {
   assert.deepEqual(plain(L.plateEdges([{ n: 1, labelled: true, cut: true }])), [{ left: true, right: true }])
 })
 
-test("plateCorners: any shape but nested rounds all four corners alike", () => {
+test("plateCorners: dock, pill and rounded round all four corners alike when they fit", () => {
   assert.deepEqual(plain(L.plateCorners("dock", 40, 6, 9, { left: true, right: false })), { tl: 6, tr: 6, bl: 6, br: 6 })
   assert.deepEqual(plain(L.plateCorners("pill", 40, 12.8, 9, null)), { tl: 12.8, tr: 12.8, bl: 12.8, br: 12.8 })
 })
 
-test("plateCorners: nested without edges (pill, hover) looks like dock", () => {
-  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, null)), { tl: 6, tr: 6, bl: 6, br: 6 })
-  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, undefined)), { tl: 6, tr: 6, bl: 6, br: 6 })
+test("plateCorners: without edges (pills, hover labels) every shape keeps its radius", () => {
+  assert.deepEqual(plain(L.plateCorners("square", 40, 6, 9, null)), { tl: 6, tr: 6, bl: 6, br: 6 })
+  assert.deepEqual(plain(L.plateCorners("square", 40, 6, 9, undefined)), { tl: 6, tr: 6, bl: 6, br: 6 })
 })
 
-test("plateCorners: nested squares inner corners and rounds the edge side", () => {
-  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, { left: false, right: false })), { tl: 0, tr: 0, bl: 0, br: 0 })
-  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, { left: true, right: false })), { tl: 9, tr: 0, bl: 9, br: 0 })
-  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, { left: false, right: true })), { tl: 0, tr: 9, bl: 0, br: 9 })
-  assert.deepEqual(plain(L.plateCorners("nested", 40, 6, 9, { left: true, right: true })), { tl: 9, tr: 9, bl: 9, br: 9 })
+test("plateCorners: square squares inner corners and rounds the edge side", () => {
+  assert.deepEqual(plain(L.plateCorners("square", 40, 6, 9, { left: false, right: false })), { tl: 0, tr: 0, bl: 0, br: 0 })
+  assert.deepEqual(plain(L.plateCorners("square", 40, 6, 9, { left: true, right: false })), { tl: 9, tr: 0, bl: 9, br: 0 })
+  assert.deepEqual(plain(L.plateCorners("square", 40, 6, 9, { left: false, right: true })), { tl: 0, tr: 9, bl: 0, br: 9 })
+  assert.deepEqual(plain(L.plateCorners("square", 40, 6, 9, { left: true, right: true })), { tl: 9, tr: 9, bl: 9, br: 9 })
 })
 
-test("plateCorners: nested outer radius stops at a pill end and never goes negative", () => {
+test("plateCorners: square edge radius stops at a pill end and never goes negative", () => {
   // Pill dock 72 high, gap 6: R - gap = 30 = half of a 60 px plate, not the 0.32 h cap.
-  assert.deepEqual(plain(L.plateCorners("nested", 60, 19.2, 30, { left: true, right: false })), { tl: 30, tr: 0, bl: 30, br: 0 })
-  assert.equal(L.plateCorners("nested", 40, 6, 50, { left: true, right: false }).tl, 20)
-  assert.equal(L.plateCorners("nested", 40, 6, -3, { left: true, right: false }).tl, 0)
-})
-
-test("readLabelConfig accepts the nested corners", () => {
-  assert.equal(L.readLabelConfig({ labelMode: "always", labelShape: "nested" }).labelShape, "nested")
+  assert.deepEqual(plain(L.plateCorners("square", 60, 19.2, 30, { left: true, right: false })), { tl: 30, tr: 0, bl: 30, br: 0 })
+  assert.equal(L.plateCorners("square", 40, 6, 50, { left: true, right: false }).tl, 20)
+  assert.equal(L.plateCorners("square", 40, 6, -3, { left: true, right: false }).tl, 0)
 })
 
 test("plateFitRadius: the smallest edge corner that stays inside the panel's curve", () => {
@@ -424,11 +420,32 @@ test("plateCorners: a chosen corner that would stick out of the panel's curve ro
   assert.deepEqual(plain(L.plateCorners("rounded", 60, 15, 30, { left: false, right: true }, fit)), { tl: 15, tr: 30, bl: 15, br: 30 })
   // A choice that already fits stays as chosen, on every side.
   assert.deepEqual(plain(L.plateCorners("dock", 60, 19.2, 30, { left: true, right: true }, fit)), { tl: 19.2, tr: 19.2, bl: 19.2, br: 19.2 })
-  // A rounded dock: a square plate fits, nothing changes.
-  assert.deepEqual(plain(L.plateCorners("square", 40, 0, 10, { left: true, right: true }, L.plateFitRadius(16, 6))), { tl: 0, tr: 0, bl: 0, br: 0 })
+  // A rounded dock: square plates still round their ends with the dock's corners.
+  assert.deepEqual(plain(L.plateCorners("square", 40, 0, 10, { left: true, right: true }, L.plateFitRadius(16, 6))), { tl: 10, tr: 10, bl: 10, br: 10 })
   // Inside the row (no edge) and without edges (pills, hover): the choice.
   assert.deepEqual(plain(L.plateCorners("square", 60, 0, 30, { left: false, right: false }, fit)), { tl: 0, tr: 0, bl: 0, br: 0 })
   assert.deepEqual(plain(L.plateCorners("square", 60, 0, 30, null, fit)), { tl: 0, tr: 0, bl: 0, br: 0 })
   // Never past a pill end.
   assert.equal(L.plateCorners("square", 40, 0, 30, { left: true, right: false }, fit).tl, 20)
+})
+
+test("pillRoom: how far in a pill end's curve reaches at a given half height", () => {
+  // Radius 25: at 17 px off the centre line the curve is 25 - sqrt(625 - 289) in.
+  assert.ok(Math.abs(L.pillRoom(25, 17) - (25 - Math.sqrt(625 - 289))) < 1e-9)
+  assert.equal(L.pillRoom(25, 0), 0)
+  assert.equal(L.pillRoom(25, 30), 25)   // taller than the plate: the whole radius
+  assert.equal(L.pillRoom(0, 5), 0)
+})
+
+test("square corners: square between plates, the ends round with the panel", () => {
+  // What Nested used to do: an edge side takes the panel's radius less the gap.
+  assert.deepEqual(plain(L.plateCorners("square", 40, 0, 9, { left: true, right: false }, 0)), { tl: 9, tr: 0, bl: 9, br: 0 })
+  assert.deepEqual(plain(L.plateCorners("square", 40, 0, 9, { left: false, right: false }, 0)), { tl: 0, tr: 0, bl: 0, br: 0 })
+  assert.deepEqual(plain(L.plateCorners("square", 40, 0, 9, null, 0)), { tl: 0, tr: 0, bl: 0, br: 0 })
+})
+
+test("a stored nested corner reads as square, in the config and in presets", () => {
+  assert.equal(L.readLabelConfig({ labelMode: "always", labelShape: "nested" }).labelShape, "square")
+  const look = plain(L.pickLabelLook({ labelShape: "nested" }, { labelShape: "dock" }))
+  assert.equal(look.labelShape, "square")
 })

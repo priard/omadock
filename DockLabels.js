@@ -9,7 +9,10 @@ var LABEL_SIZES = ["small", "medium", "large"]
 var LABEL_WEIGHTS = ["regular", "medium", "bold"]
 var LABEL_COLORS = ["auto", "theme", "accent"]
 var LABEL_BACKGROUNDS = ["none", "pill", "plate"]
-var LABEL_SHAPES = ["dock", "pill", "rounded", "square", "nested"]
+var LABEL_SHAPES = ["dock", "pill", "rounded", "square"]
+// "nested" was its own choice; square took its look (square between plates,
+// the ends round with the panel), so a stored nested reads as square.
+function _shape(v) { return v === "nested" ? "square" : v }
 var LABEL_INDICATORS = ["before", "after", "under"]
 var LABEL_PLATE_HEIGHTS = ["icon", "dock"]
 var LABEL_REVEALS = ["slide", "typewriter", "scramble"]
@@ -215,7 +218,7 @@ function readLabelConfig(parsed) {
     labelWeight: _pick(p.labelWeight, LABEL_WEIGHTS, "medium"),
     labelColor: color,
     labelBackground: background,
-    labelShape: _pick(p.labelShape, LABEL_SHAPES, "dock"),
+    labelShape: _pick(_shape(p.labelShape), LABEL_SHAPES, "dock"),
     labelIndicators: _pick(p.labelIndicators, LABEL_INDICATORS, "before"),
     labelPlateHeight: _pick(p.labelPlateHeight, LABEL_PLATE_HEIGHTS, "icon"),
     labelReveal: _pick(p.labelReveal, LABEL_REVEALS, "slide"),
@@ -234,8 +237,7 @@ function sideMarks(mode, background, indicators) {
 
 // Corner radius of a label background of height h. "dock" keeps the
 // dock's own corner-to-height ratio, so a square dock gets square labels
-// and a pill dock pill ones. "nested" draws as "dock" wherever a
-// background has no panel edge to follow (pills, hover labels).
+// and a pill dock pill ones.
 function labelRadius(shape, h, dockRatio) {
   if (shape === "pill") return h / 2
   if (shape === "rounded") return h / 4
@@ -273,27 +275,35 @@ function plateEdges(sections) {
   return out
 }
 
-// A plate's corner radii { tl, tr, bl, br }. Every shape but "nested", and
-// "nested" without edges, rounds all four by radius. "nested" squares the
-// plate off inside its panel and, on a side at the panel's edge, uses outer
-// (the panel's radius less the gap) so the two curves run parallel, up to
-// a pill end.
-//
-// fit (plateFitRadius) is the smallest corner that stays inside the panel's
-// curve: with any other shape, an edge corner smaller than that (a square
-// plate at a pill dock's end) would poke out, so it takes outer instead.
+// A plate's corner radii { tl, tr, bl, br }. Without edges (pills, hover
+// labels) every shape rounds all four by radius. In a plate row "square"
+// squares the plate off inside its panel and, on a side at the panel's edge,
+// uses outer (the panel's radius less the gap), so the two curves run
+// parallel, up to a pill end. Any other shape keeps its radius unless an
+// edge corner would be smaller than fit (plateFitRadius), the smallest one
+// that stays inside the panel's curve: then that side takes outer too.
 function plateCorners(shape, h, radius, outer, edges, fit) {
   var nested = Math.max(0, Math.min(h / 2, Number(outer) || 0))
   if (!edges) return { tl: radius, tr: radius, bl: radius, br: radius }
-  if (shape !== "nested") {
-    var edge = radius < (Number(fit) || 0) ? Math.max(radius, nested) : radius
-    var el = edges.left ? edge : radius
-    var er = edges.right ? edge : radius
-    return { tl: el, tr: er, bl: el, br: er }
+  if (_shape(shape) === "square") {
+    var l = edges.left ? nested : 0
+    var rr = edges.right ? nested : 0
+    return { tl: l, tr: rr, bl: l, br: rr }
   }
-  var l = edges.left ? nested : 0
-  var rr = edges.right ? nested : 0
-  return { tl: l, tr: rr, bl: l, br: rr }
+  var edge = radius < (Number(fit) || 0) ? Math.max(radius, nested) : radius
+  var el = edges.left ? edge : radius
+  var er = edges.right ? edge : radius
+  return { tl: el, tr: er, bl: el, br: er }
+}
+
+// How far in from a pill end its curve (radius r) reaches at half-height
+// half off the centre line: the room a pill plate keeps before its icon and
+// after its name, so the curve never cuts into either.
+function pillRoom(r, half) {
+  var R = Math.max(0, Number(r) || 0)
+  var y = Math.max(0, Number(half) || 0)
+  if (y >= R) return R
+  return R - Math.sqrt(R * R - y * y)
 }
 
 // The smallest corner radius a plate g in from a curve of radius R can have
@@ -323,6 +333,7 @@ function pickLabelLook(look, current) {
     var v = l[k]
     if (k === "labelEffect" && v === "shadow") v = "outline"
     if (k === "labelColor" && v === "high") v = "auto"
+    if (k === "labelShape") v = _shape(v)
     if (k === "labelMaxWidth") {
       out[k] = (typeof v === "number" && isFinite(v))
         ? Math.max(LABEL_MAX_WIDTH_MIN, Math.min(LABEL_MAX_WIDTH_MAX, Math.round(v))) : c[k]
