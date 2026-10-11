@@ -58,7 +58,9 @@ Item {
   // The column's room opens only while there is something to show, and
   // eases in and out as an app starts or stops.
   readonly property bool hasMarks: !!(label.marksFrom && label.marksFrom.running) || label.backgroundMarks
-  property real marksLevel: label.sideMarks && label.hasMarks ? 1 : 0
+  // A folded name (foldable) keeps a column only for the faint "playing
+  // without a window" mark; its window marks wait for the name to open.
+  property real marksLevel: label.sideMarks && (label.folded ? label.backgroundMarks : label.hasMarks) ? 1 : 0
   Behavior on marksLevel { NumberAnimation { duration: (label.motion ? label.motion.base : 0); easing.type: Easing.OutCubic } }
   // The column keeps the plate's own padding to the plate's edge (the room a
   // name has at the far end), the marks' own width and a gap to the art or the
@@ -79,9 +81,16 @@ Item {
   readonly property real pillLead: label.pillPlate
     ? Math.max(0, Math.ceil(DockLabels.pillRoom(plateRect.height / 2, (label.root ? label.root.baseIconArt : 0) / 2)) + Style.space(1) - label.artMargin) : 0
   readonly property real pillTrail: label.pillPlate ? Math.ceil(DockLabels.pillRoom(plateRect.height / 2, textItem.implicitHeight / 2)) : 0
-  readonly property real lead: Math.round(label.progress * Math.max(
-    (label.sideMarks && !label.marksAfter) ? label.marksLevel * Math.max(0, label.markSpan - label.artMargin) : 0,
-    label.pillLead))
+  // The column's room past the slot's own margin. A foldable name keeps it
+  // while folded (the plate is there), so it is not scaled by progress.
+  readonly property real columnRoom: label.marksLevel * Math.max(0, label.markSpan - label.artMargin)
+  readonly property real lead: Math.round(Math.max(
+    (label.sideMarks && !label.marksAfter) ? (label.foldable ? 1 : label.progress) * label.columnRoom : 0,
+    label.progress * label.pillLead))
+  // Folded with the column after the icon: its room behind the art, handed
+  // over to the name's trail as the name opens.
+  readonly property real foldTail: (label.sideMarks && label.marksAfter && label.foldable)
+    ? Math.round((1 - label.progress) * label.columnRoom) : 0
   // Empty room between the icon slot's edge and the drawn art.
   readonly property real artMargin: label.root ? (label.root.iconSlot - label.root.baseIconArt) / 2 : Style.space(7)
   // The name is placed from the art's edge, not the slot's: a pill sits
@@ -161,7 +170,7 @@ Item {
   // Hover labels slide out over the neighbours instead of widening the
   // tile, so the dock never moves under the pointer.
   readonly property bool overlay: !!label.style && label.style.hover
-  readonly property real rawExtra: label.overlay ? 0 : Math.round(label.progress * label.naturalWidth) + label.lead
+  readonly property real rawExtra: label.overlay ? 0 : Math.round(label.progress * label.naturalWidth) + label.lead + label.foldTail
   // In a plate row the tile's width lands on the device-pixel grid.
   readonly property real extra: (label.rawExtra > 0 && label.root && label.root.labelPlates)
     ? DockLabels.gridCeil(label.root.iconSlot + label.rawExtra, label.root.outputScale) - label.root.iconSlot
@@ -314,7 +323,7 @@ Item {
     id: markColumn
     visible: label.sideMarks
     transform: Translate { y: label.rise }
-    opacity: label.progress * label.marksLevel
+    opacity: (label.foldable ? 1 : label.progress) * label.marksLevel
     readonly property real artSize: label.root ? label.root.baseIconArt : 0
     readonly property real iconW: label.iconBox ? label.iconBox.width : 0
     // At the plate's leading edge for "before", its trailing edge for
