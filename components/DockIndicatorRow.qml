@@ -128,6 +128,13 @@ Item {
         // Written a turn late: in onCompleted the Behavior would not animate.
         Component.onCompleted: Qt.callLater(function() { cell._settled = true; cell.appear = cell.going ? 0 : 1 })
         onGoingChanged: cell.appear = cell.going ? 0 : 1
+        // The mark snaps itself to the pixel grid from its scene position,
+        // which the grow (scale) and the column closing up shift without
+        // moving the mark inside its cell: snapped mid-grow it kept a pixel
+        // off its neighbours. Snap again once the cell has settled or moved.
+        onAppearChanged: if (cell.appear >= 1) Qt.callLater(mark.resnap)
+        onXChanged: Qt.callLater(mark.resnap)
+        onYChanged: Qt.callLater(mark.resnap)
         opacity: cell.appear
         scale: (marks.motion && marks.motion.scale) ? 0.4 + 0.6 * cell.appear : 1
 
