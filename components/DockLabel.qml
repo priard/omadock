@@ -37,6 +37,9 @@ Item {
   // A folded name keeps its plate around the icon, and opening widens it.
   readonly property bool foldable: !!label.style && !label.style.hover
   property bool folded: false
+  // Folded because the app sleeps or is still starting ("When running"):
+  // its window marks wait for the name. A name folded for room keeps them.
+  property bool marksHeld: false
 
   readonly property var style: root ? root.labelStyle(label.kind) : null
   readonly property string fullText: root ? root.labelName(label.appId, label.name) : label.name
@@ -59,9 +62,10 @@ Item {
   // The column's room opens only while there is something to show, and
   // eases in and out as an app starts or stops.
   readonly property bool hasMarks: !!(label.marksFrom && label.marksFrom.running) || label.backgroundMarks
-  // A folded name (foldable) keeps a column only for the faint "playing
-  // without a window" mark; its window marks wait for the name to open.
-  property real marksLevel: label.sideMarks && (label.folded ? label.backgroundMarks : label.hasMarks) ? 1 : 0
+  // A name held folded (marksHeld) keeps a column only for the faint
+  // "playing without a window" mark; its window marks wait for the name to
+  // open. A name folded for room keeps all of them.
+  property real marksLevel: label.sideMarks && ((label.folded && label.marksHeld) ? label.backgroundMarks : label.hasMarks) ? 1 : 0
   Behavior on marksLevel { NumberAnimation { duration: (label.motion ? label.motion.base : 0); easing.type: Easing.OutCubic } }
   // The column keeps the plate's own padding to the plate's edge (the room a
   // name has at the far end), the marks' own width and a gap to the art or the
@@ -207,7 +211,7 @@ Item {
     inner: label.pad * 2 + label.gap + (label.plate ? Style.space(1) : label.trailTarget),
     outer: label.pad * 2 + label.gap + label.trailTarget
       + Math.max((label.sideMarks && !label.marksAfter && label.hasMarks) ? Math.max(0, label.markSpan - label.artMargin) : 0, label.pillLead),
-    folded: (label.sideMarks && label.backgroundMarks) ? Math.max(0, label.markSpan - label.artMargin) : 0
+    folded: (label.sideMarks && (label.backgroundMarks || label.hasMarks)) ? Math.max(0, label.markSpan - label.artMargin) : 0
   } : null
   property int _nslot: -1
   function syncNatural() {

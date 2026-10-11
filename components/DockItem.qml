@@ -390,7 +390,8 @@ Item {
     marksFrom: indicatorRow
     backgroundMarks: item.backgroundMedia
     bounce: item.bounceY
-    folded: root ? (DockLabels.nameFolded(root.labelMode, root.labelPinned, item.pinned, item.nameAwake) || root.fitHostRef.folds("app", item.pinned, item.running)) : false
+    marksHeld: root ? DockLabels.nameFolded(root.labelMode, root.labelPinned, item.pinned, item.nameAwake) : false
+    folded: label.marksHeld || (root ? root.fitHostRef.folds("app", item.pinned, item.running) : false)
   }
 
   DropArea {
