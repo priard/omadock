@@ -111,6 +111,11 @@ PopupWindow {
   Binding { target: frozen; property: "lastY"; value: popup.body ? popup.body.y - popup.rise : 0; when: !popup.closing; restoreMode: Binding.RestoreNone }
   Binding { target: frozen; property: "lastW"; value: popup.body ? popup.body.width : 0; when: !popup.closing; restoreMode: Binding.RestoreNone }
   Binding { target: frozen; property: "lastH"; value: popup.body ? popup.body.height : 0; when: !popup.closing; restoreMode: Binding.RestoreNone }
+  // The body sizes itself to 0 the moment its state clears, and a
+  // ShaderEffectSource with an empty source draws nothing: while closing the
+  // body keeps its last size, so the frozen frame has something to show.
+  Binding { target: popup.body; property: "width"; value: frozen.lastW; when: popup.closing }
+  Binding { target: popup.body; property: "height"; value: frozen.lastH; when: popup.closing }
 
   anchor.window: dockWindow
   anchor.rect.width: 1
