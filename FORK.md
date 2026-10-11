@@ -55,10 +55,12 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 
 ## Open
 
-- `feat/animations`: entry/exit animations everywhere, one motion source,
-  Animations Full / Reduced / Off.
-- `feat/capture-guard`: no window captures while the dock's output is gone
-  (Hyprland 0.56.2 aborted on a capture of a disconnected DP-1).
+- #59 `feat/animations`: entry/exit animations everywhere, one motion
+  source, Animations Full / Reduced / Off (opened 2026-10-11).
+- #58 `feat/capture-guard`: no window captures while the dock's output is
+  gone (Hyprland 0.56.2 aborted on a capture of a disconnected DP-1). #58
+  and #59 conflict on adjacent added lines in ci.yml, PreviewTile and
+  WindowCardStack: keep both.
 
 ## Fork only
 
