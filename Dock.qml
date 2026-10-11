@@ -1864,16 +1864,9 @@ Item {
   // what its first press parked. Always the recorded origin.
   function restoreAddress(address) { return windowLogic.restoreWindow(root, address, "", true) }
 
-  // Recorded-place bookkeeping: the queue and the timer stay here, the logic in
+  // Recorded-place bookkeeping: the timer stays here, the logic in
   // DockSlotLogic (which other modules reach through these).
-  function scheduleSlotFix(address) {
-    if (!address) return
-    var queue = root.pendingSlotFixes ? root.pendingSlotFixes.slice() : []
-    if (queue.indexOf(address) < 0) queue.push(address)
-    root.pendingSlotFixes = queue
-    root.slotFixFocus = address
-    slotFixTimer.restart()
-  }
+  function scheduleSlotFix(address) { return slotLogic.scheduleSlotFix(root, address, slotFixTimer) }
 
   function dropParkSlot(address) { return slotLogic.dropParkSlot(root, address) }
 
