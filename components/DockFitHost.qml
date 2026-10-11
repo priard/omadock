@@ -176,6 +176,33 @@ Item {
   onAvailableOverrideChanged: host.schedule()
   Component.onCompleted: host.schedule()
 
+  // What the hidden items would show on the dock, summed for the "»" tile:
+  // a window open, an urgent app, notification badges.
+  readonly property var hiddenState: {
+    var s = { windows: false, urgent: false, badges: 0 }
+    var dock = host.root
+    if (!dock) return s
+    var apps = []
+    for (var i = 0; i < host.hiddenItems.length; i++) {
+      var id = host.hiddenItems[i]
+      var sep = id.indexOf(":")
+      var kind = id.slice(0, sep), key = id.slice(sep + 1)
+      if (kind === "run") apps.push(key)
+      else if (kind === "pin") {
+        var p = dock.pinnedRowByKey[key]
+        if (p && p.entry) apps.push(p.entry.appId)
+        else if (p && p.group && DockModel.isList(p.group.apps)) apps = apps.concat(DockModel.toArray(p.group.apps))
+      }
+    }
+    for (var a = 0; a < apps.length; a++) {
+      var e = dock.entryForId(apps[a])
+      if (e && e.running) s.windows = true
+      if (dock.showUrgentHint && dock.urgentMap && dock.urgentMap[apps[a]]) s.urgent = true
+    }
+    if (dock.showNotificationBadges) s.badges = DockModel.groupBadgeTotal(apps, dock.notificationBadges)
+    return s
+  }
+
   // ---- the overflow popup, opened by the "»" tile (DockOverflowTile)
   // The dock's other popup lives (PopupLife rivals): opening one ends
   // another still fading out, so its window cannot clear the new grab.
