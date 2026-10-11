@@ -20,14 +20,26 @@ Item {
   readonly property var motion: root ? root.motion : null
 
   anchors.verticalCenter: parent ? parent.verticalCenter : undefined
-  // Set in onShownChanged, after shown, so the easing the animation picks
-  // up is the new direction's (a bound width started before it changed).
+  // Width set by hand, after shown: the easing then matches the direction
+  // (a bound width started before the easing changed), and changes in the
+  // first moments, while the dock starts and its data arrives, land at once.
   readonly property real full: root ? root.separatorWidth : Style.space(1)
+  readonly property real _bornAt: Date.now()
   property bool _going: !divider.shown
-  width: divider.shown ? divider.full : 0
-  onShownChanged: divider._going = !divider.shown
-  Behavior on width {
-    enabled: !!divider.motion && divider.motion.layout
+  property bool _snap: false
+  property real _w: 0
+  width: divider._w
+  function _set() {
+    divider._going = !divider.shown
+    divider._snap = Date.now() - divider._bornAt < 1500
+    divider._w = divider.shown ? divider.full : 0
+    divider._snap = false
+  }
+  Component.onCompleted: divider._set()
+  onShownChanged: divider._set()
+  onFullChanged: divider._set()
+  Behavior on _w {
+    enabled: !divider._snap && !!divider.motion && divider.motion.layout
     NumberAnimation {
       duration: divider.motion ? divider.motion.base : 0
       easing.type: divider._going ? Easing.InCubic : Easing.OutCubic

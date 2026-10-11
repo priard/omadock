@@ -49,7 +49,14 @@ Item {
       else slot.appear = slot.wanted ? 1 : 0
     })
   }
-  onWantedChanged: if (slot._settled) slot.appear = slot.wanted ? 1 : 0
+  // A row that hides or shows itself while the dock starts (its data still
+  // arriving) does so at once.
+  readonly property real _bornAt: Date.now()
+  onWantedChanged: {
+    if (!slot._settled) return
+    if (Date.now() - slot._bornAt < 1500) slot._start(slot.wanted ? 1 : 0)
+    else slot.appear = slot.wanted ? 1 : 0
+  }
 
   readonly property real full: slot.child ? slot.child.width : 0
   width: (slot.motion && slot.motion.layout) ? slot.full * slot.appear : (slot.appear > 0.001 ? slot.full : 0)
