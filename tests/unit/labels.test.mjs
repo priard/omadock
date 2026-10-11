@@ -408,3 +408,14 @@ test("plateCorners: nested outer radius stops at a pill end and never goes negat
 test("readLabelConfig accepts the nested corners", () => {
   assert.equal(L.readLabelConfig({ labelMode: "always", labelShape: "nested" }).labelShape, "nested")
 })
+
+test("plateEdges: drives with plates of their own take the edge after the folders", () => {
+  // button, 2 pinned, 1 folder, 1 drive: the drive is the last plate, at the right edge.
+  const e = plain(L.plateEdges([
+    { n: 1, labelled: true, cut: false }, { n: 2, labelled: true, cut: false },
+    { n: 0, labelled: false, cut: false }, { n: 0, labelled: true, cut: false },
+    { n: 1, labelled: true, cut: false }, { n: 1, labelled: true, cut: false }]))
+  assert.equal(e.length, 5)
+  assert.deepEqual(e[3], { left: false, right: false })
+  assert.deepEqual(e[4], { left: false, right: true })
+})

@@ -3,7 +3,7 @@ import qs.Commons
 import qs.Ui
 import "../DockLabels.js" as DockLabels
 
-// The plate an unlabelled tile (the Omarchy button) wears when
+// The plate an unlabelled tile (the Omarchy button, a drive) wears when
 // always-on labels use plates, so the row reads as one set of buttons.
 // Same fill, corners, margins and height mode as the label plates
 // (DockLabel); it lifts with the tile's art. ink is what the tile should
@@ -15,6 +15,9 @@ Rectangle {
   readonly property var root: rootRef
   property Item tile: parent
   property bool hovered: false
+  // Its place among the plates (DockCard.plateEdges): 0 for the Omarchy
+  // button, after the folders for a drive.
+  property int slot: 0
 
   readonly property var style: root ? root.labelStyle("app") : null
   readonly property color ink: style ? style.ink : Color.bar.text
@@ -34,9 +37,8 @@ Rectangle {
   y: box ? box.y : artTop - vMargin
   height: box ? box.h : art + vMargin * 2
   readonly property real baseRadius: style ? Math.min(height * 0.32, DockLabels.labelRadius(style.shape, height, style.dockRatio)) : 0
-  // The Omarchy button is label slot 0 (Dock.appsSlots).
   readonly property var corners: DockLabels.plateCorners(style ? style.shape : "dock", height, baseRadius,
-    style ? style.nestedRadius : 0, (root && root.dockCardComp) ? root.dockCardComp.plateEdges[0] : null)
+    style ? style.nestedRadius : 0, (root && root.dockCardComp) ? root.dockCardComp.plateEdges[plate.slot] : null)
   radius: baseRadius
   topLeftRadius: corners.tl
   topRightRadius: corners.tr
