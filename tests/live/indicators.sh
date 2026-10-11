@@ -258,14 +258,14 @@ off = (((min(xs) + max(xs) + 1) / 2 + cx) - (x + w / 2) if mode == "row"
 
 windows = item["windows"]
 expected = 5 if windows > 5 else max(1, min(windows, 5))
-# What is drawn has to be the shape this check is about: the focused window's
-# accent bar (12x4 px) beside 5 px dots, or upright in a column (1.6x: a dense
-# 9 px bar to the full dot). Windows > 5 also has to draw the overflow pill,
-# which is why the count is five there.
+# What is drawn has to be the shape this check is about: the accent bar lies
+# along the row and stands upright in a column (1.6x the dots). Past five
+# windows the count moves into the "+N" pill, which spans wider than the dots
+# rather than taller, so a column of equal squares is neither shape.
 if mode == "row":
     shape = widths[0] > heights[0] if windows == 1 else max(widths) >= 1.8 * min(widths)
 else:
-    shape = heights[0] > widths[0] if windows == 1 else max(heights) >= 1.6 * min(heights)
+    shape = heights[0] > widths[0] if windows == 1 else max(heights) >= 1.6 * min(heights) or (windows > 5 and max(widths) >= 1.6 * min(widths))
 ok = len(marks) == expected and abs(off) <= tol and shape
 line = (f"{item_id} · {windows} window(s) → {len(marks)} mark(s) of {expected} · "
         f"centre {abs(off):.1f} px off the icon's (tol {tol})")
