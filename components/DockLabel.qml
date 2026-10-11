@@ -201,12 +201,12 @@ Item {
   // so it does not depend on the plan it feeds.
   readonly property var fitHost: label.root ? label.root.fitHostRef : null
   TextMetrics { id: fullWidth; font: textItem.font; text: label.fullText }
-  readonly property real trailTarget: label.plate ? Style.space(1) + ((label.marksAfter && label.hasMarks) ? label.markSpan - label.pad : 0) : label.artMargin + Style.space(3)
+  readonly property real trailTarget: label.plate ? Style.space(1) + Math.max((label.marksAfter && label.hasMarks) ? label.markSpan - label.pad : 0, label.pillTrail) : label.artMargin + Style.space(3)
   readonly property var natural: (label.shown && !label.overlay) ? {
     text: fullWidth.advanceWidth,
     inner: label.pad * 2 + label.gap + (label.plate ? Style.space(1) : label.trailTarget),
     outer: label.pad * 2 + label.gap + label.trailTarget
-      + ((label.sideMarks && !label.marksAfter && label.hasMarks) ? Math.max(0, label.markSpan - label.artMargin) : 0),
+      + Math.max((label.sideMarks && !label.marksAfter && label.hasMarks) ? Math.max(0, label.markSpan - label.artMargin) : 0, label.pillLead),
     folded: (label.sideMarks && label.backgroundMarks) ? Math.max(0, label.markSpan - label.artMargin) : 0
   } : null
   property int _nslot: -1
