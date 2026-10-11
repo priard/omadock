@@ -1,7 +1,9 @@
 import QtQuick
+import Quickshell.Hyprland
 import Quickshell.Wayland._Screencopy
 import qs.Commons
 import qs.Ui
+import "../DockOutput.js" as DockOutput
 
 // Still thumbnails of an app's windows, stacked like cards: the front card
 // shows windows[frontIndex], up to two more peek out above it, and changing
@@ -20,6 +22,11 @@ Item {
   property var rootRef: null
   readonly property var root: rootRef
   readonly property var motion: stack.root ? stack.root.motion : null
+  // Window captures only while the dock's output is there and powered
+  // (DockOutput.js): Hyprland aborts on a capture of a vanished output.
+  // monitorRev re-runs this on Hyprland's monitor events.
+  readonly property bool canCapture: !!stack.root && DockOutput.outputAwake(stack.root.dockScreen ? stack.root.dockScreen.name : "",
+    stack.root.dockScreen ? Hyprland.monitorFor(stack.root.dockScreen) : null, stack.root.monitorRev)
   property var windows: []
   property int frontIndex: 0
   property bool active: false
@@ -100,7 +107,7 @@ Item {
       Loader {
         id: capture
         anchors.centerIn: parent
-        active: card.reached && !!card.win
+        active: card.reached && !!card.win && stack.canCapture
         sourceComponent: ScreencopyView {
           // Letterbox the window into the frame by its own aspect ratio.
           readonly property real aspect: (sourceSize.width > 0 && sourceSize.height > 0)
