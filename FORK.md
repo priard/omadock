@@ -77,7 +77,7 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   one device pixel, so a Row no longer drops it with its spacing and the
   right group does not jump when magnification uses up a small gap.
 
-- `feat/pinned-labels` (no PR yet, cut from feat/animations: needs #59):
+- #63 `feat/pinned-labels` (cut from feat/animations: rebase after #59):
   Labels -> Pinned apps "When running" folds a closed pinned app's name
   to its icon (plate kept) and widens the tile once the launch bounce
   lands. Cherry-picked into priard 2026-10-11.
