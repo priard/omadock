@@ -24,7 +24,7 @@ const LABEL_LISTS = {
   labelMode: "LABEL_MODES", labelKind: "LABEL_KINDS", labelFont: "LABEL_FONTS",
   labelSize: "LABEL_SIZES", labelWeight: "LABEL_WEIGHTS", labelColor: "LABEL_COLORS",
   labelBackground: "LABEL_BACKGROUNDS", labelShape: "LABEL_SHAPES",
-  labelIndicators: "LABEL_INDICATORS", labelPlateHeight: "LABEL_PLATE_HEIGHTS",
+  labelIndicators: "LABEL_INDICATORS", labelPlateHeight: "LABEL_PLATE_HEIGHTS", labelPinned: "LABEL_PINNED",
   labelReveal: "LABEL_REVEALS", labelEffect: "LABEL_EFFECTS",
 }
 

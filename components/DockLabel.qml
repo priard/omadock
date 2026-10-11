@@ -31,6 +31,11 @@ Item {
   // window" mark.
   property var marksFrom: null
   property bool backgroundMarks: false
+  // "When running" pinned apps (labelPinned): the tile may fold this name
+  // (foldable), and does while its app sleeps (folded). A folded name keeps
+  // its plate around the icon, and opening widens that plate.
+  property bool foldable: false
+  property bool folded: false
 
   readonly property var style: root ? root.labelStyle(label.kind) : null
   readonly property string fullText: root ? root.labelName(label.appId, label.name) : label.name
@@ -129,7 +134,7 @@ Item {
   // switches at once. Never during a drag.
   property bool dwelled: false
   readonly property bool dragFree: label.root ? !label.root.dockDragActive : true
-  readonly property bool wantOpen: label.shown
+  readonly property bool wantOpen: label.shown && !label.folded
     && (!label.style.hover || (label.hovered && label.dwelled && label.dragFree))
   Timer {
     id: dwell
@@ -146,7 +151,13 @@ Item {
     label.counted = label.counts
   }
   property real progress: label.wantOpen ? 1 : 0
-  Behavior on progress { NumberAnimation { duration: (label.motion ? label.motion.base : 0); easing.type: Easing.OutCubic } }
+  // A foldable name widens its tile only where layout eases (Full); at
+  // Reduced the width snaps and the name fades (nameFade).
+  Behavior on progress { NumberAnimation { duration: (label.motion && (label.motion.layout || !label.foldable) ? label.motion.base : 0); easing.type: Easing.OutCubic } }
+  property real nameFade: label.wantOpen ? 1 : 0
+  Behavior on nameFade { NumberAnimation { duration: (label.motion ? label.motion.fast : 0); easing.type: Easing.OutCubic } }
+  // The plate stays put while the name folds into it.
+  readonly property bool restingPlate: label.plate && label.shown && label.foldable
   // Hover labels slide out over the neighbours instead of widening the
   // tile, so the dock never moves under the pointer.
   readonly property bool overlay: !!label.style && label.style.hover
@@ -231,7 +242,7 @@ Item {
   x: label.mirror ? label.tileLead : (label.iconBox ? label.iconBox.x + label.iconBox.width : 0)
   width: label.overlay ? Math.round(label.progress * label.naturalWidth) : label.extra - label.lead
   height: parent ? parent.height : 0
-  visible: label.width > 0
+  visible: label.width > 0 || label.restingPlate
 
   // Plate: one surface behind icon and name. The art gets the same margin
   // on its leading side as the name on the trailing one, and the window
@@ -282,7 +293,7 @@ Item {
     bottomLeftRadius: corners.bl
     bottomRightRadius: corners.br
     color: label.style ? Util.alpha(label.fill, label.overlay ? 1 : 0.55 + 0.25 * label.hoverLevel) : "transparent"
-    opacity: label.progress
+    opacity: label.restingPlate ? 1 : label.progress
     // Lifts with the icon and the name, like one button.
     transform: Translate { y: label.rise }
     // Lifted off the icons it covers.
@@ -357,7 +368,7 @@ Item {
       height: textItem.implicitHeight + Style.space(2)
       // Centred on the icon art, which sits on the dock floor.
       y: label.root ? Math.round(label.height - label.root.iconArtBottom - label.root.baseIconArt / 2 - height / 2) : 0
-      opacity: label.progress
+      opacity: label.foldable ? Math.min(label.progress, label.nameFade) : label.progress
       transform: Translate { y: label.rise }
 
       Rectangle {

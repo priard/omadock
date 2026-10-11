@@ -59,6 +59,18 @@ Column {
       value: root ? root.labelKind : "all"
       onPicked: function(v) { root.setOption("labelKind", v) }
     }
+    ChoiceRow {
+      key: "labelPinned"
+      label: "Pinned apps"
+      hint: "When running shows a pinned app's name only while it has a window; a closed one keeps just its icon."
+      visible: root ? (root.labelMode === "always" && (root.labelKind === "all" || root.labelKind === "apps")) : false
+      options: [
+        { value: "always", label: "Always" },
+        { value: "running", label: "When running" }
+      ]
+      value: root ? root.labelPinned : "always"
+      onPicked: function(v) { root.setOption("labelPinned", v) }
+    }
 
     SectionLabel { text: "Look" }
 

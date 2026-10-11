@@ -169,13 +169,13 @@ test("pickLook carries the label look keys, labels on or off, but not names", ()
   const look = plain(M.pickLook({
     labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
     labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
-    labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock",
+    labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock", labelPinned: "running",
     labelMode: "hover", labelKind: "apps", labelNames: { a: "A" }
   }))
   const want = {
     labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
     labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
-    labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock",
+    labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock", labelPinned: "running",
     labelMode: "hover", labelKind: "apps"
   }
   for (const k in want) assert.equal(look[k], want[k], k)

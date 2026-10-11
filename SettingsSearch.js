@@ -99,6 +99,7 @@ var SETTINGS_SEARCH = [
   { key: "labelBackground", page: "labels", label: "Background", terms: ["labels", "pill", "plate", "button"] },
   { key: "labelShape", page: "labels", label: "Corners", terms: ["labels", "shape", "square", "sharp", "pill", "rounded", "radius", "nested", "round ends"] },
   { key: "labelIndicators", page: "labels", label: "Indicators", terms: ["labels", "dots", "windows", "running", "plate", "column", "side"] },
+  { key: "labelPinned", page: "labels", label: "Pinned apps", terms: ["labels", "pinned", "running", "open", "closed", "hide", "names"] },
   { key: "labelPlateHeight", page: "labels", label: "Plate height", terms: ["labels", "plate", "tall", "full", "stretch", "dock"] },
   { key: "labelReveal", page: "labels", label: "Reveal", terms: ["labels", "animation", "typewriter", "scramble", "slide"] },
   { key: "labelEffect", page: "labels", label: "Effect", terms: ["labels", "glow", "shadow", "outline", "stroke"] },

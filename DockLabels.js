@@ -15,6 +15,7 @@ var LABEL_SHAPES = ["dock", "pill", "rounded", "square"]
 function _shape(v) { return v === "nested" ? "square" : v }
 var LABEL_INDICATORS = ["before", "after", "under"]
 var LABEL_PLATE_HEIGHTS = ["icon", "dock"]
+var LABEL_PINNED = ["always", "running"]
 var LABEL_REVEALS = ["slide", "typewriter", "scramble"]
 var LABEL_EFFECTS = ["none", "glow", "outline"]
 var LABEL_MAX_WIDTH_MIN = 80
@@ -24,7 +25,7 @@ var MAX_LABEL_NAMES = 200
 var MAX_LABEL_NAME = 40
 var MAX_LABEL_APP_ID = 128
 var LABEL_CONFIG_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "labelWeight",
-  "labelColor", "labelBackground", "labelShape", "labelIndicators", "labelPlateHeight", "labelReveal", "labelEffect", "labelMaxWidth", "labelNames"]
+  "labelColor", "labelBackground", "labelShape", "labelIndicators", "labelPlateHeight", "labelPinned", "labelReveal", "labelEffect", "labelMaxWidth", "labelNames"]
 // The first label release spelled these; read once, dropped on save.
 var LEGACY_LABEL_KEYS = ["showLabels", "labelPlacement", "labelContrast"]
 var SYMBOL_WORD = /^[&+\-–—|\/·:,.]+$/
@@ -221,11 +222,19 @@ function readLabelConfig(parsed) {
     labelShape: _pick(_shape(p.labelShape), LABEL_SHAPES, "dock"),
     labelIndicators: _pick(p.labelIndicators, LABEL_INDICATORS, "before"),
     labelPlateHeight: _pick(p.labelPlateHeight, LABEL_PLATE_HEIGHTS, "icon"),
+    labelPinned: _pick(p.labelPinned, LABEL_PINNED, "always"),
     labelReveal: _pick(p.labelReveal, LABEL_REVEALS, "slide"),
     labelEffect: p.labelEffect === "shadow" ? "outline" : _pick(p.labelEffect, LABEL_EFFECTS, "none"),
     labelMaxWidth: w,
     labelNames: boundLabelNames(p.labelNames)
   }
+}
+
+// "When running" pinned apps (labelPinned): an always-on name folds away
+// while its pinned app has no window, leaving the icon (on its plate). awake
+// is the tile's say that the app runs and its launch bounce has landed.
+function nameFolded(mode, pinnedMode, pinned, awake) {
+  return mode === "always" && pinnedMode === "running" && !!pinned && !awake
 }
 
 // Window indicators move from under the icon to a column at the plate's
@@ -316,7 +325,7 @@ function plateFitRadius(R, g) {
 }
 
 var LABEL_LOOK_KEYS = ["labelMode", "labelKind", "labelFont", "labelSize", "labelWeight", "labelColor",
-  "labelBackground", "labelShape", "labelIndicators", "labelPlateHeight", "labelReveal", "labelEffect", "labelMaxWidth"]
+  "labelBackground", "labelShape", "labelIndicators", "labelPlateHeight", "labelPinned", "labelReveal", "labelEffect", "labelMaxWidth"]
 
 // A preset's label look over the current one: known keys with valid
 // values win, anything else keeps its current value. (readLabelConfig
@@ -326,7 +335,7 @@ function pickLabelLook(look, current) {
   var c = current || {}
   var out = {}
   var lists = { labelMode: LABEL_MODES, labelKind: LABEL_KINDS, labelFont: LABEL_FONTS, labelSize: LABEL_SIZES, labelWeight: LABEL_WEIGHTS,
-    labelColor: LABEL_COLORS, labelBackground: LABEL_BACKGROUNDS, labelShape: LABEL_SHAPES, labelIndicators: LABEL_INDICATORS, labelPlateHeight: LABEL_PLATE_HEIGHTS,
+    labelColor: LABEL_COLORS, labelBackground: LABEL_BACKGROUNDS, labelShape: LABEL_SHAPES, labelIndicators: LABEL_INDICATORS, labelPlateHeight: LABEL_PLATE_HEIGHTS, labelPinned: LABEL_PINNED,
     labelReveal: LABEL_REVEALS, labelEffect: LABEL_EFFECTS }
   for (var i = 0; i < LABEL_LOOK_KEYS.length; i++) {
     var k = LABEL_LOOK_KEYS[i]

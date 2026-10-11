@@ -140,8 +140,24 @@ test("readLabelConfig defaults", () => {
   assert.deepEqual(plain(L.readLabelConfig(null)), {
     labelMode: "off", labelKind: "all", labelFont: "theme", labelSize: "medium",
     labelWeight: "medium", labelColor: "auto", labelBackground: "none", labelShape: "dock",
-    labelIndicators: "before", labelPlateHeight: "icon", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelNames: {}
+    labelIndicators: "before", labelPlateHeight: "icon", labelPinned: "always", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140, labelNames: {}
   })
+})
+
+test("readLabelConfig keeps a known labelPinned and defaults the rest", () => {
+  assert.equal(L.readLabelConfig({ labelPinned: "running" }).labelPinned, "running")
+  assert.equal(L.readLabelConfig({ labelPinned: "never" }).labelPinned, "always")
+  assert.equal(L.pickLabelLook({ labelPinned: "running" }, { labelPinned: "always" }).labelPinned, "running")
+  assert.equal(L.pickLabelLook({}, { labelPinned: "running" }).labelPinned, "running")
+})
+
+test("nameFolded only for a sleeping pinned app with always-on names set to running", () => {
+  assert.equal(L.nameFolded("always", "running", true, false), true)
+  assert.equal(L.nameFolded("always", "running", true, true), false)
+  assert.equal(L.nameFolded("always", "running", false, false), false)
+  assert.equal(L.nameFolded("always", "always", true, false), false)
+  assert.equal(L.nameFolded("hover", "running", true, false), false)
+  assert.equal(L.nameFolded("off", "running", true, false), false)
 })
 
 test("readLabelConfig migrates upstream's first label keys", () => {
@@ -224,7 +240,7 @@ test("homeExtra counts the part of a slot's own extra that sits before its icon"
 
 test("pickLabelLook applies a preset's label look and keeps the rest", () => {
   const cur = { labelMode: "always", labelKind: "all", labelFont: "theme", labelSize: "small", labelWeight: "medium", labelColor: "auto",
-    labelBackground: "none", labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140 }
+    labelBackground: "none", labelShape: "dock", labelIndicators: "before", labelPlateHeight: "icon", labelPinned: "always", labelReveal: "slide", labelEffect: "none", labelMaxWidth: 140 }
   const out = plain(L.pickLabelLook({ labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 999, labelShape: "blob", iconSize: 40 }, cur))
   assert.deepEqual(out, Object.assign({}, cur, { labelFont: "pixel", labelBackground: "plate", labelMaxWidth: 240 }))
   // A preset saved before label looks existed changes nothing.

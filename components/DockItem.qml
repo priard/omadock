@@ -218,12 +218,23 @@ Item {
   // mid-air used to snap the icon down from 13 px).
   SequentialAnimation on bounceY {
     running: item.bouncing && (root ? root.dockVisible : false)
+    onStopped: item.launchLanding = false
     alwaysRunToEnd: true
     loops: Animation.Infinite
     NumberAnimation { from: 0; to: -Style.space(13); duration: 260; easing.type: Easing.OutQuad }
     NumberAnimation { from: -Style.space(13); to: 0; duration: 260; easing.type: Easing.OutBounce }
+    ScriptAction { script: item.launchLanding = false }
     PauseAnimation { duration: item.urgent ? 380 : 220 }
   }
+
+  // A launch that ended with the icon in the air: its last hop is still
+  // landing. "When running" pinned names (labelPinned) wait for it, so the
+  // tile widens once the bounce is over. Read from the icon's height, not
+  // the animation's running, which turns false at once though the hop
+  // runs to its end.
+  property bool launchLanding: false
+  onStartingChanged: item.launchLanding = !item.starting && item.bounceY < 0
+  readonly property bool nameAwake: item.running && !item.starting && !item.launchLanding
 
   // The icon carries every state on its own: it grows on hover, dips on
   // press, bounces while starting. No plate, no frame — the only chrome in
@@ -379,6 +390,8 @@ Item {
     marksFrom: indicatorRow
     backgroundMarks: item.backgroundMedia
     bounce: item.bounceY
+    foldable: item.pinned && (root ? root.labelPinned === "running" : false)
+    folded: root ? DockLabels.nameFolded(root.labelMode, root.labelPinned, item.pinned, item.nameAwake) : false
   }
 
   DropArea {
@@ -547,7 +560,7 @@ Item {
     property bool tipShown: false
     readonly property bool wanted: area.containsMouse && !item.isDragging
       && item.name !== "" && (root ? (root.showTooltips && root.contextAppId === "") : true)
-      && (root ? root.labelTooltipNeeded("app", item.tooltipWindows.length > 0, item.tooltipText !== item.displayName, label.shortened) : true)
+      && (label.folded || (root ? root.labelTooltipNeeded("app", item.tooltipWindows.length > 0, item.tooltipText !== item.displayName, label.shortened) : true))
     readonly property bool showing: itemTooltip.tipShown && itemTooltip.wanted
 
     TooltipLife {
