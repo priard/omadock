@@ -48,28 +48,17 @@ Row {
   id: group
   spacing: group.outerRow.spacing
   anchors.verticalCenter: parent.verticalCenter
-  visible: root ? (root.hasFolderSeparator || root.folderSlots > 0 || root.driveSlots > 0 || trailingDropGap.open) : true
+  // Also while its last rows and dividers are on their way out.
+  visible: root ? (root.hasFolderSeparator || root.folderSlots > 0 || root.driveSlots > 0 || trailingDropGap.open
+    || folderRowModel.count > 0 || driveRowModel.count > 0 || folderSeparator.visible || driveSeparator.visible) : true
 
-  Item {
+  RowDivider {
     id: folderSeparator
-    visible: root ? root.hasFolderSeparator : false
-    anchors.verticalCenter: parent.verticalCenter
-    width: root ? root.separatorWidth : Style.space(1)
-    height: root ? (root.iconSize * 0.7) : 24
-
-    // The line, placed by dockCard (70% of its height by default, as on
-    // macOS). It overflows the slot, so it does not grow the row. With
-    // split sections the slot is the gap between two panels and no line
-    // is drawn.
-    Rectangle {
-      visible: !(root && (root.placement.split || root.placement.align === "spread"))
-      anchors.horizontalCenter: parent.horizontalCenter
-      y: root && root.dividerGeometry === "long"
-        ? group.cardRef.dividerTop - group.outerRow.y - group.y - parent.y : (root ? root.iconCenterOffset : 0)
-      width: group.cardRef.dividerWidth
-      height: root && root.dividerGeometry === "long" ? group.cardRef.dividerLength : parent.height
-      color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
-    }
+    rootRef: group.wrapper.rootRef
+    cardRef: group.cardRef
+    rowY: group.outerRow.y + group.y
+    shown: root ? root.hasFolderSeparator : false
+    lineHidden: !!(root && (root.placement.split || root.placement.align === "spread"))
   }
 
   Repeater {
@@ -134,26 +123,13 @@ Row {
     Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
   }
 
-  Item {
+  RowDivider {
     id: driveSeparator
-    visible: root ? root.hasDriveSeparator : false
-    anchors.verticalCenter: parent.verticalCenter
-    width: root ? root.separatorWidth : Style.space(1)
-    height: root ? (root.iconSize * 0.7) : 24
-
-    // The line, placed by dockCard (70% of its height by default, as on
-    // macOS). It overflows the slot, so it does not grow the row. With
-    // split sections the slot is the gap between two panels and no line
-    // is drawn.
-    Rectangle {
-      visible: !(root && root.placement.split)
-      anchors.horizontalCenter: parent.horizontalCenter
-      y: root && root.dividerGeometry === "long"
-        ? group.cardRef.dividerTop - group.outerRow.y - group.y - parent.y : (root ? root.iconCenterOffset : 0)
-      width: group.cardRef.dividerWidth
-      height: root && root.dividerGeometry === "long" ? group.cardRef.dividerLength : parent.height
-      color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
-    }
+    rootRef: group.wrapper.rootRef
+    cardRef: group.cardRef
+    rowY: group.outerRow.y + group.y
+    shown: root ? root.hasDriveSeparator : false
+    lineHidden: !!(root && root.placement.split)
   }
 
   Repeater {

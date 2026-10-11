@@ -532,26 +532,13 @@ Item {
       }
 
       // Divider between pinned apps and the minimized-tile section.
-      Item {
+      RowDivider {
         id: leftTileSeparator
-        visible: root ? root.hasLeftTileSeparator : false
-        anchors.verticalCenter: parent.verticalCenter
-        width: root ? root.separatorWidth : Style.space(1)
-        height: root ? (root.iconSize * 0.7) : 24
-
-        // The line, placed by dockCard (70% of its height by default, as on
-        // macOS). It overflows the slot, so it does not grow the row. With
-        // split sections the slot is the gap between two panels and no line
-        // is drawn.
-        Rectangle {
-          visible: !(root && root.placement.split)
-          anchors.horizontalCenter: parent.horizontalCenter
-          y: root && root.dividerGeometry === "long"
-            ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
-          width: dockCard.dividerWidth
-          height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
-          color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
-        }
+        rootRef: cardWrapper.rootRef
+        cardRef: dockCard
+        rowY: row.y
+        shown: root ? root.hasLeftTileSeparator : false
+        lineHidden: !!(root && root.placement.split)
       }
 
       // ------------------------------------------ minimized window tiles
@@ -584,26 +571,13 @@ Item {
         }
       }
 
-      Item {
+      RowDivider {
         id: separator
-        visible: root ? root.hasSeparator : false
-        anchors.verticalCenter: parent.verticalCenter
-        width: root ? root.separatorWidth : Style.space(1)
-        height: root ? (root.iconSize * 0.7) : 24
-
-        // The line, placed by dockCard (70% of its height by default, as on
-        // macOS). It overflows the slot, so it does not grow the row. With
-        // split sections the slot is the gap between two panels and no line
-        // is drawn.
-        Rectangle {
-          visible: !(root && root.placement.split)
-          anchors.horizontalCenter: parent.horizontalCenter
-          y: root && root.dividerGeometry === "long"
-            ? dockCard.dividerTop - row.y - parent.y : (root ? root.iconCenterOffset : 0)
-          width: dockCard.dividerWidth
-          height: root && root.dividerGeometry === "long" ? dockCard.dividerLength : parent.height
-          color: root ? root.dividerLineColor : Util.alpha(Color.bar.text, 0.25)
-        }
+        rootRef: cardWrapper.rootRef
+        cardRef: dockCard
+        rowY: row.y
+        shown: root ? root.hasSeparator : false
+        lineHidden: !!(root && root.placement.split)
       }
 
       Repeater {
