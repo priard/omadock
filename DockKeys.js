@@ -28,9 +28,13 @@ function target(rows, want, initial, now, exitMs) {
   for (var w = 0; w < wantList.length; w++) wanted[wantList[w]] = true
   var had = {}
   for (var p = 0; p < prev.length; p++) had[prev[p].key] = true
+  // A key wanted twice is one row (two identical buttons are one button).
   var out = []
+  var taken = {}
   for (var i = 0; i < wantList.length; i++) {
     var k = wantList[i]
+    if (taken[k]) continue
+    taken[k] = true
     out.push({ key: k, leaving: false, fresh: !had[k] && !initial, slot: 0, leaveAt: 0 })
   }
   if (exitMs > 0) {

@@ -68,3 +68,10 @@ test("row keys for tiles, folders, buttons and drives", () => {
   assert.equal(K.folderKey({ command: "btop", name: "Top" }), "cmd:Top:btop")
   assert.equal(K.driveKey({ dev: "/dev/sdb1" }), "dev:/dev/sdb1")
 })
+
+test("a repeated key is one row (identical buttons are one button)", () => {
+  const t = plain(K.target([], ["a", "b", "a"], true, 0, 180))
+  assert.deepEqual(keys(t), ["a", "b"])
+  const r1 = K.target(K.target([], ["a", "a"], true, 0, 180), ["a"], false, 10, 180)
+  assert.deepEqual(keys(plain(r1)), ["a"])
+})
