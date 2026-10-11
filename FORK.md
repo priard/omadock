@@ -88,6 +88,11 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   popup. Spec/plan in docs/superpowers. In priard 2026-10-11 (plus two
   priard-only commits: pill-plate width report, qmllint baseline).
 
+- #65 `fix/drive-icon-theme` (from experimental): drives take Yaru's
+  device artwork before the theme-agnostic icon index, which gave
+  Breeze's 16 px outline (a few faint dots in the dots style). In priard
+  2026-10-11.
+
 
 ## Fork only
 
