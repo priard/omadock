@@ -35,14 +35,14 @@ BorderSurface {
         var p = dock.pinnedRowByKey[key]
         if (!p) continue
         if (p.group) out.push({ id: id, kind: "group", title: p.group.name || "Group", icon: pop.folderIcon(p.group.icon || "folder"), data: p.group })
-        else if (p.entry) out.push({ id: id, kind: "app", title: dock.labelName(p.entry.appId, p.entry.name), icon: pop.appIcon(p.entry.appId), data: p.entry })
+        else if (p.entry) out.push({ id: id, kind: "app", title: dock.labelName(p.entry.appId, p.entry.name), icon: pop.appIcon(p.entry), data: p.entry })
       } else if (kind === "run") {
         var r = dock.runningByKey[key]
-        if (r) out.push({ id: id, kind: "app", title: dock.labelName(r.appId, r.name), icon: pop.appIcon(r.appId), data: r })
+        if (r) out.push({ id: id, kind: "app", title: dock.labelName(r.appId, r.name), icon: pop.appIcon(r), data: r })
       } else if (kind === "tile") {
         var t = card ? card.tileByKey[key] : null
         var wins = t ? (t.windows ? t.windows : [t.win]) : []
-        if (wins.length > 0 && wins[0]) out.push({ id: id, kind: "tile", title: wins[0].title || wins[0].appId || "Window", icon: pop.appIcon(wins[0].appId || ""), data: { wins: wins, appId: wins[0].appId || "" } })
+        if (wins.length > 0 && wins[0]) out.push({ id: id, kind: "tile", title: wins[0].title || wins[0].appId || "Window", icon: pop.appIcon(pop.root.entryForId(wins[0].appId || "") || { appId: wins[0].appId || "" }), data: { wins: wins, appId: wins[0].appId || "" } })
       } else if (kind === "folder") {
         var f = right ? right.folderByKey[key] : null
         if (f) out.push({ id: id, kind: "folder", title: f.name || DockLabels.folderBaseName(f.path || ""),
@@ -57,7 +57,11 @@ BorderSurface {
     return out
   }
 
-  function appIcon(appId) {
+  // The icon the dock draws for this entry (DockItem: entry.icon), else the
+  // app library's.
+  function appIcon(entry) {
+    if (entry && entry.icon) return entry.icon
+    var appId = entry ? entry.appId : ""
     if (pop.root && pop.root.appLibrary) {
       var s = DockModel.resolveAppIcon(pop.root.appLibrary, pop.root.appRows, appId)
       if (s) return s
