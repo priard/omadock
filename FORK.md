@@ -62,6 +62,11 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   and #59 conflict on adjacent added lines in ci.yml, PreviewTile and
   WindowCardStack: keep both.
 
+## Not upstream yet
+
+- `feat/pill-plates`: plates at a pill dock's ends round with them instead
+  of poking out (any Corners choice).
+
 ## Fork only
 
 - `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
