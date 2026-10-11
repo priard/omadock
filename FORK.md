@@ -66,6 +66,11 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   2026-10-11; conflicts with #59 in DockCard: plateSlot moves to
   DockRightGroup).
 
+- `feat/label-reshorten` (no PR yet): the deferred name shortening goes
+  through a child Timer instead of Qt.callLater, so it cannot run after a
+  dock reload has invalidated its context (the DockLabel.qml null
+  TypeError). Synced with v4.4.2 the same day.
+
 ## Fork only
 
 - `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
