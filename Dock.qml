@@ -166,6 +166,7 @@ Item {
   readonly property var folderStackScannerRef: folderStackScanner
   readonly property var launchPruneTimerRef: launchPruneTimer
   readonly property var modelTimerRef: modelTimer
+  readonly property var urgentSettleTimerRef: urgentSettleTimer
   readonly property var removableDrivesScannerRef: removableDrivesScanner
   readonly property var scaleRevBumpRef: scaleRevBump
   readonly property var terminalHostDebounceRef: terminalHostDebounce
@@ -526,6 +527,7 @@ Item {
   // ipc object only carries at/size for windows that existed at shell start.
   property var clientRects: ({})
   property var urgentMap: ({})
+  property var pendingUrgent: ({}) // held by urgentSettleTimer (DockEventLogic)
   // Counts urgency events (Hyprland urgent, app notifications) so items can
   // animate again for a new event while they are already marked urgent.
   property int urgentEvents: 0
@@ -974,6 +976,7 @@ Item {
     interval: 40
     onTriggered: root.refreshDock()
   }
+  Timer { id: urgentSettleTimer; interval: 150; onTriggered: eventLogic.commitUrgent(root) }
 
   // Process identity survives TUI app-id overrides. Scan on window-list changes;
   // the helper bounds each descendant walk to known CLI names.

@@ -66,12 +66,13 @@ function handleRawEvent(root, event) {
       }
     }
 
-    var map = DockModel.copyMap(root.urgentMap)
-    map[fullAddr] = true
-    root.urgentMap = map
-    root.urgentEventKeys = [fullAddr]
-    root.urgentEvents++
-    root.modelTimerRef.restart()
+    // A window that asks for activation gets "urgent" a millisecond before
+    // its activewindowv2 (Zen does on every focus switch), so the check
+    // above still sees the old focus. Hold the event briefly; focus drops it.
+    var pending = DockModel.copyMap(root.pendingUrgent)
+    pending[fullAddr] = true
+    root.pendingUrgent = pending
+    root.urgentSettleTimerRef.restart()
   }
   if (n === "activewindow" || n === "activewindowv2") {
     var eventData = String(event.data || "").trim()
@@ -80,6 +81,11 @@ function handleRawEvent(root, event) {
       if (rawAddr.slice(0, 2) === "0x" || rawAddr.slice(0, 2) === "0X") rawAddr = rawAddr.slice(2)
       var fullAddr = "0x" + rawAddr
       root.clearUrgentApp("", fullAddr)
+      if (root.pendingUrgent[fullAddr]) {
+        var pend = DockModel.copyMap(root.pendingUrgent)
+        delete pend[fullAddr]
+        root.pendingUrgent = pend
+      }
     } else {
       var winClass = eventData.split(",")[0].trim()
       if (winClass) root.clearUrgentApp(winClass, "")
@@ -127,4 +133,24 @@ function handleRawEvent(root, event) {
   // which destroy/recreate workspace objects and re-assign toplevel handles.
   // Settle handles cleanly via root.modelSettleTimerRef.
   if (n === "configreloaded") root.modelSettleTimerRef.restart()
-}}
+}
+// The urgent events that are still pending once focus has settled: a window
+// that gained the focus meanwhile was dropped by its activewindowv2.
+function commitUrgent(root) {
+  var pending = root.pendingUrgent || {}
+  root.pendingUrgent = {}
+  var activeAddr = root.windowAddress(root.hyprToplevelFor(ToplevelManager.activeToplevel))
+  var keys = []
+  var map = DockModel.copyMap(root.urgentMap)
+  for (var addr in pending) {
+    if (!pending[addr] || addr === activeAddr) continue
+    map[addr] = true
+    keys.push(addr)
+  }
+  if (keys.length === 0) return
+  root.urgentMap = map
+  root.urgentEventKeys = keys
+  root.urgentEvents++
+  root.modelTimerRef.restart()
+}
+}
