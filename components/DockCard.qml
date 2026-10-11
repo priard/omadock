@@ -5,7 +5,6 @@ import qs.Commons
 import qs.Ui
 import "logic"
 import "../DockModel.js" as DockModel
-import "../DockIcons.js" as DockIcons
 import "../DockLabels.js" as DockLabels
 import "../DockLayout.js" as DockLayout
 import "../DockKeys.js" as DockKeys
