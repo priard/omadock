@@ -161,6 +161,8 @@ Row {
         space: (modelData || {}).space || ""
         fstype: (modelData || {}).fstype || ""
         icon: (modelData || {}).icon || "drive-removable-media"
+        // Its plate's place among the plates (DockCard.plateEdges): after the folders.
+        plateSlot: (root && !drivesRepeaterWrap.leaving) ? root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + root.folderSlots + index : -1
         homeCenter: root ? root.slotHomeCenter(
           root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + root.folderSlots + (root.hasDriveSeparator ? 1 : 0) + index,
           root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + root.folderSlots + index,

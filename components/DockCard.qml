@@ -52,7 +52,7 @@ Item {
     { n: root.tileElements, labelled: false, cut: root.placement.split && root.hasLeftTileSeparator },
     { n: root.visibleRunningCount, labelled: true, cut: root.placement.split && root.hasSeparator },
     { n: root.folderSlots, labelled: true, cut: root.placement.split && (root.hasFolderSeparator || root.placement.align === "spread") },
-    { n: root.driveSlots, labelled: false, cut: root.placement.split && root.hasDriveSeparator }
+    { n: root.driveSlots, labelled: true, cut: root.placement.split && root.hasDriveSeparator }
   ]) : []
   // Where the accent line of a drag inside the dock stands (DropGap): the
   // insert index in the pinned run or among the folders, -1 for none.
