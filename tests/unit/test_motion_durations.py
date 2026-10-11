@@ -36,12 +36,21 @@ ALLOWED = {
     # label typewriter / erase (reveal)
     ("components/DockLabel.qml", "duration: Math.min(300, 25 *"),
     ("components/DockLabel.qml", "id: eraseAnim"),
+    # the settings window's search-hit highlight (not the dock)
+    ("components/settings/SettingRow.qml", "ColorAnimation { duration: 350 }"),
+    ("components/settings/SectionLabel.qml", "ColorAnimation { duration: 350 }"),
 }
+
+
+def scanned():
+    """Every QML file of the plugin, so a new folder of components is not
+    missed; the tests' own fixtures are not the dock."""
+    return [p for p in sorted(ROOT.rglob("*.qml")) if p.relative_to(ROOT).parts[0] not in ("tests", ".git")]
 
 
 def literals():
     found = []
-    for path in [ROOT / "Dock.qml", *sorted((ROOT / "components").glob("*.qml"))]:
+    for path in scanned():
         rel = str(path.relative_to(ROOT))
         for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if is_literal(line) and not any(rel == f and frag in line for f, frag in ALLOWED):
@@ -59,6 +68,14 @@ class MotionDurations(unittest.TestCase):
     def test_durations_come_from_motion(self):
         self.assertEqual(literals(), [])
 
+    def test_every_allowance_is_used(self):
+        # Each allowed fragment matches a scanned line: a stale entry, or a
+        # file the scan no longer reaches (components/settings), shows here.
+        lines = {}
+        for path in scanned():
+            lines[str(path.relative_to(ROOT))] = path.read_text(encoding="utf-8")
+        unused = [(f, frag) for f, frag in sorted(ALLOWED) if frag not in lines.get(f, "")]
+        self.assertEqual(unused, [])
 
 if __name__ == "__main__":
     unittest.main()
