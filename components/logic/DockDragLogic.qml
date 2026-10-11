@@ -14,10 +14,11 @@ QtObject {
   // divider (no folders or drives yet, or nothing before them), the last
   // three quarters of a slot at the end of the row and beyond.
   // Folders and drives sit in their own row (card.rightRowRef); px is in
-  // the outer row's coordinates.
+  // the outer row's coordinates. A divider narrowing away (RowDivider keeps
+  // it visible while it has width) no longer counts.
   function inPinZone(root, card, px) {
     var rx = px - card.rightRowRef.x
-    if (card.folderSeparatorRef.visible) return rx >= card.folderSeparatorRef.x - (root ? root.gapWidth : 0)
+    if (card.folderSeparatorRef.visible && card.folderSeparatorRef.shown) return rx >= card.folderSeparatorRef.x - (root ? root.gapWidth : 0)
     var folders = card.liveSlots(card.foldersRepeater)
     if (folders.length > 0) return rx >= folders[0].x
     return px >= card.row.width - (root ? root.iconSlot * 0.75 : 0)
@@ -50,7 +51,7 @@ QtObject {
     var first = n > 0 ? runs[0] : null
     var last = n > 0 ? runs[n - 1] : null
     if (!first || !last) return false
-    var start = card.separatorRef.visible ? card.separatorRef.x : first.x - card.row.spacing / 2
+    var start = (card.separatorRef.visible && card.separatorRef.shown) ? card.separatorRef.x : first.x - card.row.spacing / 2
     return rx >= start && rx <= last.x + last.width + card.row.spacing / 2
   }
 
