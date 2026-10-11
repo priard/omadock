@@ -65,7 +65,9 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 ## Not upstream yet
 
 - `feat/pill-plates`: plates at a pill dock's ends round with them instead
-  of poking out (any Corners choice).
+  of poking out (any Corners choice); Square takes Nested's look and Nested
+  goes (stored nested reads as square); Pill plates get real round ends with
+  room for the icon and the name.
 
 ## Fork only
 
