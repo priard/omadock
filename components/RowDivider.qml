@@ -1,4 +1,4 @@
-import QtQuick
+import QtQuick 6.11
 import qs.Commons
 
 // A divider slot in the dock's row (pinned | tiles | running | folders |
