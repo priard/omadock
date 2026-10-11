@@ -36,6 +36,7 @@ Item {
   readonly property string shownStyle: (art.showOriginal && !art.revealMode) ? "original" : art.iconStyle
   property bool hovered: false
   property var hoverFx: null
+  readonly property var motion: art.hoverFx ? art.hoverFx.motion : null
   // The styled shader draws the original itself, dithering it in.
   // Off for symbolic icons: their "original" is drawn recoloured by the
   // owner, and revealing the raw dark-grey template flashed black.
@@ -43,7 +44,7 @@ Item {
   readonly property bool revealMode: art.allowReveal && (art.hoverFx ? art.hoverFx.reveal === true : false)
     && (art.iconStyle === "dots" || (art.iconStyle === "mono" && !art.hasCustom))
   property real revealLevel: art.showOriginal ? 1 : 0
-  Behavior on revealLevel { NumberAnimation { duration: 450; easing.type: Easing.InOutQuad } }
+  Behavior on revealLevel { NumberAnimation { duration: (art.motion ? art.motion.slow : 0); easing.type: Easing.InOutQuad } }
   property color tint: Color.bar.text
   // Which tone carries the ink in mono/dots: -1 follows the tint (its
   // brightness for a light tint, darkness for a dark one); 1 reads the

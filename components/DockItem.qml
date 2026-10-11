@@ -10,6 +10,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: item.root ? item.root.motion : null
   property var dockCard: root ? root.dockCard : null
   property var appContextMenuColumn: root ? root.appContextMenuColumnRef : null
 
@@ -86,7 +87,7 @@ Item {
   }
 
   Behavior on magnifyScale {
-    NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
+    NumberAnimation { duration: (item.motion ? item.motion.hover : 0); easing.type: Easing.OutQuad }
   }
 
   // Live window state. The model carries plain primitives, so anything that
@@ -193,10 +194,13 @@ Item {
   }
 
   readonly property bool pulsing: item.starting || (item.urgent && item.urgentFresh)
-  onPulsingChanged: if (!item.pulsing) item.pulse = 1.0
+  // The pulse finishes its breath before it rests; without one-shots it
+  // never starts.
+  onPulsingChanged: if (!item.pulsing && !(item.motion && item.motion.oneShots)) item.pulse = 1.0
 
   SequentialAnimation on pulse {
-    running: item.pulsing && (root ? root.dockVisible : false)
+    running: item.pulsing && (root ? root.dockVisible : false) && !!item.motion && item.motion.oneShots
+    alwaysRunToEnd: true
     loops: Animation.Infinite
     NumberAnimation { from: 1.0; to: 0.35; duration: 650; easing.type: Easing.InOutQuad }
     NumberAnimation { from: 0.35; to: 1.0; duration: 650; easing.type: Easing.InOutQuad }
@@ -205,14 +209,16 @@ Item {
   // Fainter still once pulled off the dock, where letting go unpins it.
   opacity: item.isDragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
   Behavior on opacity {
-    NumberAnimation { duration: 120 }
+    NumberAnimation { duration: (item.motion ? item.motion.fast : 0); easing.type: Easing.OutCubic }
   }
 
-  readonly property bool bouncing: root ? ((item.starting && root.launchBounce) || (item.urgent && item.urgentFresh && root.showUrgentHint)) : false
-  onBouncingChanged: if (!item.bouncing) item.bounceY = 0
+  readonly property bool bouncing: root ? ((item.starting && root.launchBounce) || (item.urgent && item.urgentFresh && root.showUrgentHint)) && !!item.motion && item.motion.oneShots : false
 
+  // The hop in flight lands before the bounce stops (a window appearing
+  // mid-air used to snap the icon down from 13 px).
   SequentialAnimation on bounceY {
     running: item.bouncing && (root ? root.dockVisible : false)
+    alwaysRunToEnd: true
     loops: Animation.Infinite
     NumberAnimation { from: 0; to: -Style.space(13); duration: 260; easing.type: Easing.OutQuad }
     NumberAnimation { from: -Style.space(13); to: 0; duration: 260; easing.type: Easing.OutBounce }
@@ -230,7 +236,7 @@ Item {
 
     scale: area.pressed ? 0.92 : 1.0
     transformOrigin: Item.Bottom
-    Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutQuad } }
+    Behavior on scale { NumberAnimation { duration: (item.motion ? item.motion.press : 0); easing.type: Easing.OutQuad } }
 
     transform: Translate {
       y: item.bounceY
@@ -248,7 +254,7 @@ Item {
       border.width: 1.5
       z: -1
       SequentialAnimation on opacity {
-        running: item.isDropTarget || item.isFileDropTarget
+        running: (item.isDropTarget || item.isFileDropTarget) && !!item.motion && item.motion.oneShots
         loops: Animation.Infinite
         NumberAnimation { from: 0.5; to: 1.0; duration: 350; easing.type: Easing.InOutQuad }
         NumberAnimation { from: 1.0; to: 0.5; duration: 350; easing.type: Easing.InOutQuad }

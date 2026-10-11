@@ -10,6 +10,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: ditem.root ? ditem.root.motion : null
 
   property string dev: ""
   property string mountpoint: ""
@@ -48,7 +49,7 @@ Item {
   readonly property bool isSymbolic: resolvedSource.indexOf("symbolic") >= 0
 
   Behavior on magnifyScale {
-    NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
+    NumberAnimation { duration: (ditem.motion ? ditem.motion.hover : 0); easing.type: Easing.OutQuad }
   }
 
   Item {

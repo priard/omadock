@@ -13,6 +13,7 @@ Rectangle {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: plate.root ? plate.root.motion : null
   property Item tile: parent
   property bool hovered: false
 
@@ -24,7 +25,7 @@ Rectangle {
   readonly property var spacing: root ? root.plateSpacing : null
 
   property real level: plate.hovered ? 1 : 0
-  Behavior on level { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  Behavior on level { NumberAnimation { duration: (plate.motion ? plate.motion.base : 0); easing.type: Easing.OutCubic } }
 
   visible: !!root && root.labelPlates
   x: spacing ? spacing.inset : 0

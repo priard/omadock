@@ -8,6 +8,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: btn.root ? btn.root.motion : null
   property var dockCard: root ? root.dockCard : null
 
   property string glyph: ""
@@ -28,7 +29,7 @@ Item {
   }
 
   Behavior on magnifyScale {
-    NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
+    NumberAnimation { duration: (btn.motion ? btn.motion.hover : 0); easing.type: Easing.OutQuad }
   }
 
   width: root ? (root.iconSlot * (root.waveHover ? btn.magnifyScale : 1)) : 0
@@ -98,7 +99,7 @@ Item {
         : ((glyphBox.shownStyle === "mono" || glyphBox.shownStyle === "dots") ? glyphBox.tint : btn.glyphColor)
       x: Math.round(glyphBox.width / 2 - (glyphMetrics.tightBoundingRect.x + glyphMetrics.tightBoundingRect.width / 2))
       y: Math.round(glyphBox.height / 2 - (glyphText.baselineOffset + glyphMetrics.tightBoundingRect.y + glyphMetrics.tightBoundingRect.height / 2))
-      Behavior on color { ColorAnimation { duration: 120 } }
+      Behavior on color { ColorAnimation { duration: (btn.motion ? btn.motion.fast : 0) } }
     }
   }
 

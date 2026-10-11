@@ -10,6 +10,7 @@ import "../DockKeys.js" as DockKeys
 Row {
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: group.root ? group.root.motion : null
   // The card (dividers' geometry), its wrapper (drag handlers, drop lines,
   // the Both sides shift) and the outer row (spacing, y).
   property var cardRef: null
@@ -120,7 +121,7 @@ Row {
     readonly property bool open: root ? (root.dropPreviewPath !== "" && root.dropInsertIndex >= folderRowModel.liveCount) : false
     width: open && root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
-    Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+    Behavior on width { NumberAnimation { duration: (group.motion ? group.motion.base : 0); easing.type: Easing.OutCubic } }
   }
 
   RowDivider {

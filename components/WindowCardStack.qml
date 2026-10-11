@@ -19,6 +19,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: stack.root ? stack.root.motion : null
   property var windows: []
   property int frontIndex: 0
   property bool active: false
@@ -30,7 +31,7 @@ Item {
   // typical window fills the card instead of sitting between bars.
   property real frontAspect: 16 / 10
   readonly property real frameHeight: Math.round(frameWidth / frontAspect)
-  Behavior on frontAspect { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+  Behavior on frontAspect { NumberAnimation { duration: (stack.motion ? stack.motion.fast : 0); easing.type: Easing.OutCubic } }
   readonly property real peek: count > 1 ? Style.space(10) : 0
   readonly property int peeking: Math.max(0, Math.min(count - 1, 2))
 
@@ -74,9 +75,9 @@ Item {
       scale: depth === 0 ? 1 : (depth === 1 ? 0.92 : 0.84)
       opacity: depth === 0 ? 1 : (depth === 1 ? 0.8 : (depth === 2 ? 0.55 : 0))
 
-      Behavior on y { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-      Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-      Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+      Behavior on y { NumberAnimation { duration: (stack.motion ? stack.motion.base : 0); easing.type: Easing.OutCubic } }
+      Behavior on scale { NumberAnimation { duration: (stack.motion ? stack.motion.base : 0); easing.type: Easing.OutCubic } }
+      Behavior on opacity { NumberAnimation { duration: (stack.motion ? stack.motion.base : 0); easing.type: Easing.OutCubic } }
 
       Rectangle {
         anchors.fill: parent

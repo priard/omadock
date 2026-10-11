@@ -22,6 +22,7 @@ Item {
 
   property bool hovered: false
   property var hoverFx: null
+  readonly property var motion: fx.hoverFx ? fx.hoverFx.motion : null
 
   default property alias content: body.data
   readonly property Item contentItem: body
@@ -31,7 +32,7 @@ Item {
 
   // 0..1, follows hovered; the effects scale with it.
   property real hoverLevel: fx.hovered ? 1 : 0
-  Behavior on hoverLevel { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  Behavior on hoverLevel { NumberAnimation { duration: (fx.motion ? fx.motion.base : 0); easing.type: Easing.OutCubic } }
 
   // One-shot animations started as the pointer arrives.
   property real ring: 0
@@ -40,6 +41,8 @@ Item {
   readonly property bool glitching: fx.effect === "glitch" && glitchAnim.running
   onHoveredChanged: {
     if (!fx.hovered) return
+    // The ripple and the glitch burst are one-shots (DockMotion).
+    if (!fx.motion || !fx.motion.oneShots) return
     if (fx.effect === "glow") ringAnim.restart()
     if (fx.effect === "glitch") {
       fx.glitchSeed = Math.random() * 10

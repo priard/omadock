@@ -13,6 +13,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: gap.root ? gap.root.motion : null
   property bool open: false
   property bool spacer: false
 
@@ -27,7 +28,7 @@ Item {
   }
   width: gap.open ? gap.room : 0
   height: parent ? parent.height : 0
-  Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  Behavior on width { NumberAnimation { duration: (gap.motion ? gap.motion.base : 0); easing.type: Easing.OutCubic } }
   // A spacer leaves the Row's layout while closed.
   visible: gap.spacer ? gap.width > 0.5 : gap.open
 

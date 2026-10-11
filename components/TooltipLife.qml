@@ -13,7 +13,7 @@ Item {
   property var dockRoot: null
   property bool want: false
   property int hideDelay: 200
-  property int fadeMs: 120
+  property int fadeMs: dockRoot ? dockRoot.motion.fast : 120
 
   property bool alive: false
   // 0 = hidden, 1 = shown; drives opacity and the small rise.

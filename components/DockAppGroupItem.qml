@@ -10,6 +10,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: gitem.root ? gitem.root.motion : null
 
   property var groupData: null
   property real homeCenter: 0
@@ -171,7 +172,7 @@ Item {
   }
 
   Behavior on magnifyScale {
-    NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
+    NumberAnimation { duration: (gitem.motion ? gitem.motion.hover : 0); easing.type: Easing.OutQuad }
   }
 
   Item {
@@ -216,7 +217,7 @@ Item {
         border.width: 1.5
         z: -1
         SequentialAnimation on opacity {
-          running: gitem.isDropTarget
+          running: gitem.isDropTarget && !!gitem.motion && gitem.motion.oneShots
           loops: Animation.Infinite
           NumberAnimation { from: 0.5; to: 1.0; duration: 350; easing.type: Easing.InOutQuad }
           NumberAnimation { from: 1.0; to: 0.5; duration: 350; easing.type: Easing.InOutQuad }

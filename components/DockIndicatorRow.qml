@@ -54,6 +54,24 @@ Item {
   readonly property real dynamicSpacing: DockMarkGeometry.rowSpacing(Style.space, marks.dpr, marks.plan.dense)
 
   visible: marks.running
+
+  // A mark that goes stays one exit long (it shrinks and fades), and a new
+  // one grows from nothing (DockMotion).
+  readonly property var motion: marks.root ? marks.root.motion : null
+  property int shownDots: marks.plan.dots
+  Timer {
+    id: dotsLater
+    interval: marks.motion ? marks.motion.base : 0
+    onTriggered: marks.shownDots = marks.plan.dots
+  }
+  onPlanChanged: {
+    if (marks.plan.dots >= marks.shownDots || !marks.motion || marks.motion.base <= 0) {
+      dotsLater.stop()
+      marks.shownDots = marks.plan.dots
+    } else {
+      dotsLater.restart()
+    }
+  }
   width: indicatorRow.width
   height: indicatorRow.height
 
@@ -70,14 +88,14 @@ Item {
   Grid {
     id: indicatorRow
     spacing: marks.dynamicSpacing
-    columns: marks.vertical ? 1 : marks.plan.slots
-    rows: marks.vertical ? marks.plan.slots : 1
+    columns: marks.vertical ? 1 : Math.max(marks.plan.slots, marks.shownDots + (marks.plan.overflow ? 1 : 0))
+    rows: marks.vertical ? Math.max(marks.plan.slots, marks.shownDots + (marks.plan.overflow ? 1 : 0)) : 1
     flow: marks.vertical ? Grid.TopToBottom : Grid.LeftToRight
     horizontalItemAlignment: Grid.AlignHCenter
     verticalItemAlignment: Grid.AlignVCenter
 
     Repeater {
-      model: marks.plan.dots
+      model: marks.shownDots
       // Active window: accent bar; open window: dot; minimized: hollow dot.
       delegate: Item {
         id: cell
@@ -88,6 +106,22 @@ Item {
 
         width: marks.vertical ? marks.cross : mark.width
         height: marks.vertical ? mark.height : marks.cross
+
+        readonly property bool going: index >= marks.plan.dots
+        property real appear: 0
+        property bool _settled: false
+        Behavior on appear {
+          enabled: cell._settled && !!marks.motion && marks.motion.fade
+          NumberAnimation {
+            duration: marks.motion ? marks.motion.base : 0
+            easing.type: cell.going ? Easing.InCubic : Easing.OutCubic
+          }
+        }
+        // Written a turn late: in onCompleted the Behavior would not animate.
+        Component.onCompleted: Qt.callLater(function() { cell._settled = true; cell.appear = cell.going ? 0 : 1 })
+        onGoingChanged: cell.appear = cell.going ? 0 : 1
+        opacity: cell.appear
+        scale: (marks.motion && marks.motion.scale) ? 0.4 + 0.6 * cell.appear : 1
 
         DockIndicator {
           id: mark
