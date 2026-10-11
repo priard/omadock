@@ -210,6 +210,7 @@ Item {
     id: label
     z: -1
     rootRef: fitem.rootRef
+    folded: root ? root.fitHostRef.folds("folder", true, false) : false
     kind: "folder"
     name: fitem.name
     hovered: area.containsMouse && !area.dragging

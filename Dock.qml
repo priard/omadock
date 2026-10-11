@@ -306,11 +306,11 @@ Item {
   // Pinned-group | running divider. Sits after the tile section when tiles
   // exist, so it doubles as the right tile divider.
   readonly property bool hasSeparator: (root.pinnedSection.length > 0 || root.hasTiles) && root.visibleRunningCount > 0
-  readonly property real gapWidth: root.labelPlates ? root.plateSpacing.gap : Style.space(root.itemSpacing)
+  readonly property real gapWidth: fitHost.plan.t < 1 ? fitHost.plan.gap : (root.labelPlates ? root.plateSpacing.gap : Style.space(root.itemSpacing))
   // Split sections turn each separator into the gap between two panels. Each
   // panel reaches the card padding past its outer icons, so the separator
   // slot is sized to leave the chosen visible gap between the panels.
-  readonly property real sectionGap: Style.space(root.sectionSpacing)
+  readonly property real sectionGap: Style.space(root.sectionSpacing) * Math.min(1, fitHost.plan.t)
   // Without the split, a divider's slot gets half the margin an icon has
   // inside its own slot on each side. Squeezed against its neighbours, the
   // line made every difference in icon width show; with the full margin it
@@ -421,9 +421,8 @@ Item {
   // ------------------------------------------------- sizing
 
   property int configuredIconSize: 0
-  readonly property int iconSize: root.configuredIconSize > 0
-    ? root.configuredIconSize
-    : Math.max(28, Math.round(Style.bar.sizeHorizontal * 0.9))
+  readonly property int baseIconSize: root.configuredIconSize > 0 ? root.configuredIconSize : Math.max(28, Math.round(Style.bar.sizeHorizontal * 0.9))
+  readonly property int iconSize: fitHost.plan.iconSize > 0 ? Math.min(root.baseIconSize, fitHost.plan.iconSize) : root.baseIconSize
   readonly property int iconSlot: root.labelPlates ? DockLabels.gridInt(root.iconSize + Style.space(10), root.outputScale) : root.iconSize + Style.space(10)
 
   // ------------------------------------------------- model

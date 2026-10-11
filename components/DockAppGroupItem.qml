@@ -403,6 +403,7 @@ Item {
     id: label
     z: -1
     rootRef: gitem.rootRef
+    folded: root ? root.fitHostRef.folds("group", true, false) : false
     kind: "group"
     name: gitem.groupName
     hovered: groupArea.containsMouse && !groupArea.dragging

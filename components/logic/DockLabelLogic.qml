@@ -49,7 +49,8 @@ QtObject {
       plateFit: (root && dockH > 0 && root.labelPlates) ? DockLabels.plateFitRadius(Math.min(root.effectiveCardRadius, dockH / 2), root.plateSpacing.gap) : 0,
       reveal: root ? root.labelReveal : "slide",
       effect: root ? root.labelEffect : "none",
-      maxWidth: root ? root.labelMaxWidth : 140
+      // The dock's fit (DockFit.js) may shorten names to make room.
+      maxWidth: root ? ((root.fitHostRef && root.fitHostRef.plan.labelMax > 0) ? Math.min(root.labelMaxWidth, root.fitHostRef.plan.labelMax) : root.labelMaxWidth) : 140
     }
   }
 

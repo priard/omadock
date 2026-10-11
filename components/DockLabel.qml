@@ -31,10 +31,11 @@ Item {
   // window" mark.
   property var marksFrom: null
   property bool backgroundMarks: false
-  // "When running" pinned apps (labelPinned): the tile may fold this name
-  // (foldable), and does while its app sleeps (folded). A folded name keeps
-  // its plate around the icon, and opening widens that plate.
-  property bool foldable: false
+  // Any always-on name can fold (foldable): "Pinned apps: When running"
+  // (labelPinned) folds a sleeping pinned app's, the dock's fit (DockFit.js)
+  // folds names when the row runs out of room. The tile says when (folded).
+  // A folded name keeps its plate around the icon, and opening widens it.
+  readonly property bool foldable: !!label.style && !label.style.hover
   property bool folded: false
 
   readonly property var style: root ? root.labelStyle(label.kind) : null
