@@ -33,10 +33,10 @@
 #    keys off the config path, so the probe stays addressable as
 #    `qs -p "$PROBE_DIR" ipc call omadock ...`.
 #  - A "qt.qpa.services ... portal" warning is normal for a second instance.
-#  - Keep its surfaces off screen: never openSettings / openSettingsPage (a
-#    full-screen overlay would cover the owner's desktop) and never reveal /
-#    toggleVisibility without hiding again. The hide() at start and probe_stop
-#    are what make it invisible - a test that calls those is not non-intrusive.
+#  - Keep its surfaces off screen: no openSettings / openSettingsPage and no
+#    reveal / toggleVisibility on the owner's monitor; hide() at start and
+#    probe_stop make it invisible. A test that must OPEN surfaces runs the dock
+#    on a headless output instead - PROBE_SCREEN, tests/live/interactions.sh.
 #
 # A probe session must leave NOTHING behind: the dock spawns helpers through
 # `Process` (scripts/drive-removal-watch.py, the folder scanner) and they do not
@@ -173,10 +173,10 @@ PY
   ln -s /usr/share/omarchy/shell/Ui "$PROBE_DIR/Ui"
   # PROBE_BODY names a QML file whose contents become the body of ShellRoot,
   # for a test that must reach inside the dock (tests/live/label-metrics.sh).
-  # Such a body declares its own `Od.DockHost { ... }`; the default is the dock
-  # alone. Imports go at the top, so the body holds only what is inside ShellRoot.
+  # The body declares its own `Od.DockHost { ... }`; QtQuick, Quickshell,
+  # Quickshell.Io and qs.Commons as C are imported, so it holds no imports.
   {
-    printf 'import QtQuick\nimport Quickshell\nimport "file:%s" as Od\n\nShellRoot {\n' "$PROBE_ROOT"
+    printf 'import QtQuick\nimport Quickshell\nimport Quickshell.Io\nimport qs.Commons as C\nimport "file:%s" as Od\n\nShellRoot {\n' "$PROBE_ROOT"
     if [ -n "${PROBE_BODY:-}" ]; then cat "$PROBE_BODY"; else printf '  Od.DockHost { }\n'; fi
     printf '}\n'
   } > "$PROBE_DIR/shell.qml"

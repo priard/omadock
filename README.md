@@ -750,6 +750,19 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
 
+### v4.4.2 — 2026-10-11
+
+- **The Rename field is built when you rename, not when the menu opens.** A
+  `TextInput` that is only being *displayed* still takes Qt's clipboard
+  subscription, and on Wayland that subscription reads a foreign clipboard
+  offer with no paste gesture. Measured on a headless output with the dock's
+  menu open and a 12-byte offer set by an outside client (never completing):
+  the displayed row read the offer 15–17 ms after it appeared, the shell grew
+  6–9 MB and one `state` IPC call took ~520 ms instead of ~24 ms. The same
+  menu with its `TextInput`s destroyed read nothing and stalled on nothing.
+  `ContextRenameRow` now creates its field on Rename and destroys it on
+  finish, so a menu that is merely open subscribes to nothing.
+
 ### v4.4.1 — 2026-10-11
 
 - **The dock survives Qt 6.12, which Omarchy's edge channel now ships** — Qt 6.12 added a `Color` singleton to QtQuick, and an unqualified `Color` in a file that imports QtQuick without a version resolves to *that* instead of the shell's `qs.Commons` singleton the dock is written against. The dock still instantiated and answered IPC, but every colour it asked for was `undefined` — 221 error lines in its own log (`Cannot read property 'background' of undefined`, `Unable to assign [undefined] to QColor`), colourless tiles, and the theme-change `Connections` silently unmatched — and it does not recover on its own. The import is now pinned to the version the plugin is built and verified against (`import QtQuick 6.11`) in the 43 files that use `Color`, a one-line change per file that keeps the shadowing type out of scope; nothing else moved. `tests/unit/test_qtquick_color_shadowing.py` is the guard: a file that uses a bare `Color` with an unpinned or too-new QtQuick import fails the suite, and a pinned and a colour-free file stay passing, so the rule cannot pass vacuously.
