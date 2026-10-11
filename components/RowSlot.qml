@@ -24,11 +24,14 @@ Item {
   // arrive after its bindings and onCompleted first ran.
   property real appear: 1
   property bool _snap: false
+  // The easing reads the Behavior's target (set before the animation
+  // starts); bound to `wanted` it could start with the old one.
   Behavior on appear {
+    id: appearMotion
     enabled: !slot._snap && !!slot.motion && slot.motion.base > 0
     NumberAnimation {
       duration: slot.motion ? slot.motion.base : 0
-      easing.type: slot.wanted ? Easing.OutCubic : Easing.InCubic
+      easing.type: appearMotion.targetValue > 0.5 ? Easing.OutCubic : Easing.InCubic
     }
   }
   // A write past the Behavior.

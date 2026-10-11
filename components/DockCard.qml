@@ -155,25 +155,30 @@ Item {
   // Autohide: slides and fades at Full; at Reduced it only fades, the card
   // moving off screen once the fade is over (and back before it fades in);
   // Off is instant.
+  // The direction (showing: margin >= 0, opacity 1) is read from each
+  // Behavior's target, set before its animation starts; bound to
+  // dockVisible the easing and the pause could start with the old values.
   Behavior on anchors.bottomMargin {
+    id: marginMotion
     enabled: !!cardWrapper.motion && cardWrapper.motion.fade
     SequentialAnimation {
       PauseAnimation {
-        duration: (cardWrapper.motion && !cardWrapper.motion.layout && !(root && root.dockVisible)) ? cardWrapper.motion.base : 0
+        duration: (cardWrapper.motion && !cardWrapper.motion.layout && marginMotion.targetValue < 0) ? cardWrapper.motion.base : 0
       }
       NumberAnimation {
         duration: (cardWrapper.motion && cardWrapper.motion.layout) ? cardWrapper.motion.slow : 0
-        easing.type: (root && root.dockVisible) ? Easing.OutCubic : Easing.InCubic
+        easing.type: marginMotion.targetValue >= 0 ? Easing.OutCubic : Easing.InCubic
       }
     }
   }
 
   opacity: (root && root.dockVisible) ? 1 : 0
   Behavior on opacity {
+    id: opacityMotion
     enabled: !!cardWrapper.motion && cardWrapper.motion.fade
     NumberAnimation {
       duration: cardWrapper.motion ? cardWrapper.motion.base : 0
-      easing.type: (root && root.dockVisible) ? Easing.OutCubic : Easing.InCubic
+      easing.type: opacityMotion.targetValue > 0.5 ? Easing.OutCubic : Easing.InCubic
     }
   }
 

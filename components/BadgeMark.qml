@@ -27,11 +27,14 @@ Rectangle {
   onCountChanged: if (badge.count > 0) badge.shownCount = badge.count
   Component.onCompleted: if (badge.count > 0) badge.shownCount = badge.count
   property real level: badge.count > 0 ? 1 : 0
+  // The easing reads the Behavior's target (set before the animation
+  // starts); bound to the count it could start with the old one.
   Behavior on level {
+    id: levelMotion
     enabled: !!badge.motion && badge.motion.fade
     NumberAnimation {
       duration: badge.motion ? badge.motion.base : 0
-      easing.type: badge.count > 0 ? Easing.OutCubic : Easing.InCubic
+      easing.type: levelMotion.targetValue > 0.5 ? Easing.OutCubic : Easing.InCubic
     }
   }
   visible: badge.level > 0.01 && badge.anchorRef !== null

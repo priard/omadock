@@ -16,10 +16,13 @@ Item {
   // 0 = gone, 1 = open; drives the window's opacity and the small rise.
   property real level: 0
   readonly property bool closing: life.alive && !life.want
+  // The easing reads the Behavior's target, which is set before the
+  // animation starts; bound to `want` it could start with the old one.
   Behavior on level {
+    id: levelMotion
     NumberAnimation {
       duration: life.motion ? life.motion.base : 0
-      easing.type: life.want ? Easing.OutCubic : Easing.InCubic
+      easing.type: levelMotion.targetValue > 0.5 ? Easing.OutCubic : Easing.InCubic
     }
   }
 

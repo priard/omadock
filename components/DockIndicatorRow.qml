@@ -110,11 +110,14 @@ Item {
         readonly property bool going: index >= marks.plan.dots
         property real appear: 0
         property bool _settled: false
+        // The easing reads the Behavior's target (set before the animation
+        // starts); bound to `going` it could start with the old one.
         Behavior on appear {
+          id: appearMotion
           enabled: cell._settled && !!marks.motion && marks.motion.fade
           NumberAnimation {
             duration: marks.motion ? marks.motion.base : 0
-            easing.type: cell.going ? Easing.InCubic : Easing.OutCubic
+            easing.type: appearMotion.targetValue > 0.5 ? Easing.OutCubic : Easing.InCubic
           }
         }
         // Written a turn late: in onCompleted the Behavior would not animate.
