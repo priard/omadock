@@ -47,17 +47,18 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   (with #50 from another contributor: parked windows restore to their
   workspace and place, command buttons in the folder section).
 
+- #51-#57 merged 2026-10-11 and released in v4.4.0: nested plate corners
+  and plates in split, full-size side marks, Both sides follow-ups, hover
+  effects / badges / marks in the opened group, menus keeping their bottom
+  border at 1.5x, right click in a group opening the app's menu, the group
+  drag log fix.
+
 ## Open
 
-- #51 nested plate corners and plates in split sections (`feat/nested-plates`),
-  #52 full-size side column marks (`feat/side-mark-size`), #53 Both sides
-  follow-ups from #49 (`feat/spread-fixes`, conflicts with #51 on two adjacent
-  lines in DockCard.qml), #54 hover effects in the opened group and its badges
-  and marks reaching the dock (`feat/group-cell-hover`): opened 2026-10-10.
-- #55 menus keep their bottom border at 1.5x (`feat/popup-grid`), #56 right
-  click in an opened group opens the app's menu (`feat/group-cell-menu`),
-  #57 group drag stops calling the retired rowIndicatorX
-  (`feat/group-drag-fix`): opened 2026-10-11.
+- `feat/animations`: entry/exit animations everywhere, one motion source,
+  Animations Full / Reduced / Off.
+- `feat/capture-guard`: no window captures while the dock's output is gone
+  (Hyprland 0.56.2 aborted on a capture of a disconnected DP-1).
 
 ## Fork only
 
