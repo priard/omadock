@@ -73,13 +73,10 @@ function resolveDriveIcon(iconName, themeName, appLibrary, folderColorMode) {
     return "file:///usr/share/icons/Adwaita/symbolic/devices/" + (symbolicMap[name] || "drive-removable-media") + "-symbolic.svg"
   }
 
-  // Try iconIndex/theme resolution first for theme resilience
-  if (appLibrary) {
-    var src = appLibrary.iconSource(name)
-    if (src && src.length > 0) return src
-  }
-
-  // Hardcoded Yaru fallback for known device icons
+  // Known device icons come from Yaru itself, as the folders do. The icon
+  // index is theme-agnostic (first file found under any theme wins), so
+  // asking it first gave Breeze's 16 px dark outline, which reads as a
+  // few faint dots next to Yaru's folders.
   var devMap = {
     "drive-removable-media-usb": "/usr/share/icons/Yaru/256x256/devices/drive-removable-media-usb.png",
     "usb-pendrive": "/usr/share/icons/Yaru/256x256/devices/drive-removable-media-usb.png",
@@ -91,6 +88,12 @@ function resolveDriveIcon(iconName, themeName, appLibrary, folderColorMode) {
 
   if (devMap[name]) {
     return "file://" + devMap[name]
+  }
+
+  // Anything else: whatever the icon index or the theme resolves.
+  if (appLibrary) {
+    var src = appLibrary.iconSource(name)
+    if (src && src.length > 0) return src
   }
 
   return "file:///usr/share/icons/Yaru/256x256/devices/drive-removable-media-usb.png"

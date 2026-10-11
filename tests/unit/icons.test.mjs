@@ -40,8 +40,8 @@ test("a folder path maps to the themed folder icon name", () => {
   assert.equal(ctx.folderIconFor("/home/suva/Pictures", ""), "folder-pictures")
 })
 
-test("a device icon name resolves through the theme, then the Yaru fallback", () => {
-  const library = { iconSource: name => name === "usb-pendrive" ? "file:///theme/usb.svg" : "" }
+test("a device icon name resolves to Yaru's artwork, then through the theme", () => {
+  const library = { iconSource: name => (name === "usb-pendrive" || name === "drive-multidisk") ? "file:///theme/usb.svg" : "" }
   const adwaita = "file:///usr/share/icons/Adwaita/symbolic/devices/"
   const yaru = "file:///usr/share/icons/Yaru/256x256/devices/drive-removable-media-usb.png"
   // Yaru keeps the colour artwork; every other theme (and Yaru's grey variant)
@@ -58,8 +58,10 @@ test("a device icon name resolves through the theme, then the Yaru fallback", ()
   // Absolute paths and file URIs pass through untouched.
   assert.equal(ctx.resolveDriveIcon("/abs/icon.svg", "Yaru", library, "theme"), "/abs/icon.svg")
   assert.equal(ctx.resolveDriveIcon("file:///f.png", "Yaru", library, "theme"), "file:///f.png")
-  // A name the library knows wins over the hardcoded fallback.
-  assert.equal(ctx.resolveDriveIcon("usb-pendrive", "Yaru", library, "theme"), "file:///theme/usb.svg")
+  // A known device name keeps Yaru's artwork even when the (theme-agnostic)
+  // icon index knows it from another theme; other names go to the index.
+  assert.equal(ctx.resolveDriveIcon("usb-pendrive", "Yaru", library, "theme"), yaru)
+  assert.equal(ctx.resolveDriveIcon("drive-multidisk", "Yaru", library, "theme"), "file:///theme/usb.svg")
   // An unknown name and an empty one both land on the removable-media default.
   assert.equal(ctx.resolveDriveIcon("unknown-icon", "Yaru", library, "theme"), yaru)
   assert.equal(ctx.resolveDriveIcon("", "Yaru", library, "theme"), yaru)
