@@ -61,11 +61,33 @@ test("rowOffset per alignment, clamped at 0 on overflow", () => {
   assert.equal(L.rowOffset("center", 300, 400), 0)
 })
 
-test("spreadGap fills what is left between the groups, never negative", () => {
+test("spreadGap fills what is left between the groups, never below one pixel", () => {
   // The gap item starts at x 300 (the row spacing after the left group is
   // already in that x); one more spacing separates it from the right group.
   assert.equal(L.spreadGap(1000, 300, 200, 4), 496)
-  assert.equal(L.spreadGap(400, 300, 200, 4), 0)
+  // Used up: one logical pixel, or one device pixel given a scale, so the
+  // Row keeps the gap item and the spacing after it.
+  assert.equal(L.spreadGap(400, 300, 200, 4), 1)
+  assert.equal(L.spreadGap(400, 300, 200, 4, 1.5), 1 / 1.5)
+  assert.equal(L.spreadGap(400, 300, 200, 4, 2), 0.5)
+})
+
+test("spreadGap: the right group never jumps back as the gap is used up", () => {
+  // The left group growing under magnification pushes gapX right; where the
+  // right group starts (gap + the spacing after it) must keep moving the same
+  // way, without the drop of one spacing a zero-width gap item would cause
+  // (a Row skips it and the spacing after it). Snapping the gap to device
+  // pixels may step back by less than one of them.
+  for (const dpr of [0, 1.5]) {
+    const px = dpr > 0 ? 1 / dpr : 1
+    let last = -Infinity
+    for (let gapX = 280; gapX <= 320; gapX += 0.25) {
+      const gap = L.spreadGap(500, gapX, 200, 6, dpr)
+      const start = gap > 0 ? gapX + gap + 6 : gapX
+      assert.ok(start > last - px, `dpr ${dpr} gapX ${gapX}: ${start} after ${last}`)
+      last = start
+    }
+  }
 })
 
 test("spreadGap puts the right group's end on the inner edge", () => {

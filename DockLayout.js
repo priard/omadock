@@ -59,9 +59,13 @@ function rowOffset(align, innerWidth, rowWidth, dpr) {
 // group ends on the inner edge. gapX is where the gap item starts (the row
 // spacing after the left group is already in it); one more spacing stands
 // between the gap and the right group.
+// The gap never reaches 0: a Row skips a zero-width child together with the
+// spacing after it, so when magnification used up a small gap the right
+// group would jump left by one spacing. It bottoms out at one device pixel
+// (one logical pixel without a scale) instead.
 function spreadGap(innerWidth, gapX, rightWidth, spacing, dpr) {
-  var w = Math.max(0, innerWidth - gapX - rightWidth - spacing)
-  return dpr > 0 ? Math.max(0, Math.floor(w * dpr) / dpr) : w
+  var w = innerWidth - gapX - rightWidth - spacing
+  return dpr > 0 ? Math.max(1 / dpr, Math.floor(w * dpr) / dpr) : Math.max(1, w)
 }
 
 // How far the right group's resting centres sit past where a packed row
