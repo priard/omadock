@@ -2315,12 +2315,14 @@ Item {
     // ------------------------------------------------------------ Folder Stack Popover
     // Created only while open: idle popup windows cost a QQuickWindow each,
     // and several hidden ones next to the dock broke its hover handling.
+    PopupLife { id: stackLife; dockRoot: root; want: root.activeStackFolder !== "" && root.dockVisible }
     LazyLoader {
       id: folderStackLoader
-      active: root.activeStackFolder !== "" && root.dockVisible
+      active: stackLife.alive
 
       DockPopupWindow {
         id: folderStackWindow
+        life: stackLife
         dockRoot: root
         open: true
         centerX: root.activeStackX
@@ -2337,12 +2339,14 @@ Item {
     // ------------------------------------------------------------ App Group Popover
     // Created only while open: idle popup windows cost a QQuickWindow each,
     // and several hidden ones next to the dock broke its hover handling.
+    PopupLife { id: groupLife; dockRoot: root; want: root.activeAppGroupId !== "" && root.dockVisible }
     LazyLoader {
       id: appGroupLoader
-      active: root.activeAppGroupId !== "" && root.dockVisible
+      active: groupLife.alive
 
       DockPopupWindow {
         id: appGroupWindow
+        life: groupLife
         dockRoot: root
         open: true
         centerX: root.activeAppGroupX
@@ -2364,12 +2368,14 @@ Item {
     // ------------------------------------------------------------ context menu
     // Created only while open: idle popup windows cost a QQuickWindow each,
     // and several hidden ones next to the dock broke its hover handling.
+    PopupLife { id: contextLife; dockRoot: root; want: root.contextAppId !== "" }
     LazyLoader {
       id: contextMenuLoader
-      active: root.contextAppId !== ""
+      active: contextLife.alive
 
       DockPopupWindow {
         id: contextMenuWindow
+        life: contextLife
         dockRoot: root
         open: true
         centerX: root.contextX

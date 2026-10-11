@@ -16,8 +16,6 @@ BorderSurface {
   readonly property var appList: (activeGroup && DockModel.isList(activeGroup.apps)) ? DockModel.toArray(activeGroup.apps) : []
 
   visible: root ? (root.activeAppGroupId !== "" && root.dockVisible) : false
-  opacity: (root && root.activeAppGroupId !== "" && root.dockVisible) ? 1 : 0
-  Behavior on opacity { NumberAnimation { duration: 120 } }
 
   z: 100
   color: Color.menu.background
