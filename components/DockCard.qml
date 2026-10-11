@@ -8,6 +8,7 @@ import "../DockModel.js" as DockModel
 import "../DockIcons.js" as DockIcons
 import "../DockLabels.js" as DockLabels
 import "../DockLayout.js" as DockLayout
+import "../DockKeys.js" as DockKeys
 
 Item {
   id: cardWrapper
@@ -108,6 +109,15 @@ Item {
   // a list replaced by an equal or slightly changed one keeps its delegates.
   KeyedListModel { id: pinnedRowModel; exitMs: cardWrapper.root ? cardWrapper.root.motion.base : 0 }
   KeyedListModel { id: runningModel; exitMs: cardWrapper.root ? cardWrapper.root.motion.base : 0 }
+  // Minimized tiles, keyed by window (or by app for a grouped tile).
+  KeyedListModel { id: tileRowModel; exitMs: cardWrapper.root ? cardWrapper.root.motion.base : 0 }
+  readonly property var tileList: root ? root.tileModel : []
+  readonly property var tileByKey: {
+    var m = {}
+    for (var i = 0; i < tileList.length; i++) m[DockKeys.tileKey(tileList[i])] = tileList[i]
+    return m
+  }
+  onTileListChanged: tileRowModel.sync(tileList.map(DockKeys.tileKey))
 
   Connections {
     target: cardWrapper.root
@@ -119,6 +129,7 @@ Item {
     if (!root) return
     pinnedRowModel.sync(root.pinnedRowKeys)
     runningModel.sync(root.runningKeys)
+    tileRowModel.sync(tileList.map(DockKeys.tileKey))
   }
 
   // Dimensions driven by dockCard
@@ -434,8 +445,8 @@ Item {
         delegate: RowSlot {
           id: rowWrap
           required property string key
-          required property bool leaving
-          required property bool fresh
+          required leaving
+          required fresh
           required property int slot
           rootRef: cardWrapper.rootRef
           Loader {
@@ -446,11 +457,11 @@ Item {
             // Looked up by key; kept through the moment a removed key has left
             // the lookup but not yet the model.
             property var modelData: ({})
-            Binding on modelData {
-              value: root ? root.pinnedRowByKey[rowSlot.key] : undefined
-              when: !!(root && root.pinnedRowByKey[rowSlot.key])
-              restoreMode: Binding.RestoreNone
-            }
+            // Taken only while the key is in the lookup: a leaving row keeps
+            // the data it had (a Binding would read the gap first).
+            readonly property var _lookedUp: root ? root.pinnedRowByKey[rowSlot.key] : undefined
+            on_LookedUpChanged: if (_lookedUp) modelData = _lookedUp
+            Component.onCompleted: if (_lookedUp) modelData = _lookedUp
             readonly property real home: root ? root.slotHomeCenter(root.appsSlots + index, root.appsSlots + index, false) : 0
             sourceComponent: isGroup ? groupSlotComp : appSlotComp
             // A zoomed icon raises itself over its neighbours; in the Row that
@@ -548,12 +559,28 @@ Item {
       // preview tile. Click a tile to bring that exact window back.
       Repeater {
         id: minimizedTilesRepeater
-        model: root ? root.tileModel : []
+        model: tileRowModel
 
-        delegate: PreviewTile {
+        delegate: RowSlot {
+          id: minimizedTilesRepeaterWrap
+          required property string key
+          required leaving
+          required fresh
+          required property int slot
           rootRef: cardWrapper.rootRef
-          tileData: modelData
-          tileIndex: index
+          PreviewTile {
+            // Looked up by key; kept while the row leaves.
+            property var modelData: ({})
+            // Taken only while the key is in the lookup: a leaving row keeps
+            // the data it had (a Binding would read the gap first).
+            readonly property var _lookedUp: cardWrapper.tileByKey[minimizedTilesRepeaterWrap.key]
+            on_LookedUpChanged: if (_lookedUp) modelData = _lookedUp
+            Component.onCompleted: if (_lookedUp) modelData = _lookedUp
+            readonly property int index: minimizedTilesRepeaterWrap.slot
+            rootRef: cardWrapper.rootRef
+            tileData: modelData || ({})
+            tileIndex: index
+          }
         }
       }
 
@@ -585,8 +612,8 @@ Item {
         delegate: RowSlot {
           id: runWrap
           required property string key
-          required property bool leaving
-          required property bool fresh
+          required leaving
+          required fresh
           required property int slot
           rootRef: cardWrapper.rootRef
           // A fully tiled app leaves the run like a closed one.
@@ -597,11 +624,11 @@ Item {
             id: runningDockItem
             // Looked up by key, as in the pinned run.
             property var entry: ({})
-            Binding on entry {
-              value: root ? root.runningByKey[runningDockItem.key] : undefined
-              when: !!(root && root.runningByKey[runningDockItem.key])
-              restoreMode: Binding.RestoreNone
-            }
+            // Taken only while the key is in the lookup: a leaving row keeps
+            // the data it had (a Binding would read the gap first).
+            readonly property var _lookedUp: root ? root.runningByKey[runningDockItem.key] : undefined
+            on_LookedUpChanged: if (_lookedUp) entry = _lookedUp
+            Component.onCompleted: if (_lookedUp) entry = _lookedUp
             rootRef: cardWrapper.rootRef
             appId: entry.appId || ""
             name: entry.name || ""

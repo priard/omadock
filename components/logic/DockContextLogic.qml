@@ -169,16 +169,12 @@ QtObject {
       it = runs[i].child
       add(it, "app", it.appId, it.windows, it.urgent)
     }
-    for (i = 0; i < card.minimizedTilesRepeater.count; i++)
-      add(card.minimizedTilesRepeater.itemAt(i), "tile", "", 1, false)
-    for (i = 0; i < card.foldersRepeater.count; i++) {
-      it = card.foldersRepeater.itemAt(i)
-      if (it) add(it, "folder", it.folderPath, 0, false)
-    }
-    for (i = 0; i < card.drivesRepeater.count; i++) {
-      it = card.drivesRepeater.itemAt(i)
-      if (it) add(it, "drive", it.mountpoint, 0, false)
-    }
+    var tiles = card.liveSlots(card.minimizedTilesRepeater)
+    for (i = 0; i < tiles.length; i++) add(tiles[i].child, "tile", "", 1, false)
+    var folders = card.liveSlots(card.foldersRepeater)
+    for (i = 0; i < folders.length; i++) add(folders[i].child, "folder", folders[i].child.folderPath, 0, false)
+    var drives = card.liveSlots(card.drivesRepeater)
+    for (i = 0; i < drives.length; i++) add(drives[i].child, "drive", drives[i].child.mountpoint, 0, false)
     return JSON.stringify(out)
   }
 
