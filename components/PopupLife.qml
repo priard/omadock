@@ -38,6 +38,9 @@ Item {
       life.alive = false
     } else {
       life.level = 0
+      // Opened and closed within one turn: the level never left 0, so no
+      // change will come to end the life.
+      if (life.level === 0) life.alive = false
     }
   }
   onLevelChanged: if (life.level === 0 && !life.want) life.alive = false
