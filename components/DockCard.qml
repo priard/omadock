@@ -152,12 +152,19 @@ Item {
     return (root && root.labelPlates) ? DockLabels.gridRound(ax, root.outputScale) : ax
   }
 
-  // Autohide: slides (Full) and fades (Full, Reduced); Off is instant.
+  // Autohide: slides and fades at Full; at Reduced it only fades, the card
+  // moving off screen once the fade is over (and back before it fades in);
+  // Off is instant.
   Behavior on anchors.bottomMargin {
-    enabled: !!cardWrapper.motion && cardWrapper.motion.layout
-    NumberAnimation {
-      duration: cardWrapper.motion ? cardWrapper.motion.slow : 0
-      easing.type: (root && root.dockVisible) ? Easing.OutCubic : Easing.InCubic
+    enabled: !!cardWrapper.motion && cardWrapper.motion.fade
+    SequentialAnimation {
+      PauseAnimation {
+        duration: (cardWrapper.motion && !cardWrapper.motion.layout && !(root && root.dockVisible)) ? cardWrapper.motion.base : 0
+      }
+      NumberAnimation {
+        duration: (cardWrapper.motion && cardWrapper.motion.layout) ? cardWrapper.motion.slow : 0
+        easing.type: (root && root.dockVisible) ? Easing.OutCubic : Easing.InCubic
+      }
     }
   }
 
