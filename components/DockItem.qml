@@ -10,6 +10,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: item.root ? item.root.motion : null
   property var dockCard: root ? root.dockCard : null
   property var appContextMenuColumn: root ? root.appContextMenuColumnRef : null
 
@@ -86,7 +87,7 @@ Item {
   }
 
   Behavior on magnifyScale {
-    NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
+    NumberAnimation { duration: (item.motion ? item.motion.hover : 0); easing.type: Easing.OutQuad }
   }
 
   // Live window state. The model carries plain primitives, so anything that
@@ -205,7 +206,7 @@ Item {
   // Fainter still once pulled off the dock, where letting go unpins it.
   opacity: item.isDragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
   Behavior on opacity {
-    NumberAnimation { duration: 120 }
+    NumberAnimation { duration: (item.motion ? item.motion.fast : 0); easing.type: Easing.OutCubic }
   }
 
   readonly property bool bouncing: root ? ((item.starting && root.launchBounce) || (item.urgent && item.urgentFresh && root.showUrgentHint)) : false
@@ -230,7 +231,7 @@ Item {
 
     scale: area.pressed ? 0.92 : 1.0
     transformOrigin: Item.Bottom
-    Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutQuad } }
+    Behavior on scale { NumberAnimation { duration: (item.motion ? item.motion.press : 0); easing.type: Easing.OutQuad } }
 
     transform: Translate {
       y: item.bounceY

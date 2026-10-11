@@ -10,6 +10,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: fitem.root ? fitem.root.motion : null
 
   property string folderPath: ""
   // A pinned slot with a command is a button, not a folder: the click runs the
@@ -31,7 +32,7 @@ Item {
   property int slotIndex: -1
   readonly property bool gapOpen: root ? (root.dropPreviewPath !== "" && root.dropInsertIndex === fitem.slotIndex) : false
   property real ghostWidth: gapOpen && root ? root.iconSlot + root.gapWidth : 0
-  Behavior on ghostWidth { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  Behavior on ghostWidth { NumberAnimation { duration: (fitem.motion ? fitem.motion.base : 0); easing.type: Easing.OutCubic } }
   // A pinned folder dragged in the dock lands before this one.
   property bool dropLineHere: false
   // All the room ahead of the folder's tile: the ghost's, or the drag's.
@@ -83,7 +84,7 @@ Item {
   readonly property color symbolicColor: (label.plate && label.shown) ? label.ink : (root ? root.symbolicIconColor : "#ffffff")
 
   Behavior on magnifyScale {
-    NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
+    NumberAnimation { duration: (fitem.motion ? fitem.motion.hover : 0); easing.type: Easing.OutQuad }
   }
 
   Item {

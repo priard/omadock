@@ -10,6 +10,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: gitem.root ? gitem.root.motion : null
 
   property var groupData: null
   property real homeCenter: 0
@@ -171,7 +172,7 @@ Item {
   }
 
   Behavior on magnifyScale {
-    NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
+    NumberAnimation { duration: (gitem.motion ? gitem.motion.hover : 0); easing.type: Easing.OutQuad }
   }
 
   Item {

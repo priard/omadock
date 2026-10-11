@@ -15,6 +15,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: root ? root.motion : null
   readonly property var folderSeparatorRef: rightRow.folderSeparator
   readonly property var separatorRef: separator
   readonly property var rightRowRef: rightRow
@@ -152,18 +153,21 @@ Item {
     return (root && root.labelPlates) ? DockLabels.gridRound(ax, root.outputScale) : ax
   }
 
+  // Autohide: slides (Full) and fades (Full, Reduced); Off is instant.
   Behavior on anchors.bottomMargin {
+    enabled: !!cardWrapper.motion && cardWrapper.motion.layout
     NumberAnimation {
-      duration: (root && root.dockVisible) ? 300 : 260
+      duration: cardWrapper.motion ? cardWrapper.motion.slow : 0
       easing.type: (root && root.dockVisible) ? Easing.OutCubic : Easing.InCubic
     }
   }
 
   opacity: (root && root.dockVisible) ? 1 : 0
   Behavior on opacity {
+    enabled: !!cardWrapper.motion && cardWrapper.motion.fade
     NumberAnimation {
-      duration: (root && root.dockVisible) ? 220 : 260
-      easing.type: (root && root.dockVisible) ? Easing.OutQuad : Easing.InQuad
+      duration: cardWrapper.motion ? cardWrapper.motion.base : 0
+      easing.type: (root && root.dockVisible) ? Easing.OutCubic : Easing.InCubic
     }
   }
 

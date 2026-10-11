@@ -9,6 +9,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: tile.root ? tile.root.motion : null
   property var dockCard: root ? root.dockCard : null
 
   property var tileData: typeof modelData !== "undefined" ? modelData : null
@@ -56,7 +57,7 @@ Item {
     return (tileArea.containsMouse && !tile.tileMenuOpen) ? root.zoomPeak : 1
   }
   Behavior on magnifyScale {
-    NumberAnimation { duration: 110; easing.type: Easing.OutQuad }
+    NumberAnimation { duration: (tile.motion ? tile.motion.hover : 0); easing.type: Easing.OutQuad }
   }
 
   function doRestore() {

@@ -660,6 +660,7 @@ Item {
   // passes a single property.
   readonly property var hoverFx: ({
     effect: root.hoverEffect,
+    motion: root.motion,
     reveal: root.iconHoverOriginal && root.iconHoverReveal,
     glow: Color.accent
   })
@@ -2270,14 +2271,14 @@ Item {
         anchors.bottom: parent.bottom
         x: Math.round((parent.width - width) / 2)
         Behavior on x {
-          NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+          NumberAnimation { duration: root.motion.slow; easing.type: Easing.OutCubic }
         }
         width: revealHover.hovered ? Style.space(48) : Style.space(24)
         height: Style.space(3)
         radius: height / 2
         color: Util.alpha(Color.bar.text, revealHover.hovered ? 0.6 : 0.25)
-        Behavior on width { NumberAnimation { duration: 150 } }
-        Behavior on color { ColorAnimation { duration: 150 } }
+        Behavior on width { NumberAnimation { duration: root.motion.fast; easing.type: Easing.OutCubic } }
+        Behavior on color { ColorAnimation { duration: root.motion.fast } }
       }
     }
 

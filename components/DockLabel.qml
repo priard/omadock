@@ -16,6 +16,7 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: label.root ? label.root.motion : null
   property string kind: "app"
   property string appId: ""
   property string name: ""
@@ -53,7 +54,7 @@ Item {
   // eases in and out as an app starts or stops.
   readonly property bool hasMarks: !!(label.marksFrom && label.marksFrom.running) || label.backgroundMarks
   property real marksLevel: label.sideMarks && label.hasMarks ? 1 : 0
-  Behavior on marksLevel { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+  Behavior on marksLevel { NumberAnimation { duration: (label.motion ? label.motion.base : 0); easing.type: Easing.OutCubic } }
   // The column keeps the plate's own padding to the plate's edge (the room a
   // name has at the far end), the marks' own width and a gap to the art or the
   // name: the sizes are the ones the row draws with, from DockMarkGeometry.js,
@@ -130,7 +131,7 @@ Item {
     label.counted = label.counts
   }
   property real progress: label.wantOpen ? 1 : 0
-  Behavior on progress { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+  Behavior on progress { NumberAnimation { duration: (label.motion ? label.motion.base : 0); easing.type: Easing.OutCubic } }
   // Hover labels slide out over the neighbours instead of widening the
   // tile, so the dock never moves under the pointer.
   readonly property bool overlay: !!label.style && label.style.hover
@@ -191,7 +192,7 @@ Item {
 
   // ---- hover sync with the icon's HoverFx
   property real hoverLevel: label.hovered ? 1 : 0
-  Behavior on hoverLevel { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+  Behavior on hoverLevel { NumberAnimation { duration: (label.motion ? label.motion.base : 0); easing.type: Easing.OutCubic } }
   readonly property string hoverEffect: label.root ? label.root.hoverEffect : ""
   readonly property real liftY: label.hoverEffect === "lift" && label.root ? -label.root.baseIconArt * 0.16 * label.hoverLevel : 0
   // The tile's launch / urgent bounce: a label (and its plate and marks)

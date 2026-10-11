@@ -19,6 +19,7 @@ Rectangle {
 
   property var rootRef: null
   readonly property var root: rootRef
+  readonly property var motion: mark.root ? mark.root.motion : null
 
   property string kind: "window"
   property bool urgent: false
@@ -117,8 +118,8 @@ Rectangle {
 
   opacity: urgent ? (0.4 + 0.6 * pulse) : 1.0
 
-  Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
-  Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
-  Behavior on color { ColorAnimation { duration: 120 } }
-  Behavior on border.color { ColorAnimation { duration: 120 } }
+  Behavior on width { NumberAnimation { duration: (mark.motion ? mark.motion.fast : 0); easing.type: Easing.OutCubic } }
+  Behavior on height { NumberAnimation { duration: (mark.motion ? mark.motion.fast : 0); easing.type: Easing.OutCubic } }
+  Behavior on color { ColorAnimation { duration: (mark.motion ? mark.motion.fast : 0) } }
+  Behavior on border.color { ColorAnimation { duration: (mark.motion ? mark.motion.fast : 0) } }
 }
