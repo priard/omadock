@@ -483,8 +483,8 @@ Item {
                 windows: entry.windows || 0
                 windowList: entry.windowList || []
                 homeCenter: rowSlot.home
-                labelSlot: root ? root.appsSlots + rowSlot.index : -1
-                dropLineHere: cardWrapper.dropLineRow === rowSlot.index
+                labelSlot: (root && !rowWrap.leaving) ? root.appsSlots + rowSlot.index : -1
+                dropLineHere: !rowWrap.leaving && cardWrapper.dropLineRow === rowSlot.index
                 pinned: true
                 active: root ? (entry.appId === root.activeId) : false
                 onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -510,8 +510,8 @@ Item {
                 rootRef: cardWrapper.rootRef
                 groupData: rowSlot.modelData.group || ({})
                 homeCenter: rowSlot.home
-                labelSlot: root ? root.appsSlots + rowSlot.index : -1
-                dropLineHere: cardWrapper.dropLineRow === rowSlot.index
+                labelSlot: (root && !rowWrap.leaving) ? root.appsSlots + rowSlot.index : -1
+                dropLineHere: !rowWrap.leaving && cardWrapper.dropLineRow === rowSlot.index
                 onOpenGroupRequested: function(gdata, cx, cy) {
                   if (root) root.openAppGroup(gdata, cx, cy)
                 }
@@ -621,7 +621,7 @@ Item {
               root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx,
               (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0),
               root.tilesFixedWidth) : 0
-            labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx : -1
+            labelSlot: (root && !runWrap.leaving) ? root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx : -1
             pinned: false
             active: root ? (entry.appId === root.activeId) : false
             onActivateRequested: function(aid) { if (root) root.activate(aid) }

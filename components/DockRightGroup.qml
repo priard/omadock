@@ -86,14 +86,15 @@ Row {
         command: (modelData || {}).command || ""
         name: (modelData || {}).name || "Folder"
         icon: (modelData || {}).icon || ((modelData || {}).command ? "application-x-executable" : DockIcons.folderIconFor((modelData || {}).path, ""))
-        slotIndex: index
-        dropLineHere: group.wrapper.dropLineFolder === index
+        // A leaving folder takes no drop gap and no label slot.
+        slotIndex: foldersRepeaterWrap.leaving ? -1 : index
+        dropLineHere: !foldersRepeaterWrap.leaving && group.wrapper.dropLineFolder === index
         homeCenter: root ? root.slotHomeCenter(
           root.appsSlots + root.pinnedSection.length + root.groupSlots + (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + root.tileElements + root.visibleRunningCount + (root.hasFolderSeparator ? 1 : 0) + index,
           root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index,
           (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0) + (root.hasFolderSeparator ? 1 : 0),
           root.tilesFixedWidth + group.wrapper.spreadShift) : 0
-        labelSlot: root ? root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index : -1
+        labelSlot: (root && !foldersRepeaterWrap.leaving) ? root.appsSlots + root.pinnedSection.length + root.groupSlots + root.visibleRunningCount + index : -1
         onOpenStackRequested: function(fpath, fname, cx, cy) {
           if (root) root.openFolderStack(fpath, fname, cx)
         }
