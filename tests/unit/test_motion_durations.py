@@ -44,8 +44,10 @@ ALLOWED = {
 
 def scanned():
     """Every QML file of the plugin, so a new folder of components is not
-    missed; the tests' own fixtures are not the dock."""
-    return [p for p in sorted(ROOT.rglob("*.qml")) if p.relative_to(ROOT).parts[0] not in ("tests", ".git")]
+    missed; the tests' own fixtures, and the local experiment worktree (a
+    nested checkout of the experimental branch, git-ignored), are not the
+    dock."""
+    return [p for p in sorted(ROOT.rglob("*.qml")) if p.relative_to(ROOT).parts[0] not in ("tests", ".git", "experiment")]
 
 
 def literals():

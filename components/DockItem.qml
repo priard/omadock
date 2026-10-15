@@ -4,6 +4,7 @@ import qs.Commons
 import qs.Ui
 import "../DockModel.js" as DockModel
 import "../DockLabels.js" as DockLabels
+import "../DockTasks.js" as DockTasks
 
 Item {
   id: item
@@ -27,10 +28,17 @@ Item {
   property bool pinned: false
 
   // Badge counts are filed under whichever id the matching entry carries.
-  // DockModel owns the id spellings, so this only sums the aliases it is told.
   readonly property int notificationCount: {
     if (!root || !root.showNotificationBadges) return 0
     return DockModel.groupBadgeTotal([item.appId], root.notificationBadges)
+  }
+
+  readonly property var taskInfo: root
+    ? DockTasks.taskStatusFor(DockModel, root.taskMap, item.appId, root.dockModel)
+    : null
+
+  readonly property var badgeView: {
+    return DockTasks.resolveBadgeView(item.notificationCount, item.taskInfo, item.isFocused)
   }
 
   signal activateRequested(string appId)
@@ -98,6 +106,7 @@ Item {
     if (!root || !root.showUrgentHint) return false
     // Foreground Suppression Rule: An app currently focused in the foreground suppresses urgency bounce
     if (item.active || item.isFocused) return false
+    if (item.taskInfo && item.taskInfo.status === "error") return true
     if (item.appId && root.urgentMap && root.urgentMap[item.appId]) return true
     var list = item.windowList || []
     for (var i = 0; i < list.length; i++) {
@@ -307,7 +316,9 @@ Item {
         BadgeMark {
           rootRef: item.rootRef
           anchorRef: parent
-          count: item.notificationCount
+          count: item.badgeView ? item.badgeView.count : item.notificationCount
+          glyph: item.badgeView ? item.badgeView.glyph : ""
+          badgeColor: item.badgeView ? item.badgeView.color : "transparent"
           rim: Color.bar.background
         }
       ]
@@ -560,7 +571,7 @@ Item {
     property bool tipShown: false
     readonly property bool wanted: area.containsMouse && !item.isDragging
       && item.name !== "" && (root ? (root.showTooltips && root.contextAppId === "") : true)
-      && (label.folded || (root ? root.labelTooltipNeeded("app", item.tooltipWindows.length > 0, item.tooltipText !== item.displayName, label.shortened) : true))
+      && (label.folded || (item.taskInfo !== null) || (root ? root.labelTooltipNeeded("app", item.tooltipWindows.length > 0, item.tooltipText !== item.displayName, label.shortened) : true))
     readonly property bool showing: itemTooltip.tipShown && itemTooltip.wanted
 
     TooltipLife {
@@ -624,6 +635,30 @@ Item {
               font.bold: root ? (root.advancedTooltips && item.running) : false
               horizontalAlignment: Text.AlignHCenter
               anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Row {
+              visible: item.taskInfo !== null
+              anchors.horizontalCenter: parent.horizontalCenter
+              spacing: Style.space(4)
+
+              Rectangle {
+                width: Style.space(6)
+                height: Style.space(6)
+                radius: width / 2
+                anchors.verticalCenter: parent.verticalCenter
+                color: DockTasks.statusColor(item.taskInfo ? item.taskInfo.status : "")
+              }
+
+              Text {
+                text: DockTasks.chipLabel(item.taskInfo)
+                textFormat: Text.PlainText
+                color: Util.alpha(Color.tooltip.text, 0.85)
+                font.family: Style.font.family
+                font.pixelSize: Math.max(9, Style.font.caption - 2)
+                elide: Text.ElideRight
+                maximumLineCount: 1
+              }
             }
 
             // Window previews: a card stack the wheel rotates; a click on the icon

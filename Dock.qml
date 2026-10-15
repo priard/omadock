@@ -115,15 +115,14 @@ Item {
   }
 
   // ------------------------------------------------- multi-monitor
-  // Set by DockHost when one dock runs per monitor. forcedScreenName pins this
-  // instance to its monitor regardless of the "screen" config key; isPrimary
-  // marks the one dock that owns global side effects (alert sounds);
-  // sharedState carries parked-window bookkeeping across all docks so a tile
-  // lands on the monitor its window was minimized from, whichever dock did it.
+  // DockHost sets forcedScreenName to pin this dock to a monitor, isPrimary on
+  // the one owning global side effects, and sharedState for a tile's origin monitor.
   property string forcedScreenName: ""
   property bool isPrimary: true
   property bool ipcEnabled: true
   property QtObject sharedState: null
+  // Task status has one owner - the host's shared store; this is a read-only view of it.
+  readonly property var taskMap: (root.sharedState ? root.sharedState.taskStatus : null) || ({})
   property bool multiMonitor: false
   property bool perMonitorApps: true
   readonly property bool filterByMonitor: root.perMonitorApps && root.forcedScreenName !== ""
@@ -707,37 +706,7 @@ Item {
   // palette colours (colors.toml) that sit furthest enough in hue from the
   // accent and from each other, so the gradient never collapses into one
   // hue. Falls back to the accent alone when the theme names no colours.
-  readonly property var themeGradientColors: {
-    var _tv = root.themeVersion
-    var text = ""
-    try {
-      text = DockModel.readCapped(themeColorsFile.text, DockModel.MAX_COLORS_TOML_BYTES)
-    } catch (e) {
-      console.warn("[omadock] Failed reading theme colors:", e)
-    }
-    var named = {}
-    var re = /^\s*([a-z_]+)\s*=\s*"(#[0-9a-fA-F]{6})"/gm
-    var m
-    while ((m = re.exec(text)) !== null) named[m[1]] = m[2]
-    var accent = named.accent || String(Color.accent)
-    var picked = [accent]
-    var order = ["magenta", "blue", "cyan", "red", "green", "orange", "yellow"]
-    function hueGap(a, b) {
-      var ha = Qt.color(a).hslHue, hb = Qt.color(b).hslHue
-      if (ha < 0 || hb < 0) return 1
-      var d = Math.abs(ha - hb)
-      return Math.min(d, 1 - d)
-    }
-    for (var i = 0; i < order.length && picked.length < 3; i++) {
-      var c = named[order[i]]
-      if (!c) continue
-      var ok = true
-      for (var j = 0; j < picked.length; j++) if (hueGap(c, picked[j]) < 0.07) ok = false
-      if (ok) picked.push(c)
-    }
-    while (picked.length < 3) picked.push(accent)
-    return picked
-  }
+  readonly property var themeGradientColors: styleLogic.themeGradientColors(root, themeColorsFile.text)
 
   readonly property var gradientColors: {
     if (root.gradientPreset !== "theme") {

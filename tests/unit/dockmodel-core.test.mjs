@@ -158,6 +158,16 @@ test("boundPresets validates ids, drops duplicates, caps at six", () => {
   assert.deepEqual(out.slice(0, 2).map((p) => p.id), ["a", "p0"])
 })
 
+test("entryFor ignores the directories of an absolute Icon= path (issue #66)", () => {
+  // An AppImage's Icon= is an absolute path; its directory names used to match
+  // the web app id's "home" token, so the result depended on row order.
+  const photo = { id: "ai.storyteller.photocraft", name: "PhotoCraft", icon: "/home/user/.local/share/applications/icons/photocraft.png" }
+  const drive = { id: "Drive", name: "Drive", icon: "drive" }
+  const id = "chrome-drive.google.com__drive_home-Default"
+  assert.equal(M.entryFor([photo, drive], id).name, "Drive")
+  assert.equal(M.entryFor([drive, photo], id).name, "Drive")
+})
+
 test("lookIncludes compares only the preset's keys", () => {
   assert.equal(M.lookIncludes({ grain: true, iconSize: 48 }, { grain: true }), true)
   assert.equal(M.lookIncludes({ grain: false }, { grain: true }), false)

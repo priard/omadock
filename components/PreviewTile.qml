@@ -11,12 +11,12 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
-  readonly property var motion: tile.root ? tile.root.motion : null
   // Window captures only while the dock's output is there and powered
   // (DockOutput.js): Hyprland aborts on a capture of a vanished output.
   // monitorRev re-runs this on Hyprland's monitor events.
   readonly property bool canCapture: !!tile.root && DockOutput.outputAwake(tile.root.dockScreen ? tile.root.dockScreen.name : "",
     tile.root.dockScreen ? Hyprland.monitorFor(tile.root.dockScreen) : null, tile.root.monitorRev)
+  readonly property var motion: tile.root ? tile.root.motion : null
   property var dockCard: root ? root.dockCard : null
 
   property var tileData: typeof modelData !== "undefined" ? modelData : null

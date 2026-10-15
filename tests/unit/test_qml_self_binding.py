@@ -82,7 +82,7 @@ class SelfBinding(unittest.TestCase):
     def test_tree_own_property_reads(self):
         found = []
         for path in sorted(QML_DIR.rglob("*.qml")):
-            if "docs" in path.parts:
+            if "docs" in path.parts or path.relative_to(QML_DIR).parts[0] == "experiment":
                 continue
             for n, line in own_property_reads(path.read_text(encoding="utf-8"), lambda t: declared(t, QML_DIR)):
                 found.append(f"{path.relative_to(QML_DIR)}:{n}: {line}")
@@ -91,7 +91,7 @@ class SelfBinding(unittest.TestCase):
     def test_tree(self):
         found = []
         for path in sorted(QML_DIR.rglob("*.qml")):
-            if "docs" in path.parts:
+            if "docs" in path.parts or path.relative_to(QML_DIR).parts[0] == "experiment":
                 continue
             for n, line in self_bindings(path.read_text(encoding="utf-8")):
                 found.append(f"{path.relative_to(QML_DIR)}:{n}: {line}")

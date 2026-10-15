@@ -9,69 +9,46 @@
 [![Omarchy](https://img.shields.io/badge/omarchy-4.0.3+-cba6f7?style=for-the-badge&logo=archlinux&logoColor=white&labelColor=1e1e2e)](https://omarchy.org)
 [![Hyprland](https://img.shields.io/badge/compositor-Hyprland-89b4fa?style=for-the-badge&logo=wayland&logoColor=white&labelColor=1e1e2e)](https://hyprland.org)
 [![Quickshell](https://img.shields.io/badge/shell-Quickshell_Qt6-a6e3a1?style=for-the-badge&logo=qt&logoColor=white&labelColor=1e1e2e)](https://quickshell.org)
+[![XERJ Corpus Hub](https://img.shields.io/badge/XERJ_Corpus_Hub-Reference_Implementation-89dceb?style=for-the-badge&labelColor=1e1e2e)](https://github.com/xerj-org/xerj)
 [![License](https://img.shields.io/badge/license-MIT-fab387?style=for-the-badge&labelColor=1e1e2e)](LICENSE)
 
 <br />
 
 <p align="center">
-  <img src="assets/preview-desktop.png" alt="omadock on an Omarchy desktop (Ristretto theme) with a btop system monitor maximized above the dock: pinned apps, app groups and folder stacks along the bottom edge, the running marks under the icons whose apps have open windows" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
+  <img src="assets/preview-desktop.png" alt="OmaDock on an Omarchy desktop showcasing pinned apps, app group folders, folder stacks, and settings" width="880" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
 </p>
 
 <p align="center">
-  <a href="#-quick-start"><b>Quick Start</b></a> •
-  <a href="#-core-features"><b>Features</b></a> •
-  <a href="#-minimized-preview-tiles"><b>Preview Tiles</b></a> •
-  <a href="#-customization--theming"><b>Theming</b></a> •
-  <a href="#%EF%B8%8F-controls-cheat-sheet"><b>Controls</b></a> •
-  <a href="#%EF%B8%8F-configuration-reference"><b>Configuration</b></a> •
-  <a href="#-keyboard-shortcuts-via-ipc"><b>Keybindings</b></a> •
-  <a href="#-faq"><b>FAQ</b></a> •
-  <a href="#support-the-project"><b>Support</b></a>
+  <a href="#quick-start"><b>Quick Start</b></a> •
+  <a href="#features"><b>Features</b></a> •
+  <a href="#2-minimized-preview-tiles"><b>Preview Tiles</b></a> •
+  <a href="#customization--theming"><b>Theming</b></a> •
+  <a href="#controls-reference"><b>Controls</b></a> •
+  <a href="#configuration-reference"><b>Configuration</b></a> •
+  <a href="#ipc--keyboard-shortcuts"><b>Keybindings</b></a> •
+  <a href="#faq"><b>FAQ</b></a> •
+  <a href="#sponsoring-omadock"><b>Sponsor</b></a>
 </p>
 
 </div>
 
 ---
 
-## ❤️ Support the project
-
-omadock is built by **[thepathless](https://github.com/thepathless)**, a medical student in India who codes between classes and clinics. It's free, and it always will be — but building it costs money I don't quite have: monthly AI coding tokens, and a laptop that's falling apart (dead WiFi, sticky keys, a trackpad with a mind of its own) — so I'm saving for a **[Dell XPS 13 (2026)](https://www.dell.com/en-us/blog/year-of-the-linux-laptop-omarchy-on-xps/)**.
-
-If omadock earns a place on your desktop, [**sponsoring me**](https://github.com/sponsors/thepathless) keeps the AI lights on and the laptop fund growing. Every supporter is honored on the [**supporters wall**](SPONSORS.md) 💝 — with love, no tiers, no perks.
-
-<p align="center">
-  <a href="https://github.com/sponsors/thepathless"><img src="https://img.shields.io/badge/Sponsor_%E2%9D%A4%EF%B8%8F-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor ❤️ on GitHub" /></a>
-</p>
-
-### 💻 Laptop fund
-
-<img src="assets/laptop-fund.svg" alt="Laptop fund: $0 of $1,000" width="480" />
-
-### 📊 Where donations went
-
-| Month | AI tokens | Laptop fund | Notes |
-| :--- | :--- | :--- | :--- |
-| — | — | — | Just launched — be the first! 🙏 |
-
-*(running total so far: **−₹499** for my coding-agent subscription — borrowed from my mom 😅. Updated monthly; honesty is the least I can offer)*
-
-**Freebuff wallet (2026-10-03):** omadock creator [thepathless](https://github.com/thepathless) reports adding **₹1,000 to their Freebuff wallet** to fund continued development.
-
-To everyone who donates — really, truly, thank you. 🙏
-
----
-
-## ⚡ Overview
+## Overview
 
 **omadock (オマドック)** is a fluid, zero-CPU application dock for **[Omarchy](https://omarchy.org/)** — Arch, Hyprland, Quickshell.
 
 Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live window previews, app groups, multi-monitor docks. Beautiful, opinionated, and strictly **0.00% background CPU**.
 
 <p align="center">
-  <img src="assets/screenshot-transparent.png" alt="omadock close-up: the running marks - a dot per open window, the focused app's accent bar - dead-centre under their icons on the translucent gradient dock" width="700" />
+  <img src="assets/screenshot-transparent.png" alt="omadock close-up: running marks — a dot per open window and the focused app's accent bar — dead-centre under their icons on the translucent gradient dock" width="700" />
 </p>
 
-### ✨ Key Highlights
+### Architecture & Recognition
+
+Every release is backed by 244 Node.js unit tests, 116 Python checks, and ten sandboxed live Wayland integration suites. OmaDock's atomic asynchronous configuration gate (`CappedFileView.qml` and `tests/unit/test_capped_gate.py`) was independently selected for the **[XERJ Corpus Hub](https://github.com/xerj-org/xerj)** as a verified open-source reference implementation for AI coding agents.
+
+### Highlights
 
 - **🌊 Wave magnification** — cosine-falloff dock physics, or classic zoom. Zero coordinate jumping.
 - **🪟 Live window previews** — minimized windows park on the dock as thumbnail cards.
@@ -87,7 +64,7 @@ Crafted in the spirit of **Omakase (おまかせ)**: wave magnification, live wi
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Install
 
@@ -109,21 +86,21 @@ omarchy plugin remove omadock --yes
 
 ---
 
-## 🌟 Core Features
+## Features
 
-### 🔘 1. 3-State Window Indicators
+### 1. Three-State Window Indicators
 
 Every icon shows all its windows at a glance: **▬** active · **●** open · **○** minimized. App group tiles carry the same marks — one per member window — with the accent bar on the focused member's window, so a foldered app behaves exactly like a pinned one.
 
 | Window Count | Indicator Visual | Behavior |
 | :--- | :--- | :--- |
 | **1–4 windows** | `[ ▬ ] [ ● ] [ ○ ] [ ● ]` | Dedicated indicator dot/bar for every individual window. |
-| **5 windows** | `[ ▬ ] [ ● ] [ ● ] [ ● ] [ ● ]` | Micro-dot scaling ($4\text{px}$) fits up to 5 instances cleanly. |
+| **5 windows** | `[ ▬ ] [ ● ] [ ● ] [ ● ] [ ● ]` | Micro-dot scaling (4px) fits up to 5 instances cleanly. |
 | **6+ windows** | `[ ▬ ] [ ● ] [ ● ] [ ● ] [ +N ]` | First 4 instance dots plus a compact `+N` count badge. |
 
 ---
 
-### 🪟 2. Minimized Preview Tiles
+### 2. Minimized Preview Tiles
 
 When a window is parked on `special:minimized`, omadock generates a live visual preview tile between your pinned and running applications:
 
@@ -145,7 +122,7 @@ focused member's window in front.
 
 ---
 
-### 🔄 3. Minimize on Click Modes
+### 3. Minimize on Click Modes
 
 Configure how clicking a focused app icon behaves (`omadock.json` or the Settings menu):
 
@@ -155,7 +132,7 @@ Configure how clicking a focused app icon behaves (`omadock.json` or the Setting
 
 ---
 
-### 🌊 4. Magnification & Hover Effects
+### 4. Magnification & Hover Physics
 
 Juan Pablo Zamora's raised-cosine falloff magnification, plus shader hover effects — all six modes in `hoverEffect`:
 
@@ -172,7 +149,7 @@ With an icon style active, `iconHoverOriginal` shows the hovered icon as shipped
 
 ---
 
-### 📁 5. Pinned Folder Stacks & File Popovers
+### 5. Pinned Folder Stacks
 
 Pin directories like `~/Downloads`, `~/Projects`, or custom paths directly to your dock:
 
@@ -187,7 +164,7 @@ Pin directories like `~/Downloads`, `~/Projects`, or custom paths directly to yo
 
 ---
 
-### 📁 6. App Group Folders (Smart Collections)
+### 6. App Group Collections
 
 Organize applications into intelligent macOS / iOS-style folders directly on your dock:
 
@@ -199,7 +176,7 @@ Organize applications into intelligent macOS / iOS-style folders directly on you
 
 ---
 
-### 💾 7. Removable Media Auto-Docking
+### 7. Removable Media Integration
 
 Zero-CPU hardware integration for removable media and USB storage:
 
@@ -208,7 +185,7 @@ Zero-CPU hardware integration for removable media and USB storage:
 
 ---
 
-### 📐 8. Dock Alignment Options
+### 8. Dock Layout & Alignment
 
 Flexible screen placement tailored to your workflow:
 
@@ -217,7 +194,7 @@ Flexible screen placement tailored to your workflow:
 - **Popovers, tooltips, and menus** self-reposition so nothing clips at screen edges.
 - **Always fits the screen**: a dock that would be wider than its monitor makes room on its own, in this order: shorter labels, labels folded to their icons (closed pinned apps first), tighter spacing, smaller icons (down to half their size). Only then do items at the end of the row move into a **»** tile, which opens them in a popup (click and right click work as on the dock).
 
-#### 🖥️ Multi-Monitor Docks
+#### Multi-Monitor Docks
 
 Enable **Settings → Placement & Alignment → Show on All Monitors** (or `"multiMonitor": true`) to run a dock on every connected monitor:
 
@@ -227,7 +204,7 @@ Enable **Settings → Placement & Alignment → Show on All Monitors** (or `"mul
 
 ---
 
-### ⚡ 9. FreeDesktop Jump Lists & Zero-CPU Autohide
+### 9. FreeDesktop Jump Lists & Zero-CPU Autohide
 
 Deep Linux desktop and compositor integration:
 
@@ -238,7 +215,7 @@ Deep Linux desktop and compositor integration:
 
 ---
 
-### 🔔 10. Notification Badges & CLI App Identity
+### 10. Notification Badges & CLI App Identity
 
 - Dock icons show a badge counting **matching notifications** (pinned, running, and foldered apps alike); a folder tile sums its members' counts. Counts are **sticky**: one notification bumps the badge by one and the count stays until the app gains focus — dismissing or expiring the popup does not clear it, and neither does a shell restart (the counts live in `~/.local/state/omarchy/omadock-badges.json`). These are not unread-message counts.
 - The badge is customizable: `badgeStyle` picks a count pill or a plain dot, `badgePosition` picks the corner of the icon (`"top-right"`, `"top-left"`, `"bottom-right"`, `"bottom-left"`), and `badgeColor` picks accent, urgent red or a neutral pill.
@@ -246,7 +223,7 @@ Deep Linux desktop and compositor integration:
 
 ---
 
-### 🗂 11. Window Preview Cards & Smooth Tooltips
+### 11. Window Preview Cards & Smooth Tooltips
 
 - Hovering an app with several windows shows them as a **card stack of live thumbnails** in the tooltip; the wheel browses the stack (paced by `wheelStepDelay`), a click raises the chosen window.
 - **App groups carry the same stack** — the group's tooltip shows its member windows with the focused one in front, and the wheel over the group tile cycles which member the bubble previews; the next click focuses exactly that window.
@@ -265,11 +242,11 @@ Deep Linux desktop and compositor integration:
 
 ---
 
-## 🎨 Customization & Theming
+## Customization & Theming
 
 Right-click the Omarchy logo or empty dock space to access deep customization.
 
-### 🎛️ Settings Panel
+### Settings Panel
 
 Right-clicking either one opens the full settings panel directly: a sidebar with *Appearance*, *Icons*, *Motion & Effects*, *Behavior*, *Placement*, *Folders*, *App Groups*, *Presets* and *About*, with switches, sliders and dropdowns for every option. A fuzzy search box at the top of the sidebar finds any setting by name or synonym (typos included — `pixl` reaches the pixel icon style) and picking a hit jumps to and highlights that setting's row. Changes apply live, so the dock underneath previews them. Close it with <kbd>Esc</kbd>, the close button, or a click outside. The panel can also be opened from a keybind: `omarchy-shell omadock openSettings`.
 
@@ -308,7 +285,7 @@ The settings at a glance:
 - **Opacity**: `Auto (Theme)`, `100%`, `80%`, `65%`, `35%`, `0% (Transparent Specular)`.
 - **Placement & Alignment**: `Dock` or `Panel` layout; `Left`, `Center (Default)`, `Right`, `Both sides` along the screen edge.
 - **Color Presets**: Theme Auto, Pure Black, Mocha, Deep Slate, Midnight Blue, Dark Navy, Emerald Forest, Velvet Ruby.
-- **Icon Sizing**: Small ($28\text{px}$), Medium ($36\text{px}$), Large ($44\text{px}$), Extra Large ($52\text{px}$).
+- **Icon Sizing**: Small (28px), Medium (36px), Large (44px), Extra Large (52px).
 - **Icon Styles**: `Original`, `Mono`, `Pixel` (coarse grid) and `Dots` (dithered dot matrix), with grid size, tint, contrast and hover-reveal controls.
 - **App Folders & Groups**: Automatic smart collections from running apps, drag-to-group, in-place title renaming, and column scaling.
 
@@ -318,7 +295,7 @@ The settings at a glance:
 
 ---
 
-### 🏷️ Name labels
+### Name Labels
 
 *Settings → Labels* puts each item's name to the right of its icon (to the left on a right-aligned dock). **Always** keeps every name out; **On hover** slides a name out over the neighbouring icons after a short rest on the icon, on an opaque pill, so the dock never moves under the pointer. Moving along the dock switches names at once.
 
@@ -342,7 +319,7 @@ With labels on, an item's tooltip shows only when it adds something: window prev
 
 ---
 
-### 🌈 One dock, every Omarchy theme
+### One Dock, Every Omarchy Theme
 
 The dock follows your Omarchy theme's palette and wallpaper — three of the twenty-plus themes out of the box:
 
@@ -358,7 +335,7 @@ The dock follows your Omarchy theme's palette and wallpaper — three of the twe
 
 ---
 
-### 🎨 Presets
+### Presets
 
 *Settings → Presets* saves the current look (background, effects, border, dividers, icons, size and spacing) as a named preset, up to six, each with a small live thumbnail. Apply, update, rename or delete them there, or switch from the dock's right-click menu (*Presets ›*). Presets are kept in `omadock.json` under `presets`. A keybind can apply one by name:
 
@@ -390,7 +367,7 @@ omarchy-shell omadock deletePreset <id>             # -> ok | not found
 
 A name that is already taken — by one of your presets or by a shipped look — falls back to `Preset 1`, `Preset 2` and so on, so the call still returns an id. When you save a copy of a shipped look under a name of your own, the row you saved is the one marked `active`; the shipped row answers only when no preset of yours matches the look on screen.
 
-## 🖱️ Controls Cheat Sheet
+## Controls Reference
 
 | Gesture / Trigger | Target | Action Executed |
 | :--- | :--- | :--- |
@@ -417,7 +394,7 @@ A name that is already taken — by one of your presets or by a shipped look —
 
 ---
 
-## ⚙️ Configuration Reference
+## Configuration Reference
 
 Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 
@@ -563,15 +540,15 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `badgeStyle` | `string` | `"count"` | Badge shape: `"count"` pill with the number, or `"dot"`. |
 | `badgePosition` | `string` | `"top-right"` | Corner of the icon the badge sits on: `"top-right"`, `"top-left"`, `"bottom-right"`, `"bottom-left"`. |
 | `badgeColor` | `string` | `"accent"` | Badge colour: `"accent"`, `"urgent"` (red) or `"neutral"`. |
-| `revealDelay` | `int` | `160` | Edge dwell time in milliseconds before unhiding ($0$–$2000$). |
-| `tooltipDelay` | `int` | `450` | Tooltip hover dwell delay in milliseconds ($0$–$5000$). |
-| `wheelStepDelay` | `int` | `150` | Minimum milliseconds between accepted wheel steps while browsing an app's windows ($0$–$1000$). |
+| `revealDelay` | `int` | `160` | Edge dwell time in milliseconds before unhiding (0–2000ms). |
+| `tooltipDelay` | `int` | `450` | Tooltip hover dwell delay in milliseconds (0–5000ms). |
+| `wheelStepDelay` | `int` | `150` | Minimum milliseconds between accepted wheel steps while browsing an app's windows (0–1000ms). |
 | `splitSections` | `bool` | `false` | Splits pinned apps, running apps and folders into separate sections divided by the `divider*` settings. |
-| `sectionSpacing` | `number` | `18` | Gap between sections in pixels ($0$–$48$). |
+| `sectionSpacing` | `number` | `18` | Gap between sections in pixels (0–48px). |
 
 ---
 
-## ⌨️ Keyboard Shortcuts via IPC
+## IPC & Keyboard Shortcuts
 
 omadock registers IPC commands callable directly by Quickshell.
 
@@ -615,7 +592,7 @@ Additional IPC methods available:
 
 ---
 
-## ❓ FAQ
+## FAQ
 
 <details>
 <summary><b>Where are minimized windows stored?</b></summary>
@@ -643,7 +620,7 @@ Run <code>omarchy restart shell</code> in your terminal to instantly reload the 
 
 ---
 
-## 🛠️ Diagnostics & Validation
+## Diagnostics & Verification
 
 Every pull request runs the test suites, a QML syntax gate, the security grep, the maintainability structure check (file-size cap and logic-module purity), a check that the compiled shaders match their sources and the manifest schema check in CI. Pull requests must target the `experimental` branch — `main` only receives verified release batches — and CI enforces the base branch.
 
@@ -655,7 +632,7 @@ omarchy plugin validate ~/Projects/omadock
 ./tests/manifest-check.sh .
 
 # Test suites (Node: model, perf, hardening, marks and DockModel behaviour; Python: script helpers, drop check, the QML rules and the CappedFileView read gate)
-node --check DockModel.js && node --check DockLabels.js && node --check DockLayout.js && node --check DockMarks.js && node --check DockMarkGeometry.js
+for f in DockModel.js DockLabels.js DockLayout.js DockMarks.js DockMarkGeometry.js DockPresets.js DockIcons.js DockOutput.js DockMotion.js DockKeys.js DockFit.js; do node --check "$f"; done
 node --test tests/unit/*.test.js tests/unit/*.test.mjs
 python3 -m unittest discover -s tests/unit -p 'test_*.py'
 
@@ -719,7 +696,7 @@ qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 
 ---
 
-## 🗂 Repository Layout
+## Repository Layout
 
 | Path | What it is |
 | :--- | :--- |
@@ -738,7 +715,15 @@ qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 
 ---
 
-## 📄 License
+## Sponsoring OmaDock
+
+OmaDock is free, open source, and built with care for the Omarchy Linux desktop.
+
+If OmaDock earns a place in your daily workflow, [**sponsoring development on GitHub**](https://github.com/sponsors/thepathless) or pledging feature bounties on [**Polar.sh**](https://polar.sh/thepathless) helps fund Linux hardware testing devices and ongoing maintenance. Every supporter is honored on the [**Supporters & Contributors Wall**](SPONSORS.md).
+
+---
+
+## License
 
 Distributed under the **MIT License**.  
 Copyright © 2026 **[thepathless](https://github.com/thepathless)**.
@@ -747,9 +732,51 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 
 ---
 
-## 📋 Releases & Changelog
+## Changelog
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
+
+### v4.6.1 — 2026-10-15
+
+Corrections to what v4.6.0 advertised, plus one internal restructure. Nothing in this release changes what the dock looks like on screen; the two behaviour fixes are both in the wrapper's answer and in what the published notes claimed.
+
+- **`scripts/omadock-task.sh` no longer reports a success it did not have.** `qs -p <shell> ipc call omadock <fn>` prints `Function not found.` on **stdout** and still exits **0** for a function the running dock does not expose, so the old wrapper's direct IPC forms answered `ok` against a shell that had none of `reportTask` / `clearTask` / `taskStatus`. It now probes the target's function list first and fails loudly — non-zero, with the reason on stderr — and `OMADOCK_SHELL_PATH` points it at a dock that is not your own. A wrapped command still exits with the wrapped command's own status.
+- **A callerless mode is gone.** The v4.6.0 notes offered `omadock-task.sh hook pre|stop` for agent events; nothing in the repository ever called it, and the published v4.6.0 release notes now carry a correction pointing here.
+- **The status look has one owner.** The tile's badge and its hover chip read the same palette (`DockTasks.js`); `components/DockItem.qml` kept its own copy of the three colours and of the chip's label text, so the two could disagree about what a status looks like. A unit test now scans every `.qml`/`.js` outside `tests/` and fails if a status colour is spelled anywhere but `DockTasks.js`.
+- **One source for task status, one owner for app identity** — a structural pass with no observable change. `Dock.qml` no longer mirrored the host's task map next to the copy `DockScreenLogic` pulled: `sharedState.taskStatus` is the only writable map, exposed as `readonly property var taskMap`. `DockTasks.js` no longer carried its own `.desktop` strip *and* its own nine-entry alias table; `DockModel.js`'s `cliAppId` is the only table, injected into the task module. The task path keeps a deliberately stricter rule than the notification path — a task for `ghostty` must not badge the separate `ghostty-gui` app — and both rules are documented and pinned by tests.
+- **The notification path's routing is pinned spelling by spelling**, since widening `cliAppId` also feeds it. All 28 CLI/agent spellings resolve to exactly the tile they resolved to in v4.6.0, and no candidate set shrank (asserted directly, not by eye). **How much of the widening is observable was then measured rather than assumed**: the candidate builder also splits an id on dots and dashes, so for 26 of the 28 spellings the canonical name is already in the token set — deleting the `claude-code → claude` rule changes no route at all — while only the `agy` family depends on the table (`agy` splits to itself, so `antigravity` can only arrive through `cliAppId`), and deleting that single rule turns 4 of the 5 new tests red, naming `agy` and `org.omarchy.agy`.
+- **Two honest limits**: the notification widening was proved by routing synthetic notifications for those spellings, because a real one cannot be produced from a test; and a status badge is never `visible` inside the hidden probe dock (Qt Quick cascades `Item.visible` from ancestors), so the live suite asserts the level and anchor that drive its drawing instead.
+- **Verification**: 251 Node + 116 Python tests, `node --check` ×12 (CI's gate, plus the three remaining root modules), `qmllint` 0 errors (its warnings are the standing import/type-resolution and unqualified-access class — the count moves 2609 → 2610 because qmllint cannot resolve the new `sharedState.taskStatus` read that makes the host's map the single source, and every warning normalises to a class v4.6.0 already had), structure-check PASSED, security-grep, shaders-in-sync, manifest-check and `omarchy plugin validate` all 0, smoke PASSED, and the `tasks` / `presets` / `label-metrics` / `teardown` live suites green. **One suite is red and it is not this release**: `tests/live/interactions.sh` stops at its folder-menu step (`the folder menu never reached its name field ("no folder item")`) when the dock has no folder pinned, and the identical failure — same step, same message — reproduces on the published `v4.6.0` tree, so it is the local configuration, not the code. Every other surface it drives (the app menu, the group popup, the settings panel's ten pages, the dock log) passes.
+
+### v4.6.0 — 2026-10-15
+
+- **Developer Task HUD** — contributed by [@NothingManTR](https://github.com/NothingManTR) ([#67](https://github.com/thepathless/omadock/pull/67)): a dock tile now shows the progress of long-running terminal and CLI work. A blue `●` marks a command or AI coding agent that is still running, a green `✓` marks one that finished with exit code `0`, and a red `!` marks a failure — with a hover chip naming the command, how long it took and its exit code. The badge clears as soon as you focus the app, and work reported for a CLI tool that has no icon of its own falls back to its host terminal.
+- **`scripts/omadock-task.sh`** wraps any command (`omadock-task.sh cargo build --release`) and reports directly over IPC (`reportTask`, `clearTask`, `taskStatus`) for shell prompts. Its exit status is the wrapped command's own, and every direct IPC form fails loudly — non-zero, with the reason on stderr — when no dock is reachable.
+- **Zero background cost**: the HUD is pure event-driven IPC and reactive bindings — no polling timers, no background loops, still 0.00% idle CPU.
+- **Fixes on integration**: a task filed for one app can no longer badge a *different* app whose identifier merely contains it (`foot` vs `footclient`), while a reverse-DNS desktop id such as `com.mitchellh.ghostty` still reaches its bare name; the status colour is always a fully resolved colour, so a badge can never draw with an unresolved one.
+- **Verification**: 244 Node + 116 Python tests, `qmllint` 0 errors, plugin validate and manifest-check 0, smoke PASSED, and the live suites green — including a new `tests/live/tasks.sh` that drives the HUD end to end over IPC and reads the drawn badge back out of a running dock.
+
+### v4.5.1 — 2026-10-14
+
+- **Marketplace `"dock"` search & taxonomy alignment**: Updated the manifest display name to `"Dock (OmaDock)"` and standardized `tags` to the allowed marketplace taxonomy (`["launcher", "quickshell", "hyprland"]`), elevating OmaDock into the Tier 1 prefix bucket for `"dock"` queries while keeping `"OmaDock"` searchable.
+- **Nested worktree scanner & resource cleanup**: Excluded the nested `experiment/` worktree in `test_motion_durations.py`, `test_qml_self_binding.py` and `test_qtquick_color_shadowing.py` during repo-root runs, closed the `/proc/status` handle in `test_bench.py`, and ensured `drive-removal-watch.py` closes `mounts_file` and reaps its `udevadm` child on exit.
+- **Visual showcase & XERJ Corpus Hub recognition**: Restored the full desktop showcase banner (`preview.png` / `assets/preview-desktop.png`), refreshed the close-up and nameplate assets on an isolated headless output, removed `assets/laptop-fund.svg`, and added the **XERJ Corpus Hub Reference Implementation** badge recognizing commit `6e03889`.
+- **Verification**: 239 Node + 116 Python tests, `node --check` ×11, `qmllint` 0 errors, structure-check PASSED, security-grep 0, `omarchy plugin validate` 0, manifest-check 0, smoke PASSED, and headless `interactions.sh` / `presets.sh` / `label-metrics.sh` / `teardown.sh` green.
+
+### v4.5.0 — 2026-10-12
+
+- **Contributor Pull Requests**: Integrated eight pull requests from [@priard](https://github.com/priard) (#58–#65) preserving contributor commit history:
+  - Motion easing with Animations Full / Reduced / Off settings (#59).
+  - Screen-fitting cascade with `»` overflow tile (#64).
+  - Pill dock plate geometry and removable drive plates (#60).
+  - Pinned app labels active only while running (#63).
+  - Deferred label name shortening (#61).
+  - Both-sides alignment minimum gap floor (#62).
+  - Screencopy guard when dock output is disconnected (#58).
+  - Yaru device artwork priority for external drives (#65).
+- **Web App Matching**: Pinned web apps no longer misidentify desktop entries with absolute `Icon=` paths (#66, reported by [@murdialthaf](https://github.com/murdialthaf)).
+- **Group Renaming**: Isolated text input instantiation to active editing mode, preventing idle Wayland clipboard subscriptions.
+- **Verification**: 239 Node + 116 Python tests passing, zero QML lint errors, verified on live Quickshell instance (2 jiffies / 6s idle).
 
 ### v4.4.2 — 2026-10-11
 

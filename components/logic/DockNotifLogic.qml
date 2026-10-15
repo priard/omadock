@@ -7,6 +7,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
+import "../../DockTasks.js" as DockTasks
 
 // Logic extracted from Dock.qml: stateless functions, the dock root
 // is passed in and owns all state. Bodies are verbatim.
@@ -236,6 +237,9 @@ QtObject {
   // Called whenever an app/window receives focus or is activated/clicked by user.
   function clearUrgentApp(root, appId, address) {
     root.clearNotificationBadgesFor(appId, address)
+    if (root && root.sharedState && root.sharedState.taskStatus) {
+      root.sharedState.taskStatus = DockTasks.clearTaskStatusFor(DockModel, root.sharedState.taskStatus, appId)
+    }
     if (!root.urgentMap) return
     var hasKeys = false
     for (var k in root.urgentMap) {

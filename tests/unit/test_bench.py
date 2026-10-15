@@ -180,7 +180,9 @@ class ContextSwitches(unittest.TestCase):
         t.start()
         _t.sleep(0.3)
         try:
-            main_only = sum(bench._status_value(open(f"/proc/{os.getpid()}/status").read(), k)
+            with open(f"/proc/{os.getpid()}/status") as status_file:
+                status_text = status_file.read()
+            main_only = sum(bench._status_value(status_text, k)
                             for k in ("voluntary_ctxt_switches", "nonvoluntary_ctxt_switches"))
             sample = bench.read_proc_sample(os.getpid())
         finally:

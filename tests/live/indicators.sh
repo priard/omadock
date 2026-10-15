@@ -7,32 +7,25 @@
 # The marks are read as ink from a screenshot of the dock, so what is asserted
 # is the row that is actually drawn, not the source that draws it: renaming a
 # property or rewriting the row's layout passes as long as the marks stay
-# centred, and a row that declares a slot it does not draw fails. That spare
-# slot is the bug this guards - a Qt Grid reserves a gap for every slot it
-# declares, so the row's empty eighth slot left a lone accent bar 2 px off the
-# icon it belongs to.
+# centred, and a row that declares a slot it does not draw fails (a spare slot
+# left a lone bar 2 px off its icon: Qt Grids reserve gaps for declared slots).
 #
-# It opens its own windows with a terminal emulator this desktop is not already
-# running (so it knows how many marks to expect) and gives the dock a flat
-# opaque background for the run: behind a translucent one the wallpaper's
-# texture is indistinguishable from ink. omadock.json, the windows it opened
-# and the focus are all put back on exit.
+# It opens its own windows with an unused terminal emulator and gives the dock
+# a flat opaque background (wallpaper texture reads as ink). Config, windows
+# and focus are put back on exit.
 #
-# Keep the pointer off the item being measured: hovering scales it and lifts its
-# label, and the marks move with the icon.
+# Keep the pointer off the measured item: hover scales the icon and moves the marks.
 #
-# Exit: 0 the marks are centred; 1 the dock did not answer, or a mark is
-# off-centre / the row drew the wrong count; 2 nothing was measured, because
-# there was no terminal emulator left to open a window with. Never 0 without
-# measuring: a skip that exits 0 is a guard that cannot fail.
+# Exit: 0 centred; 1 no answer, off-centre, or wrong count; 2 nothing to open
+# a window with. Never 0 without measuring: a passing skip is a guard that
+# cannot fail.
 set -u
 cd "$(dirname "$0")/../.."
 . tests/live/common.sh
 wait_ready || exit 1
 
-# Slack: the bug measured 1.0-2.0 px, a centred row 0.0-0.5 px (each mark
-# rounds itself onto the pixel grid, which can move an outermost mark half a
-# pixel).
+# Slack: the bug measured 1.0-2.0 px, a centred row 0.0-0.5 px (pixel-grid
+# rounding can move an outermost mark half a pixel).
 TOL=0.75
 TITLE="omadock-live-ind"
 CFG=$HOME/.config/omarchy/omadock.json
@@ -141,7 +134,7 @@ focus_ours() {
 check() {
   focus_ours
   python3 - "$TOL" "$2" "$TARGET" "$1" <<'PY' || fail "$1"
-import collections, json, subprocess, sys
+import collections, json, subprocess, sys, time
 
 tol, mode, item_id, label = float(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
 
@@ -152,100 +145,106 @@ def report(msg, ok):
     print(f"{label}: {msg}")
     sys.exit(0 if ok else 1)
 
-# The dock's layer: its size is the screenshot's frame, its place on the monitor
-# is where grim has to cut from. Item rectangles are layer-local.
-layer = monitor = None
-for name, m in json.loads(out("hyprctl", "-j", "layers")).items():
-    for arr in m["levels"].values():
-        for l in arr:
-            if l.get("namespace") == "omadock":
-                monitor, layer = name, l
-if not layer:
-    report("the dock has no layer on screen (hidden?)", False)
-scale, mx, my = 1.0, 0, 0
-for m in json.loads(out("hyprctl", "-j", "monitors")):
-    if m["name"] == monitor:
-        scale, mx, my = m.get("scale", 1.0), m["x"], m["y"]
+for attempt in range(2):  # a second frame when the first caught the row mid-settle
+    # The dock's layer: its size is the screenshot's frame, its place on the monitor
+    # is where grim has to cut from. Item rectangles are layer-local.
+    layer = monitor = None
+    for name, m in json.loads(out("hyprctl", "-j", "layers")).items():
+        for arr in m["levels"].values():
+            for l in arr:
+                if l.get("namespace") == "omadock":
+                    monitor, layer = name, l
+    if not layer:
+        report("the dock has no layer on screen (hidden?)", False)
+    scale, mx, my = 1.0, 0, 0
+    for m in json.loads(out("hyprctl", "-j", "monitors")):
+        if m["name"] == monitor:
+            scale, mx, my = m.get("scale", 1.0), m["x"], m["y"]
 
-lx, ly = mx + layer["x"], my + layer["y"]
-shot = "/tmp/omadock-ind-shot.png"
-subprocess.run(["grim", "-g", f"{lx},{ly} {layer['w']}x{layer['h']}", shot], check=True)
+    lx, ly = mx + layer["x"], my + layer["y"]
+    shot = "/tmp/omadock-ind-shot.png"
+    subprocess.run(["grim", "-g", f"{lx},{ly} {layer['w']}x{layer['h']}", shot], check=True)
 
-item = next((i for i in json.loads(out("omarchy-shell", "omadock", "itemGeometry"))
-             if i["id"] == item_id), None)
-if not item:
-    report(f"the dock does not list {item_id}", False)
-x, y, w, h = item["x"], item["y"], item["w"], item["h"]
-# Hovering the item being measured scales it and lifts its label, and the marks
-# move with it: nothing on screen would match its rectangle.
-cursor = json.loads(out("hyprctl", "-j", "cursorpos"))
-if lx + x <= cursor.get("x", -1) < lx + x + w and ly + y <= cursor.get("y", -1) < ly + y + h:
-    report("the pointer is over the item being measured: move it away and re-run", False)
+    item = next((i for i in json.loads(out("omarchy-shell", "omadock", "itemGeometry"))
+                 if i["id"] == item_id), None)
+    if not item:
+        report(f"the dock does not list {item_id}", False)
+    x, y, w, h = item["x"], item["y"], item["w"], item["h"]
+    # Hovering the item being measured scales it and lifts its label, and the marks
+    # move with it: nothing on screen would match its rectangle.
+    cursor = json.loads(out("hyprctl", "-j", "cursorpos"))
+    if lx + x <= cursor.get("x", -1) < lx + x + w and ly + y <= cursor.get("y", -1) < ly + y + h:
+        report("the pointer is over the item being measured: move it away and re-run", False)
 
-# A row of marks sits in the item's bottom band, and the icon art above reaches
-# that band's top edge, so ink touching the top row is not a mark. A column sits
-# against the item's leading edge, the label plate hanging off it: the marks are
-# the ink that starts in the strip there, and the icon art, the plate and the
-# label text all begin to the right of it.
-# Both windows are measurement slack on purpose, not values read from
-# DockMarkGeometry.js: how big the marks are is what is being checked, so a
-# window that grew with the policy would follow a wrong size instead of
-# catching it. They only have to hold the marks and stop short of the art.
-band = max(10, round(8 * scale))
-strip = max(12, round(14 * scale))
-cx, cy, cw, ch = (x, y + h - band, w, band) if mode == "row" else (x, y, w, h)
-raw = {}
-for line in out("magick", shot, "-crop", f"{cw}x{ch}+{cx}+{cy}", "+repage", "txt:-").splitlines()[1:]:
-    point, rest = line.split(":", 1)
-    px, py = (int(v) for v in point.split(","))
-    hexv = rest.split("#")[1][:6]
-    raw[(px, py)] = tuple(int(hexv[i:i + 2], 16) for i in (0, 2, 4))
-if not raw:
-    report(f"nothing on screen at {item_id}", False)
-# Whatever the row draws stands out from what is behind it (the dock's own
-# background, or a label plate): ink is what differs from the crop's commonest
-# colour. The dock guarantees the marks read against it, so the cut sits well
-# above the film grain's speckle (a few levels) and well below a mark's
-# contrast (a hundred or more).
-bg = collections.Counter(raw.values()).most_common(1)[0][0]
-ink = {p for p, v in raw.items() if max(abs(a - b) for a, b in zip(v, bg)) > 80}
+    # Row marks live in the item's bottom band (top-touching ink is icon art);
+    # column marks in the leading strip (art, plate and text start right of it).
+    # Both windows are slack, not policy reads: a window grown with the policy
+    # would follow a wrong size instead of catching it.
+    band = max(10, round(8 * scale))
+    strip = max(12, round(14 * scale))
+    cx, cy, cw, ch = (x, y + h - band, w, band) if mode == "row" else (x, y, w, h)
+    raw = {}
+    for line in out("magick", shot, "-crop", f"{cw}x{ch}+{cx}+{cy}", "+repage", "txt:-").splitlines()[1:]:
+        point, rest = line.split(":", 1)
+        px, py = (int(v) for v in point.split(","))
+        hexv = rest.split("#")[1][:6]
+        raw[(px, py)] = tuple(int(hexv[i:i + 2], 16) for i in (0, 2, 4))
+    if not raw:
+        report(f"nothing on screen at {item_id}", False)
+    # Ink differs from the crop's background well above grain speckle (a few
+    # levels) and well below a mark's contrast (a hundred or more).
+    near = [v for v in raw.values() if max(abs(a - b) for a, b in zip(v, (16, 16, 16))) <= 60] or list(raw.values())
+    bg = collections.Counter(near).most_common(1)[0][0]
+    ink = {p for p, v in raw.items() if max(abs(a - b) for a, b in zip(v, bg)) > 80}
 
-def groups(points):
-    # Diagonals count as touching: the overflow pill's "+2" is two glyphs, and
-    # they are one mark.
-    rest, found = set(points), []
-    while rest:
-        seed = rest.pop()
-        group, stack = {seed}, [seed]
-        while stack:
-            gx, gy = stack.pop()
-            for nb in ((gx + 1, gy), (gx - 1, gy), (gx, gy + 1), (gx, gy - 1),
-                       (gx + 1, gy + 1), (gx + 1, gy - 1),
-                       (gx - 1, gy + 1), (gx - 1, gy - 1)):
-                if nb in rest:
-                    rest.discard(nb); group.add(nb); stack.append(nb)
-        found.append(group)
-    return found
+    def groups(points):
+        # Diagonals count as touching: the overflow pill's "+2" is two glyphs, and
+        # they are one mark (joined below when AA splits them).
+        rest, found = set(points), []
+        while rest:
+            seed = rest.pop()
+            group, stack = {seed}, [seed]
+            while stack:
+                gx, gy = stack.pop()
+                for nb in ((gx + 1, gy), (gx - 1, gy), (gx, gy + 1), (gx, gy - 1),
+                           (gx + 1, gy + 1), (gx + 1, gy - 1),
+                           (gx - 1, gy + 1), (gx - 1, gy - 1)):
+                    if nb in rest:
+                        rest.discard(nb); group.add(nb); stack.append(nb)
+            found.append(group)
+        return found
 
-def box(group):
-    xs = [p[0] for p in group]
-    ys = [p[1] for p in group]
-    return min(xs), min(ys), max(xs), max(ys)
+    def box(group):
+        xs = [p[0] for p in group]
+        ys = [p[1] for p in group]
+        return min(xs), min(ys), max(xs), max(ys)
 
-def is_mark(group):
-    """A speckle of grain that survived the cut is not ink."""
-    return len(group) >= 3
+    def is_mark(group):
+        """A speckle of grain that survived the cut is not ink."""
+        return len(group) >= 3
 
-if mode == "row":
-    marks = [g for g in groups(ink) if min(p[1] for p in g) > 0 and is_mark(g)]
-else:
-    # What is a mark is decided by where the ink starts, not by how large it
-    # is: past five windows the "+N" pill's glyphs are wider than the icon's
-    # own, so the largest blob in the item is as often a mark as it is the
-    # plate, and reading one as the plate hid the marks behind it.
-    marks = [g for g in groups(ink) if is_mark(g) and min(p[0] for p in g) < strip]
+    if mode == "row":
+        marks = [g for g in groups(ink) if min(p[1] for p in g) > 0 and is_mark(g)]
+    else:
+        # What is a mark is decided by where the ink starts, not by how large it
+        # is: past five windows the "+N" pill's glyphs are wider than the icon's
+        # own, so the largest blob in the item is as often a mark as it is the
+        # plate, and reading one as the plate hid the marks behind it.
+        marks = [g for g in groups(ink) if is_mark(g) and min(p[0] for p in g) < strip]
+    if marks or attempt > 0:  # fail closed: a real miss fails twice identically
+        break
+    time.sleep(2)
 if not marks:
     report(f"no marks under {item_id} (is anything running there?)", False)
+# A split "+N" pill (two glyphs sharing one band) rejoins below.
+if item["windows"] > 5 and len(marks) == 6:
+    bi = [box(g) for g in marks]
+    hit = [(i, j) for i in range(6) for j in range(i + 1, 6)
+           if 2 <= max(bi[j][0] - bi[i][2], bi[i][0] - bi[j][2]) <= 3
+           and max(bi[j][1] - bi[i][3], bi[i][1] - bi[j][3]) < 0]
+    if hit:
+        i, j = hit[0]
+        marks = [g for k, g in enumerate(marks) if k != i and k != j] + [marks[i] | marks[j]]
 
 xs = [p[0] for g in marks for p in g]
 ys = [p[1] for g in marks for p in g]
@@ -258,10 +257,8 @@ off = (((min(xs) + max(xs) + 1) / 2 + cx) - (x + w / 2) if mode == "row"
 
 windows = item["windows"]
 expected = 5 if windows > 5 else max(1, min(windows, 5))
-# What is drawn has to be the shape this check is about: the accent bar lies
-# along the row and stands upright in a column (1.6x the dots). Past five
-# windows the count moves into the "+N" pill, which spans wider than the dots
-# rather than taller, so a column of equal squares is neither shape.
+# Shape check: the bar lies along the row, stands upright in a column; past
+# five windows the "+N" pill spans wider than the dots, never just taller.
 if mode == "row":
     shape = widths[0] > heights[0] if windows == 1 else max(widths) >= 1.8 * min(widths)
 else:
@@ -273,9 +270,7 @@ report(line if ok else f"{line} · marks {widths}x{heights}", ok)
 PY
 }
 
-# A terminal this desktop is not already showing a window of, so the mark count
-# the dock reports for it is the one this test opened. Window classes carry the
-# emulator's name (foot, kitty, com.mitchellh.ghostty, ...).
+# An unused terminal emulator, so the counted marks are the ones this test opened.
 TERM_APP=""
 shown=$(hyprctl -j clients 2>/dev/null | python3 -c '
 import json, sys
@@ -297,8 +292,7 @@ if [ -z "$TERM_APP" ]; then
 fi
 
 counts > /tmp/omadock-ind-before
-# A flat opaque background without film grain: the marks are only a few pixels,
-# and ink has to be told apart from what is behind them.
+# Flat grain-free card, modal anchored at its colour: busy art can't elect the modal.
 set_cfg autohide=false showBackground=true bgColor=#101010 grain=0 labelMode=off \
   hoverEffect=off
 open_one

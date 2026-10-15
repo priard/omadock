@@ -154,8 +154,37 @@
     return ""
   }
 
+  // Every app id the dock's own list knows, de-duplicated: what a precondition
+  // this fixture has to supply can be chosen from. The list is the dock's, so
+  // an id taken from it resolves on whatever host is running the suite.
+  function appIds(d) {
+    var rows = d.appRows || []
+    var out = [], seen = {}
+    for (var i = 0; i < rows.length; i++) {
+      var e = (rows[i] && rows[i].entry) ? rows[i].entry : rows[i]
+      var id = String((e && e.id) || "")
+      if (id === "" || seen[id]) continue
+      seen[id] = true
+      out.push(id)
+    }
+    return out
+  }
+
+  function firstResolvable(d) {
+    var ids = appIds(d)
+    for (var i = 0; i < ids.length; i++) if (d.resolveDesktopEntry(ids[i])) return ids[i]
+    return ""
+  }
+
   IpcHandler {
+    id: ipc
     target: "omadock-test"
+
+    // What the fixture supplied for this run, so repeated `prepare` calls are
+    // idempotent (togglePin flips a pin, and a second call would unpin it).
+    property string probeAppId: ""
+    // The group the suite's config copy adds when the desk has none.
+    property string probeGroupId: "omadock_probe_group"
 
     // One step per call, so the suite can capture a frame before and after a
     // surface opens. Every step answers JSON; `ok` is false when the gate
@@ -172,6 +201,36 @@
       if (step === "reveal") {
         d.dockVisible = true
         return JSON.stringify({ ok: true, visible: d.dockVisible })
+      }
+
+      // The preconditions the suite owns, supplied only where the desk cannot:
+      // an app tile comes from a running window (the compositor's, not this
+      // fixture's) or from a pin, and a probe HOME starts with neither, while
+      // a group tile needs at least one app in it for the popup to draw tiles.
+      // Nothing is added while an app tile already exists - the real thing is
+      // preferred, the same way the config copy prefers a real pinned folder.
+      // Idempotent: a pin is chosen once and remembered, because togglePin
+      // flips.
+      if (step === "prepare") {
+        var hadApp = !!itemOf(d, "app")
+        if (!hadApp && ipc.probeAppId === "") ipc.probeAppId = firstResolvable(d)
+        if (!hadApp && ipc.probeAppId !== "") d.togglePin(ipc.probeAppId)
+        var filled = false
+        var groups = d.appGroups || []
+        for (var gi = 0; gi < groups.length; gi++) {
+          if (!groups[gi] || groups[gi].id !== ipc.probeGroupId) continue
+          if (groups[gi].apps && groups[gi].apps.length > 0) break
+          var pick = ipc.probeAppId !== "" ? ipc.probeAppId : firstResolvable(d)
+          if (pick === "") break
+          ipc.probeAppId = pick
+          d.addAppToGroup(ipc.probeGroupId, pick)
+          filled = true
+          break
+        }
+        return JSON.stringify({ ok: true, hadApp: hadApp, app: ipc.probeAppId,
+          pinned: !hadApp && ipc.probeAppId !== "", filled: filled,
+          group: !!itemOf(d, "group"),
+          why: hadApp ? "" : (ipc.probeAppId === "" ? "the dock lists no installed app to pin" : "") })
       }
 
       if (step === "palette")
@@ -200,6 +259,11 @@
         var greport = menuReport(d)
         greport.id = gi.id
         greport.appId = d.contextAppId
+        // Which group the menu actually took: without it the menu's group
+        // section draws its placeholder rows and the surface assertions below
+        // would still hold, so the step would not be about this tile at all.
+        greport.groupData = (d.contextAppGroupData && d.contextAppGroupData.id)
+          ? String(d.contextAppGroupData.id) : ""
         return JSON.stringify(greport)
       }
 

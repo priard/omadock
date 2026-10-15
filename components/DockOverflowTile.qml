@@ -16,7 +16,7 @@ Item {
 
   // A plate of its own in a plate row (TilePlate), like the Omarchy button.
   // Its place among the plates (DockCard.plateEdges): after every labelled item.
-  readonly property int plateSlot: tile.fit ? tile.fit.shown.button + tile.fit.shown.pinned + tile.fit.shown.running + tile.fit.shown.folders + tile.fit.shown.drives : 0
+  readonly property int plateSlot: tile.fit ? tile.fit.shown.button + tile.fit.shown.pinned + tile.fit.shown.running + tile.fit.shown.folders : 0
   TilePlate { id: plate; rootRef: tile.rootRef; hovered: area.containsMouse; slot: tile.plateSlot }
 
   Text {

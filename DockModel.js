@@ -40,9 +40,7 @@ function toArray(list) {
   return []
 }
 
-function normalizeId(id) {
-  return stripDesktop(id)
-}
+function normalizeId(id) { return stripDesktop(id) }
 
 function copyMap(src) {
   var out = {}
@@ -75,20 +73,20 @@ function extractNotificationWebDomain(body, summary) {
   return ""
 }
 
-// Omarchy's TUI launcher uses the command name, while Antigravity's
-// desktop entry uses the product name. Keep this alias exact, not fuzzy.
+// The id spellings that name a CLI or agent product: the TUI launcher's command
+// name, the product name, or a reverse-DNS desktop id. One table, one answer.
 function cliAppId(id) {
   var raw = stripDesktop(id)
   if (/^(?:org\.omarchy\.)?agy$/i.test(raw)) return "antigravity"
   if (/^org\.omarchy\.btop(?:-.*)?$/i.test(raw)) return "btop"
+  if (/^(?:com\.anthropic\.)?claude(?:-code)?$/i.test(raw)) return "claude"
+  if (/^aider(?:-chat)?$/i.test(raw)) return "aider"
+  if (/^(?:com\.cursor\.)?cursor(?:-bin)?$/i.test(raw)) return "cursor"
+  if (/^(?:com\.codeium\.)?windsurf$/i.test(raw)) return "windsurf"
+  if (/^ollama(?:-app)?$/i.test(raw)) return "ollama"
+  if (/^(?:github-)?copilot(?:-cli)?$/i.test(raw)) return "copilot"
+  if (/^open-?interpreter$/i.test(raw)) return "interpreter"
   return raw
-}
-
-function knownCliNotification(row) {
-  var app = String(row && row.app || "").trim()
-  if (/^(?:org\.omarchy\.)?agy$/i.test(app) || /^antigravity$/i.test(app)) return "antigravity"
-  if (/^(?:org\.omarchy\.)?btop(?:-.*)?$/i.test(app)) return "btop"
-  return ""
 }
 
 // The two CLI products the dock learns to identify. Nothing else takes the
@@ -110,9 +108,11 @@ function notificationAliasIds(appId) {
 }
 
 function getCandidates(id) {
-  var raw = cliAppId(id).toLowerCase()
+  // The id as written, plus its canonical name: a candidate set never shrinks.
+  var raw = stripDesktop(id).toLowerCase(), canon = cliAppId(id).toLowerCase()
   if (!raw) return []
   var list = [raw]
+  if (canon !== raw) list.push(canon)
 
   // WebApp extraction (Chrome, Chromium, Brave, Edge, Helium, Opera, Vivaldi PWAs)
   var webAppMatch = raw.match(/^(?:google-chrome|google-chrome-stable|chrome|chromium|brave|edge|microsoft-edge|helium|helium-browser|opera|vivaldi)-(.*?)__?-(?:default|profile.*)$/i)
@@ -159,8 +159,8 @@ function isAppMatch(idA, idB) {
   var b = cliAppId(idB).toLowerCase()
   if (a === b) return true
 
-  var candsA = getCandidates(a)
-  var candsB = getCandidates(b)
+  var candsA = getCandidates(idA)
+  var candsB = getCandidates(idB)
   for (var i = 0; i < candsA.length; i++) {
     var ca = candsA[i]
     if (!ca || IGNORED_TOKENS[ca]) continue
@@ -180,8 +180,8 @@ function findNotificationTargets(allEntries, appRows, row) {
   }
   // Map exact Omarchy TUI app-ids and the native Antigravity CLI name,
   // independent of window-list folding or the generic terminal host.
-  var cliTarget = knownCliNotification(row)
-    || (/^antigravity$/i.test(String(row.app || "").trim()) ? "antigravity" : "")
+  var cliApp = String(row.app || "").trim()
+  var cliTarget = isKnownCli(cliApp) ? cliAppId(cliApp).toLowerCase() : ""
   if (cliTarget) {
     for (var c = 0; c < allEntries.length; c++) {
       var candidate = allEntries[c]
@@ -973,7 +973,7 @@ function entryFor(appRows, appId) {
     if (!entry) continue
     var entryCands = getCandidates(entry.id)
       .concat(getCandidates(entry.name))
-      .concat(getCandidates(entry.icon))
+      .concat(getCandidates(String(entry.icon || "").replace(/^.*\//, "")))
     for (var k = 0; k < wantCands.length; k++) {
       var cand = wantCands[k]
       if (entryCands.indexOf(cand) >= 0) return entry

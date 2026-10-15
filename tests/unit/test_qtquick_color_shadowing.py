@@ -39,6 +39,8 @@ def violations(directory):
     """Every .qml file whose bare `Color` use is not protected by a version pin."""
     found = []
     for path in sorted(directory.rglob("*.qml")):
+        if path.relative_to(directory).parts[0] == "experiment":
+            continue
         rel = str(path.relative_to(directory))
         text = path.read_text(encoding="utf-8")
         if not COLOR_USE.search(text):

@@ -29,7 +29,7 @@ MAX_LINES = 800
 # Composition roots: single-owner state + wiring must live somewhere, and it
 # lives here. These ceilings are ratchets - see rule 2.
 ROOT_CEILINGS = {
-    "Dock.qml": 2412,    "DockModel.js": 1326,
+    "Dock.qml": 2382,    "DockModel.js": 1326,
 }
 
 # Rule 5: the live suites, ratcheted at the size they had when the cap was
@@ -38,7 +38,7 @@ ROOT_CEILINGS = {
 # out of a suite rather than raising it.
 SHELL_CEILINGS = {
     "tests/live/presets.sh": 388,
-    "tests/live/indicators.sh": 352,
+    "tests/live/indicators.sh": 346,
     "tests/live/probe.sh": 328,
     "tests/live/place-restore.sh": 250,
     "tests/live/teardown.sh": 125,

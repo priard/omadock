@@ -13,6 +13,8 @@ Rectangle {
   // The icon (or icon box) the badge sits on.
   property Item anchorRef: null
   property int count: 0
+  property string glyph: ""
+  property color badgeColor: "transparent"
   // Rim colour of the surface the badge floats over (dock card, menu).
   property color rim: Color.bar.background
 
@@ -24,9 +26,32 @@ Rectangle {
   // count while it fades.
   readonly property var motion: root ? root.motion : null
   property int shownCount: 0
-  onCountChanged: if (badge.count > 0) badge.shownCount = badge.count
-  Component.onCompleted: if (badge.count > 0) badge.shownCount = badge.count
-  property real level: badge.count > 0 ? 1 : 0
+  property string shownGlyph: ""
+  onCountChanged: {
+    if (badge.count > 0) {
+      badge.shownCount = badge.count
+      if (badge.glyph === "") badge.shownGlyph = ""
+    }
+  }
+  onGlyphChanged: {
+    if (badge.glyph !== "") {
+      badge.shownGlyph = badge.glyph
+    } else if (badge.count > 0) {
+      badge.shownGlyph = ""
+    }
+  }
+  Component.onCompleted: {
+    if (badge.count > 0) badge.shownCount = badge.count
+    if (badge.glyph !== "") badge.shownGlyph = badge.glyph
+  }
+  readonly property bool hasContent: badge.count > 0 || badge.glyph !== ""
+  property real level: badge.hasContent ? 1 : 0
+  onLevelChanged: {
+    if (badge.level <= 0.01 && !badge.hasContent) {
+      badge.shownGlyph = ""
+      badge.shownCount = 0
+    }
+  }
   // The easing reads the Behavior's target (set before the animation
   // starts); bound to the count it could start with the old one.
   Behavior on level {
@@ -40,14 +65,14 @@ Rectangle {
   visible: badge.level > 0.01 && badge.anchorRef !== null
   opacity: badge.level
   scale: (badge.motion && badge.motion.scale) ? 0.5 + 0.5 * badge.level : 1
-  width: badge.badgeStyle === "dot" ? badge.height : Math.max(Style.space(17), badgeText.implicitWidth + Style.space(8))
+  width: (badge.badgeStyle === "dot" && badge.glyph === "") ? badge.height : Math.max(Style.space(17), badgeText.implicitWidth + Style.space(8))
   Behavior on width {
     enabled: !!badge.motion && badge.motion.layout
     NumberAnimation { duration: badge.motion ? badge.motion.fast : 0; easing.type: Easing.OutCubic }
   }
-  height: badge.badgeStyle === "dot" ? Style.space(10) : Style.space(17)
+  height: (badge.badgeStyle === "dot" && badge.glyph === "") ? Style.space(10) : Style.space(17)
   radius: height / 2
-  color: root ? root.badgeFill : Color.accent
+  color: badge.badgeColor.a > 0 ? badge.badgeColor : (root ? root.badgeFill : Color.accent)
   border.width: 1
   border.color: badge.rim
   z: 2
@@ -69,11 +94,11 @@ Rectangle {
 
   Text {
     id: badgeText
-    visible: badge.badgeStyle !== "dot"
+    visible: badge.badgeStyle !== "dot" || badge.glyph !== ""
     anchors.centerIn: parent
-    text: badge.shownCount > 99 ? "99+" : String(badge.shownCount)
+    text: badge.shownGlyph !== "" ? badge.shownGlyph : (badge.shownCount > 99 ? "99+" : String(badge.shownCount))
     textFormat: Text.PlainText
-    color: root ? root.badgeInk : "#f2efec"
+    color: badge.shownGlyph !== "" ? "#12100f" : (root ? root.badgeInk : "#f2efec")
     font.family: Style.font.family
     font.pixelSize: Style.space(10)
     font.bold: true

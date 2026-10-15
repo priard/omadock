@@ -21,12 +21,12 @@ Item {
 
   property var rootRef: null
   readonly property var root: rootRef
-  readonly property var motion: stack.root ? stack.root.motion : null
   // Window captures only while the dock's output is there and powered
   // (DockOutput.js): Hyprland aborts on a capture of a vanished output.
   // monitorRev re-runs this on Hyprland's monitor events.
   readonly property bool canCapture: !!stack.root && DockOutput.outputAwake(stack.root.dockScreen ? stack.root.dockScreen.name : "",
     stack.root.dockScreen ? Hyprland.monitorFor(stack.root.dockScreen) : null, stack.root.monitorRev)
+  readonly property var motion: stack.root ? stack.root.motion : null
   property var windows: []
   property int frontIndex: 0
   property bool active: false

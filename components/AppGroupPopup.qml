@@ -90,17 +90,12 @@ BorderSurface {
         anchors.fill: titleRow
         visible: !appGroupPopup.isEditingName
         cursorShape: Qt.PointingHandCursor
-        onClicked: {
-          appGroupPopup.isEditingName = true
-          nameInput.text = titleLabel.text
-          Qt.callLater(function() {
-            nameInput.forceActiveFocus()
-            nameInput.selectAll()
-          })
-        }
+        onClicked: appGroupPopup.isEditingName = true
       }
 
-      // Inline Name Input
+      // Inline Name Input. The TextInput is built only while renaming: a field
+      // that is merely displayed takes Qt's clipboard subscription (see
+      // ContextRenameRow.qml), so an open group popup must not hold one.
       Rectangle {
         visible: appGroupPopup.isEditingName
         anchors.left: parent.left
@@ -112,23 +107,35 @@ BorderSurface {
         border.color: Color.accent
         border.width: 1
 
-        TextInput {
-          id: nameInput
+        Loader {
           anchors.fill: parent
           anchors.margins: Style.space(4)
-          color: Color.menu.text
-          font.family: Style.font.family
-          font.pixelSize: Style.font.body
-          verticalAlignment: TextInput.AlignVCenter
-          selectByMouse: true
-          onAccepted: {
-            if (root && appGroupPopup.activeGroup && text.trim() !== "") {
-              root.renameAppGroup(appGroupPopup.activeGroup.id, text.trim())
-            }
-            appGroupPopup.isEditingName = false
+          active: appGroupPopup.isEditingName
+          onLoaded: {
+            item.text = titleLabel.text
+            Qt.callLater(function() {
+              if (!item) return
+              item.forceActiveFocus()
+              item.selectAll()
+            })
           }
-          Keys.onEscapePressed: {
-            appGroupPopup.isEditingName = false
+          sourceComponent: Component {
+            TextInput {
+              color: Color.menu.text
+              font.family: Style.font.family
+              font.pixelSize: Style.font.body
+              verticalAlignment: TextInput.AlignVCenter
+              selectByMouse: true
+              onAccepted: {
+                if (root && appGroupPopup.activeGroup && text.trim() !== "") {
+                  root.renameAppGroup(appGroupPopup.activeGroup.id, text.trim())
+                }
+                appGroupPopup.isEditingName = false
+              }
+              Keys.onEscapePressed: {
+                appGroupPopup.isEditingName = false
+              }
+            }
           }
         }
       }

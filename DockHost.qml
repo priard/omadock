@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "DockModel.js" as DockModel
+import "DockTasks.js" as DockTasks
 import "components"
 
 // Entry point. Runs one Dock per monitor when "multiMonitor" is on, else a
@@ -79,6 +80,7 @@ Item {
     property var minimizedOrigins: ({})
     property var parkedAt: ({})
     property var parkSlots: ({})
+    property var taskStatus: ({})
   }
 
   Variants {
@@ -264,6 +266,22 @@ Item {
         items: JSON.parse(d[0].itemGeometry()).length,
         docks: d.length
       })
+    }
+
+    // Developer task HUD and command completion status
+    function reportTask(appId: string, status: string, exitCode: int, title: string, duration: int): string {
+      var task = DockTasks.normalizeTaskStatus(DockModel, appId, status, exitCode, title, duration)
+      if (!task) return "invalid"
+      sharedStore.taskStatus = DockTasks.withTaskStatus(DockModel, sharedStore.taskStatus, task.appId, task)
+      return "ok"
+    }
+
+    function clearTask(appId: string): void {
+      sharedStore.taskStatus = DockTasks.clearTaskStatusFor(DockModel, sharedStore.taskStatus, appId)
+    }
+
+    function taskStatus(): string {
+      return JSON.stringify(sharedStore.taskStatus || {})
     }
   }
 }

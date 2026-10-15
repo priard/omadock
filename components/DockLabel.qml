@@ -88,6 +88,7 @@ Item {
   readonly property real pillTrail: label.pillPlate ? Math.ceil(DockLabels.pillRoom(plateRect.height / 2, textItem.implicitHeight / 2)) : 0
   // The column's room past the slot's own margin. A foldable name keeps it
   // while folded (the plate is there), so it is not scaled by progress.
+  // The pill curve keeps its own clearance, scaled by progress like a name.
   readonly property real columnRoom: label.marksLevel * Math.max(0, label.markSpan - label.artMargin)
   readonly property real lead: Math.round(Math.max(
     (label.sideMarks && !label.marksAfter) ? (label.foldable ? 1 : label.progress) * label.columnRoom : 0,
@@ -205,12 +206,12 @@ Item {
   // so it does not depend on the plan it feeds.
   readonly property var fitHost: label.root ? label.root.fitHostRef : null
   TextMetrics { id: fullWidth; font: textItem.font; text: label.fullText }
-  readonly property real trailTarget: label.plate ? Style.space(1) + Math.max((label.marksAfter && label.hasMarks) ? label.markSpan - label.pad : 0, label.pillTrail) : label.artMargin + Style.space(3)
+  readonly property real trailTarget: label.plate ? Style.space(1) + ((label.marksAfter && label.hasMarks) ? label.markSpan - label.pad : 0) : label.artMargin + Style.space(3)
   readonly property var natural: (label.shown && !label.overlay) ? {
     text: fullWidth.advanceWidth,
     inner: label.pad * 2 + label.gap + (label.plate ? Style.space(1) : label.trailTarget),
     outer: label.pad * 2 + label.gap + label.trailTarget
-      + Math.max((label.sideMarks && !label.marksAfter && label.hasMarks) ? Math.max(0, label.markSpan - label.artMargin) : 0, label.pillLead),
+      + ((label.sideMarks && !label.marksAfter && label.hasMarks) ? Math.max(0, label.markSpan - label.artMargin) : 0),
     folded: (label.sideMarks && (label.backgroundMarks || label.hasMarks)) ? Math.max(0, label.markSpan - label.artMargin) : 0
   } : null
   property int _nslot: -1

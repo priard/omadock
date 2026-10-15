@@ -87,7 +87,11 @@ def main():
     except KeyboardInterrupt:
         return 0
     finally:
+        mounts_file.close()
         monitor.kill()
+        if monitor.stdout:
+            monitor.stdout.close()
+        monitor.wait()
 
 
 if __name__ == "__main__":
