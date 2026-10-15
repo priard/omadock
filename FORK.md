@@ -93,6 +93,14 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   Breeze's 16 px outline (a few faint dots in the dots style). In priard
   2026-10-11.
 
+- `feat/hidden-dividers` (from experimental, no PR yet): a Hidden divider
+  style keeps the section gaps without lines. In priard 2026-10-15.
+
+- `feat/drag-lift` (from experimental, no PR yet): a dragged app, group
+  or folder lifts off the row (its slot folds, a copy follows the
+  pointer), the drop gap opens to the element's width, and the drop
+  lands in one step. In priard 2026-10-15; mouse drags still to be
+  tested by hand.
 
 ## Fork only
 
