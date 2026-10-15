@@ -52,9 +52,6 @@ Item {
   signal dragMoved(string path, real x, real y)
   signal dragDropped(string path)
 
-  // Faded while dragged, fainter still once pulled off the dock.
-  opacity: area.dragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
-
   width: (root ? (root.iconSlot * (root.waveHover ? fitem.magnifyScale : 1)) : 0) + fitem.gapWidth + fitem.labelExtra
   height: root ? root.iconSlot : 0
 

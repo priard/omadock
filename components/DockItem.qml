@@ -215,12 +215,6 @@ Item {
     NumberAnimation { from: 0.35; to: 1.0; duration: 650; easing.type: Easing.InOutQuad }
   }
 
-  // Fainter still once pulled off the dock, where letting go unpins it.
-  opacity: item.isDragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
-  Behavior on opacity {
-    NumberAnimation { duration: (item.motion ? item.motion.fast : 0); easing.type: Easing.OutCubic }
-  }
-
   readonly property bool bouncing: root ? ((item.starting && root.launchBounce) || (item.urgent && item.urgentFresh && root.showUrgentHint)) && !!item.motion && item.motion.oneShots : false
 
   // The hop in flight lands before the bounce stops (a window appearing
@@ -254,7 +248,8 @@ Item {
     width: item.width - item.labelExtra - item.dropGap
     height: parent.height
 
-    scale: area.pressed ? 0.92 : 1.0
+    // A held icon (a drag) comes back up: its copy carries it whole.
+    scale: area.pressed && !item.isDragging ? 0.92 : 1.0
     transformOrigin: Item.Bottom
     Behavior on scale { NumberAnimation { duration: (item.motion ? item.motion.press : 0); easing.type: Easing.OutQuad } }
 

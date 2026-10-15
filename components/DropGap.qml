@@ -3,7 +3,8 @@ import qs.Commons
 import "../DockLabels.js" as DockLabels
 
 // Where a drag inside the dock will land: the room it opens there and the
-// accent line in the middle of it.
+// accent line in the middle of it. A dragged dock element (DockLift) opens
+// room as wide as itself, with no line: its copy shows what lands there.
 // An item puts one at its leading edge and adds its width to its own,
 // so the line also takes the row spacing before the item into account;
 // a run puts a spacer one (spacer: true) after its last item for a drop at
@@ -16,24 +17,32 @@ Item {
   readonly property var motion: gap.root ? gap.root.motion : null
   property bool open: false
   property bool spacer: false
+  readonly property var lift: (root && root.dockCard) ? root.dockCard.liftRef : null
+  readonly property bool lifting: !!gap.lift && gap.lift.active
 
   // Enough that the line reads between tiles packed close together
   // (plates one small gap apart), and a little anywhere so the dock
   // answers the drag.
   readonly property real room: {
     if (!root) return 0
+    // The element and the spacing after it; a spacer ends the run, where
+    // the spacing comes before it.
+    if (gap.lifting) return gap.lift.liftWidth + (gap.spacer ? 0 : root.gapWidth)
     var seen = root.labelPlates ? root.plateSpacing.gap
       : root.gapWidth + (root.iconSlot - root.baseIconArt) / (root.labelMode === "always" ? 2 : 1)
     return DockLabels.gridRound(Math.max(Style.space(6), Style.space(18) - seen), root.outputScale)
   }
   width: gap.open ? gap.room : 0
   height: parent ? parent.height : 0
-  Behavior on width { NumberAnimation { duration: (gap.motion ? gap.motion.base : 0); easing.type: Easing.OutCubic } }
+  Behavior on width {
+    enabled: !(gap.lift && gap.lift.snapping)
+    NumberAnimation { duration: (gap.motion ? gap.motion.base : 0); easing.type: Easing.OutCubic }
+  }
   // A spacer leaves the Row's layout while closed.
   visible: gap.spacer ? gap.width > 0.5 : gap.open
 
   Rectangle {
-    visible: gap.open
+    visible: gap.open && !gap.lifting
     readonly property real spacing: gap.root ? gap.root.gapWidth : 0
     // The middle of what lies between the tiles on either side.
     x: Math.round((gap.spacer ? gap.width / 2 : (gap.width - spacing) / 2) - width / 2)

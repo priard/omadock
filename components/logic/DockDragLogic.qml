@@ -16,6 +16,11 @@ QtObject {
   // Folders and drives sit in their own row (card.rightRowRef); px is in
   // the outer row's coordinates. A divider narrowing away (RowDivider keeps
   // it visible while it has width) no longer counts.
+  // The element the drag holds (DockLift); null before the card is built.
+  function liftOf(root, card) {
+    return card && card.dockCard ? card.dockCard.liftRef : null
+  }
+
   function inPinZone(root, card, px) {
     var rx = px - card.rightRowRef.x
     if (card.folderSeparatorRef.visible && card.folderSeparatorRef.shown) return rx >= card.folderSeparatorRef.x - (root ? root.gapWidth : 0)
@@ -30,6 +35,8 @@ QtObject {
     var n = folders.length
     for (var i = 0; i < n; i++) {
       var slot = folders[i]
+      // The held folder has folded away: it is no place to aim at.
+      if (slot.lifted) continue
       // The middle of the folder's tile (icon and any label), past the drop gap.
       var gap = slot.child.gapWidth || 0
       var iconCenter = slot.x + gap + (slot.width - gap) / 2
@@ -62,6 +69,8 @@ QtObject {
     root.dropTargetGroupId = ""
     root.dragPointerX = mx
     root.dragPointerY = my
+    var lift = cardWrapper.liftOf()
+    if (lift) lift.move(mx, my)
 
     // Only a pin can be taken off, by pulling it up off the dock or over to
     // the running apps; a running app that is not pinned stays.
@@ -77,7 +86,7 @@ QtObject {
     for (var i = 0; i < n; i++) {
       var slot = slots[i]
       var it = slot.child.item
-      if (!it) continue
+      if (!it || slot.lifted) continue
       // A tile with a label (or a plate) is one button: its whole width is
       // the target, with the edges left for placing before or after it.
       // Past the room an open drop gap adds before it.
@@ -125,7 +134,10 @@ QtObject {
     var slots = card.liveSlots(card.pinnedRowRepeater)
     var n = slots.length
     if (n === 0) return -1
+    // The held element has folded away: the places either side of it are
+    // the same place, its own.
     for (var i = 0; i < n; i++) {
+      if (slots[i].lifted) continue
       if (rx < slots[i].x + slots[i].width / 2) return i
     }
     return n
@@ -133,6 +145,8 @@ QtObject {
 
   function handleDragDropped(root, card, aid) {
     if (!root) return
+    var lift = cardWrapper.liftOf()
+    if (lift) lift.drop()
     var dragId = root.dragAppId
     var targetGroupId = root.dropTargetGroupId
     var targetAppId = root.dropTargetAppId
@@ -148,6 +162,9 @@ QtObject {
     root.dropRowIndex = -1
     root.dragRemoveArmed = false
 
+    // Where the dragged copy lands: the app's slot after the drop, unless it
+    // went into a group or off the dock.
+    var fade = removeArmed || targetGroupId !== "" || (targetAppId !== "" && targetAppId !== dragId)
     if (dragId !== "" && removeArmed) {
       root.dragSourceGroupId = ""
       root.togglePin(dragId)
@@ -192,6 +209,7 @@ QtObject {
     } else {
       root.dragSourceGroupId = ""
     }
+    if (lift) lift.settle(DockModel.isPinned(root.pinnedIds, aid) ? "pin:app:" + aid : "run:" + aid, fade)
     root.syncVisibility()
   }
 
@@ -208,6 +226,8 @@ QtObject {
     if (!root) return
     root.dragPointerX = mx
     root.dragPointerY = my
+    var lift = cardWrapper.liftOf()
+    if (lift) lift.move(mx, my)
     root.dragRemoveArmed = cardWrapper.offDockAt(my)
     var folders = card.liveSlots(card.foldersRepeater)
     var n = folders.length
@@ -226,6 +246,8 @@ QtObject {
 
   function handleFolderDragDropped(root, card, path) {
     if (!root) return
+    var lift = cardWrapper.liftOf()
+    if (lift) lift.drop()
     var removeArmed = root.dragRemoveArmed
     var idx = root.dropFolderIndex
     root.dragFolderPath = ""
@@ -233,6 +255,7 @@ QtObject {
     root.dragRemoveArmed = false
     if (removeArmed) root.toggleFolderPin(path, "", "")
     else if (idx >= 0) root.moveFolder(path, idx)
+    if (lift) lift.settle(lift.sourceKey, removeArmed)
     root.syncVisibility()
   }
 
@@ -249,6 +272,8 @@ QtObject {
     if (!root) return
     root.dragPointerX = mx
     root.dragPointerY = my
+    var lift = cardWrapper.liftOf()
+    if (lift) lift.move(mx, my)
     root.dragRemoveArmed = cardWrapper.offDockAt(my)
     var idx = root.dragRemoveArmed ? -1 : cardWrapper.rowInsertIndex(mx - card.row.x)
     root.dropRowIndex = idx
@@ -256,6 +281,8 @@ QtObject {
 
   function handleGroupDragDropped(root, card, gid) {
     if (!root) return
+    var lift = cardWrapper.liftOf()
+    if (lift) lift.drop()
     var removeArmed = root.dragRemoveArmed
     var idx = root.dropRowIndex
     root.dragGroupId = ""
@@ -263,6 +290,7 @@ QtObject {
     root.dragRemoveArmed = false
     if (removeArmed) root.removeAppGroup(gid)
     else if (idx >= 0) root.moveAppGroup(gid, idx)
+    if (lift) lift.settle("pin:group:" + gid, removeArmed)
     root.syncVisibility()
   }
 }

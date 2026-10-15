@@ -67,9 +67,6 @@ Item {
     openPopup()
   }
 
-  // Faded while dragged, fainter still once pulled off the dock.
-  opacity: groupArea.dragging ? ((root && root.dragRemoveArmed) ? 0.12 : 0.35) : 1.0
-
   width: (root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0) + gitem.labelExtra + gitem.dropGap
   height: root ? root.iconSlot : 0
   // An open hover label is drawn over the neighbours.
