@@ -146,7 +146,13 @@ QtObject {
   function handleDragDropped(root, card, aid) {
     if (!root) return
     var lift = cardWrapper.liftOf()
+    // Out of an opened group the copy is the app's icon (DockLift.beginIcon):
+    // the room its gap holds goes to the app's new slot, so a drop that
+    // pins it lands at once; any other lets the gap ease shut.
+    var fromPopup = !!lift && lift.iconCopy
+    var pinsIt = root.dropTargetGroupId === "" && root.dropTargetAppId === ""
     if (lift) lift.drop()
+    if (fromPopup && !pinsIt) lift.snapping = false
     var dragId = root.dragAppId
     var targetGroupId = root.dropTargetGroupId
     var targetAppId = root.dropTargetAppId
@@ -162,9 +168,13 @@ QtObject {
     root.dropRowIndex = -1
     root.dragRemoveArmed = false
 
-    // Where the dragged copy lands: the app's slot after the drop, unless it
-    // went into a group or off the dock.
-    var fade = removeArmed || targetGroupId !== "" || (targetAppId !== "" && targetAppId !== dragId)
+    // Where the dragged copy lands: the app's slot after the drop, or into
+    // the group it went into; off the dock it fades.
+    var fade = removeArmed
+    var intoKey = ""
+    var hadKeys = {}
+    var keysThen = root.pinnedRowKeys
+    for (var hk = 0; hk < keysThen.length; hk++) hadKeys[keysThen[hk]] = true
     if (dragId !== "" && removeArmed) {
       root.dragSourceGroupId = ""
       root.togglePin(dragId)
@@ -172,16 +182,20 @@ QtObject {
       if (sourceGroupId !== "") {
         if (targetGroupId === sourceGroupId) {
           root.dragSourceGroupId = ""
+          if (lift) lift.settle("pin:group:" + sourceGroupId, false, true)
           root.syncVisibility()
           return
         }
+        if (fromPopup) lift.handOff([], lift.heldGapSum)
         root.removeAppFromGroup(sourceGroupId, dragId)
       }
 
       if (targetGroupId !== "") {
         root.addAppToGroup(targetGroupId, dragId)
+        intoKey = "pin:group:" + targetGroupId
       } else if (targetAppId !== "" && targetAppId !== dragId) {
-        root.createAppGroupFromDrop(targetAppId, dragId)
+        var made = root.createAppGroupFromDrop(targetAppId, dragId)
+        if (made) intoKey = "pin:group:" + made
       } else {
         var rowNow = root.pinnedRow
         if (sourceGroupId !== "") {
@@ -205,11 +219,18 @@ QtObject {
           if (nextRow !== rowNow) root.applyPinnedRow(nextRow)
         }
       }
+      if (fromPopup && sourceGroupId !== "") {
+        var appKey = "app:" + dragId
+        lift.handOn((!hadKeys[appKey] && root.pinnedRowKeys.indexOf(appKey) >= 0) ? ["pin:" + appKey] : [])
+      }
       root.dragSourceGroupId = ""
     } else {
       root.dragSourceGroupId = ""
     }
-    if (lift) lift.settle(DockModel.isPinned(root.pinnedIds, aid) ? "pin:app:" + aid : "run:" + aid, fade)
+    if (lift) {
+      if (intoKey !== "") lift.settle(intoKey, false, true)
+      else lift.settle(DockModel.isPinned(root.pinnedIds, aid) ? "pin:app:" + aid : "run:" + aid, fade)
+    }
     root.syncVisibility()
   }
 

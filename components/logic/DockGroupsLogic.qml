@@ -12,6 +12,23 @@ import "../../DockModel.js" as DockModel
 // is passed in and owns all state. Bodies are verbatim.
 
 QtObject {
+  // Runs change() with the pinned-run slots keyed `fromKeys` handing their
+  // room to the slots it adds (DockLift.handOff/handOn), so an element that
+  // takes others' place eases from their width to its own.
+  function handOver(root, fromKeys, change) {
+    var lift = root.dockCard ? root.dockCard.liftRef : null
+    var before = {}
+    var keys = root.pinnedRowKeys
+    for (var i = 0; i < keys.length; i++) before[keys[i]] = true
+    if (lift) lift.handOff(fromKeys.map(function(k) { return "pin:" + k }))
+    change()
+    if (!lift) return
+    var added = []
+    var now = root.pinnedRowKeys
+    for (var j = 0; j < now.length; j++) if (!before[now[j]]) added.push("pin:" + now[j])
+    lift.handOn(added)
+  }
+
   function openAppGroup(root, gdata, cx, cy) {
     if (root.activeAppGroupId === (gdata && gdata.id ? gdata.id : "")) {
       root.closeAppGroup()
@@ -84,18 +101,22 @@ QtObject {
       cols: 3,
       before: anchor
     }
-    root.appGroups = (root.appGroups || []).concat([newGroup])
+    // The app it was dropped on hands its slot to the group.
+    handOver(root, ["app:" + targetAppId], function() {
+      root.appGroups = (root.appGroups || []).concat([newGroup])
 
-    // Remove grouped items from pinnedIds so they now live inside the folder
-    var pins = root.pinnedIds || []
-    var nextPins = []
-    for (var p = 0; p < pins.length; p++) {
-      if (pins[p] !== targetAppId && pins[p] !== draggedAppId) {
-        nextPins.push(pins[p])
+      // Remove grouped items from pinnedIds so they now live inside the folder
+      var pins = root.pinnedIds || []
+      var nextPins = []
+      for (var p = 0; p < pins.length; p++) {
+        if (pins[p] !== targetAppId && pins[p] !== draggedAppId) {
+          nextPins.push(pins[p])
+        }
       }
-    }
-    root.setPinned(nextPins)
+      root.setPinned(nextPins)
+    })
     root.saveConfig()
+    return newGroup.id
   }
 
   function addAppToGroup(root, groupId, appId) {
@@ -169,6 +190,24 @@ QtObject {
 
   function removeAppFromGroup(root, groupId, appId, insertBeforeId) {
     if (!groupId || !appId) return
+    // The last app of a group it leaves takes the group's place in the run
+    // (and its slot).
+    var row = root.pinnedRow
+    for (var r = 0; r < row.length; r++) {
+      var it = row[r]
+      if (!it || it.kind !== "group" || it.id !== groupId) continue
+      var left = DockModel.toArray(it.group.apps).filter(function(a) { return a !== appId })
+      if (left.length !== 1) break
+      if (root.activeAppGroupId === groupId) root.closeAppGroup()
+      var shrunk = row.slice()
+      shrunk[r] = { kind: "group", id: groupId, group: Object.assign({}, it.group, { apps: left }) }
+      handOver(root, ["group:" + groupId], function() {
+        root.applyPinnedRow(DockModel.ungroupRow(shrunk, groupId))
+      })
+      // Out by the menu: the app comes back as a pin (a drag places it).
+      if (!root.dragSourceGroupId) restorePin(root, appId, insertBeforeId)
+      return
+    }
     var groups = root.appGroups || []
     var next = []
     var remainingApps = []
@@ -208,20 +247,9 @@ QtObject {
       }
     }
 
-    // Restore removed app to pinned items if not dragging (e.g. context menu ungroup)
-    if (!root.dragSourceGroupId) {
-      if (pins.indexOf(appId) < 0) {
-        if (insertBeforeId) {
-          var toIdx = pins.indexOf(DockModel.stripDesktop(insertBeforeId))
-          if (toIdx >= 0) pins.splice(toIdx, 0, appId)
-          else pins.push(appId)
-        } else {
-          pins.push(appId)
-        }
-      }
-    }
-
     root.setPinned(pins)
+    // Restore removed app to pinned items if not dragging (e.g. context menu ungroup)
+    if (!root.dragSourceGroupId) restorePin(root, appId, insertBeforeId)
     root.saveConfig()
 
     if (remainingApps.length > 1 && root.activeAppGroupId === groupId) {
@@ -234,13 +262,26 @@ QtObject {
     }
   }
 
+  function restorePin(root, appId, insertBeforeId) {
+    var pins = (root.pinnedIds || []).slice()
+    if (pins.indexOf(appId) >= 0) return
+    var toIdx = insertBeforeId ? pins.indexOf(DockModel.stripDesktop(insertBeforeId)) : -1
+    if (toIdx >= 0) pins.splice(toIdx, 0, appId)
+    else pins.push(appId)
+    root.setPinned(pins)
+    root.saveConfig()
+  }
+
   // Dissolves a group: its apps become pins where the group stood. Removing
   // a group (removeAppGroup) drops its apps from the dock instead, as
   // dragging a pin off the dock unpins it.
   function ungroupAppGroup(root, groupId) {
     if (!groupId) return
     if (root.activeAppGroupId === groupId) root.closeAppGroup()
-    root.applyPinnedRow(DockModel.ungroupRow(root.pinnedRow, groupId))
+    // Its apps come out of the group's slot.
+    handOver(root, ["group:" + groupId], function() {
+      root.applyPinnedRow(DockModel.ungroupRow(root.pinnedRow, groupId))
+    })
   }
 
   function removeAppGroup(root, groupId) {

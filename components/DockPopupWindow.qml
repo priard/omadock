@@ -97,7 +97,8 @@ PopupWindow {
     parent: popup.contentItem
     sourceItem: popup.body
     live: !popup.closing
-    opacity: popup.closing ? 1 : 0.001
+    // A body that has faded out (an app dragged out of it) stays gone.
+    opacity: popup.closing ? (popup.body ? popup.body.opacity : 1) : 0.001
     property real lastX: 0
     property real lastY: 0
     property real lastW: 0
@@ -139,6 +140,12 @@ PopupWindow {
     var p = item.mapToItem(popup.contentItem, x, y)
     return Qt.point(popup.surfaceCenterX - Math.round(popup.implicitWidth / 2) + p.x,
                     popup.anchor.rect.y - popup.implicitHeight + p.y)
+  }
+
+  // A point in dock-window coordinates, in this popup's content item.
+  function fromDockWindow(x, y) {
+    return Qt.point(x - (popup.surfaceCenterX - Math.round(popup.implicitWidth / 2)),
+                    y - (popup.anchor.rect.y - popup.implicitHeight))
   }
 
   // A click outside the menu and the dock closes it, as the full-surface

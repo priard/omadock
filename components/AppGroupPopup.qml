@@ -26,6 +26,39 @@ BorderSurface {
 
   property bool isEditingName: false
 
+  // An app dragged out of the group: the popup gives way to the dock (it
+  // stays open, invisible, as the drag's surface until the button is let
+  // go), and the app's icon follows the pointer, drawn here and in the dock
+  // at the same place (DockLift.beginIcon), each surface showing its part.
+  property bool draggingOut: false
+  opacity: appGroupPopup.draggingOut ? 0 : 1
+  Behavior on opacity { NumberAnimation { duration: (appGroupPopup.motion ? appGroupPopup.motion.fast : 0) } }
+  readonly property var lift: (root && root.dockCard) ? root.dockCard.liftRef : null
+  Item {
+    id: outCopy
+    parent: appGroupPopup.popupWindow ? appGroupPopup.popupWindow.contentItem : appGroupPopup
+    readonly property var lift: appGroupPopup.lift
+    visible: appGroupPopup.draggingOut && !!lift && lift.iconCopy
+    readonly property point at: {
+      var l = outCopy.lift
+      if (!l || !root || !appGroupPopup.popupWindow) return Qt.point(0, 0)
+      var w = root.dockCard.mapToItem(root.contentItemRef, l._x + l._iconX, l._y + l._iconY)
+      return appGroupPopup.popupWindow.fromDockWindow(w.x, w.y)
+    }
+    width: root ? root.baseIconArt : 0
+    height: width
+    x: Math.round(outCopy.at.x - width / 2)
+    y: Math.round(outCopy.at.y - height / 2)
+    z: 1000
+    opacity: outCopy.lift ? outCopy.lift._shownOpacity : 1
+    scale: outCopy.lift ? outCopy.lift.copyScale : 1
+    LiftIcon {
+      anchors.fill: parent
+      dockRoot: root
+      source: outCopy.lift ? outCopy.lift.iconSource : ""
+    }
+  }
+
   onActiveGroupChanged: {
     isEditingName = false
   }
@@ -191,7 +224,6 @@ BorderSurface {
             anchors.fill: parent
             radius: Style.cornerRadius
             color: cellHover.hovered ? Util.alpha(Color.menu.text, 0.08) : "transparent"
-            opacity: cellItem.isDragging ? 0.35 : 1.0
             Behavior on color { ColorAnimation { duration: (appGroupPopup.motion ? appGroupPopup.motion.fast : 0) } }
             Behavior on opacity { NumberAnimation { duration: (appGroupPopup.motion ? appGroupPopup.motion.fast : 0) } }
 
@@ -295,6 +327,14 @@ BorderSurface {
                   var dist = Math.sqrt(dx * dx + dy * dy)
                   if (!cellItem.isDragging && dist > 10) {
                     cellItem.isDragging = true
+                    if (root && appGroupPopup.activeGroup && appGroupPopup.lift) {
+                      // The pointer keeps its place on the icon, at the dock's size.
+                      var c = cellIcon.mapToItem(cellMouseArea, cellIcon.width / 2, cellIcon.height / 2)
+                      var k = root.baseIconArt / Math.max(1, cellIcon.width)
+                      appGroupPopup.lift.beginIcon("popup:" + appGroupPopup.activeGroup.id, cellItem.appIconSrc,
+                        (mouse.x - c.x) * k, (mouse.y - c.y) * k)
+                      appGroupPopup.draggingOut = true
+                    }
                     if (root && appGroupPopup.activeGroup) {
                       root.dragAppId = cellItem.appId
                       root.dragSourceGroupId = appGroupPopup.activeGroup.id
