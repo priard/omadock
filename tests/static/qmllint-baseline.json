@@ -1,10 +1,11 @@
 {
  "Dock.qml::incompatible-type": 3,
- "Dock.qml::missing-property": 3,
+ "Dock.qml::missing-property": 4,
  "Dock.qml::signal-handler-parameters": 2,
  "Dock.qml::uncreatable-type": 1,
  "Dock.qml::unresolved-type": 4,
  "Dock.qml::unused-imports": 2,
+ "components/AppGroupPopup.qml::missing-property": 2,
  "components/CappedFileView.qml::signal-handler-parameters": 1,
  "components/ContextRenameRow.qml::missing-property": 3,
  "components/ContextRow.qml::missing-property": 2,
@@ -55,5 +56,6 @@
  "components/settings/SettingsPresets.qml::unresolved-type": 1,
  "components/settings/SliderRow.qml::unresolved-type": 1,
  "tests/live/interactions-shell.qml::syntax": 1,
- "tests/live/label-metrics-shell.qml::syntax": 1
+ "tests/live/label-metrics-shell.qml::syntax": 1,
+ "tests/live/tasks-shell.qml::syntax": 1
 }
