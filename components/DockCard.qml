@@ -78,6 +78,21 @@ Item {
     return out
   }
 
+  // The live RowSlot with this liftKey, in the pinned run, the running apps
+  // or the folders; null when there is none.
+  function slotByLiftKey(key) {
+    var reps = [pinnedRowRepeater, runningRepeater, rightRow.foldersRepeater]
+    for (var r = 0; r < reps.length; r++) {
+      for (var i = 0; i < (reps[r] ? reps[r].count : 0); i++) {
+        var s = reps[r].itemAt(i)
+        if (s && !s.leaving && s.liftKey === key) return s
+      }
+    }
+    return null
+  }
+
+  function liftOf() { return dragLogic.liftOf(root, cardWrapper) }
+
   function inPinZone(px) { return dragLogic.inPinZone(root, cardWrapper, px) }
 
   function folderInsertIndex(px) { return dragLogic.folderInsertIndex(root, cardWrapper, px) }
@@ -346,6 +361,9 @@ Item {
 
   BorderSurface {
     id: dockCard
+    // The element a drag in the dock holds (DockLift), for the row's slots
+    // and drop gaps.
+    readonly property var liftRef: dockLift
 
     // Whole device pixels for the rim and the padding: at a fractional scale
     // (1.5) a 1.5 px rim puts everything inside the card a fraction of a pixel
@@ -466,6 +484,7 @@ Item {
           required fresh
           required property int slot
           rootRef: cardWrapper.rootRef
+          liftKey: "pin:" + rowWrap.key
           // Moved into "»" by the dock's fit (DockFitHost).
           shown: !(root && root.fitHostRef.hidden["pin:" + rowWrap.key])
           Loader {
@@ -508,6 +527,7 @@ Item {
                 onMenuRequested: function(aid, cx, cy) { if (root) root.openContext(aid, cx, cy) }
                 onDragStarted: function(aid) {
                   if (root) {
+                    dockLift.begin(rowWrap.liftKey, rowSlot.item)
                     root.dragAppId = aid
                     root.dropBeforeId = ""
                     root.dropTargetAppId = ""
@@ -534,7 +554,10 @@ Item {
                 onMenuRequested: function(gdata, cx, cy) {
                   if (root) root.openAppGroupContext(gdata, cx, cy)
                 }
-                onDragStarted: function(gid) { cardWrapper.handleGroupDragStarted(gid) }
+                onDragStarted: function(gid) {
+                  dockLift.begin(rowWrap.liftKey, rowSlot.item)
+                  cardWrapper.handleGroupDragStarted(gid)
+                }
                 onDragMoved: function(gid, mx, my) { cardWrapper.handleGroupDragMoved(gid, mx, my) }
                 onDragDropped: function(gid) { cardWrapper.handleGroupDragDropped(gid) }
               }
@@ -610,6 +633,7 @@ Item {
           required fresh
           required property int slot
           rootRef: cardWrapper.rootRef
+          liftKey: "run:" + runWrap.key
           // A fully tiled app leaves the run like a closed one.
           shown: !runningDockItem.isFullyTiled && !(root && root.fitHostRef.hidden["run:" + runWrap.key])
           DockItem {
@@ -646,6 +670,7 @@ Item {
             onMenuRequested: function(aid, cx, cy) { if (root) root.openContext(aid, cx, cy) }
             onDragStarted: function(aid) {
               if (root) {
+                dockLift.begin(runWrap.liftKey, runningDockItem)
                 root.dragAppId = aid
                 root.dropBeforeId = ""
                 root.dropTargetAppId = ""
@@ -693,6 +718,13 @@ Item {
       border.color: Color.accent
       border.width: 2
       z: 20
+    }
+
+    DockLift {
+      id: dockLift
+      rootRef: cardWrapper.rootRef
+      findSlot: cardWrapper.slotByLiftKey
+      z: 250
     }
 
     // Over the pointer while a drag is pulled off the dock: letting go here

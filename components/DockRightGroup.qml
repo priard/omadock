@@ -72,9 +72,11 @@ Row {
       required fresh
       required property int slot
       rootRef: group.wrapper.rootRef
+      liftKey: "folder:" + foldersRepeaterWrap.key
       // Moved into "»" by the dock's fit (DockFitHost).
       shown: !(group.root && group.root.fitHostRef.hidden["folder:" + foldersRepeaterWrap.key])
       DockFolderItem {
+        id: folderItem
         // Looked up by key; kept while the row leaves.
         property var modelData: ({})
         // Taken only while the key is in the lookup: a leaving row keeps
@@ -103,7 +105,10 @@ Row {
         onMenuRequested: function(fpath, fname, cx, cy, cmd) {
           if (root) root.openFolderContext(fpath, fname, cx, cy, cmd)
         }
-        onDragStarted: function(fpath) { group.wrapper.handleFolderDragStarted(fpath) }
+        onDragStarted: function(fpath) {
+          if (group.root && group.root.dockCard) group.root.dockCard.liftRef.begin(foldersRepeaterWrap.liftKey, folderItem)
+          group.wrapper.handleFolderDragStarted(fpath)
+        }
         onDragMoved: function(fpath, mx, my) { group.wrapper.handleFolderDragMoved(fpath, mx, my) }
         onDragDropped: function(fpath) { group.wrapper.handleFolderDragDropped(fpath) }
       }

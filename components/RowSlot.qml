@@ -17,6 +17,30 @@ Item {
   property bool shown: true
   readonly property bool wanted: slot.shown && !slot.leaving
 
+  // A drag inside the dock picks the element up (DockLift): its slot folds
+  // away, the row spacing after it too, so the row closes over it; on the
+  // drop it unfolds at once, on a drag that ends without one it eases back
+  // open as the drop gap eases shut. The slot the drop lands in shows its element
+  // only once the dragged copy has settled there.
+  property string liftKey: ""
+  readonly property var lift: (root && root.dockCard) ? root.dockCard.liftRef : null
+  readonly property bool lifted: slot.liftKey !== "" && !!slot.lift && slot.lift.key === slot.liftKey
+  readonly property bool landing: slot.liftKey !== "" && !!slot.lift && slot.lift.landKey === slot.liftKey
+  property real _lift: 0
+  property bool _liftEases: false
+  Behavior on _lift {
+    enabled: slot._liftEases
+    NumberAnimation { duration: slot.motion ? slot.motion.base : 0; easing.type: Easing.OutCubic }
+  }
+  onLiftedChanged: {
+    slot._liftEases = !(slot.lift && slot.lift.snapping) && !!slot.motion && slot.motion.base > 0
+    slot._lift = slot.lifted ? 1 : 0
+  }
+  // Dropped into another run: the held slot leaves with nothing to show.
+  onLeavingChanged: if (slot.leaving && slot.lifted) slot._start(0)
+  // The dock's rows all space their elements by gapWidth.
+  readonly property real _spacing: root ? root.gapWidth : 0
+
   default property alias content: holder.data
   readonly property Item child: holder.children.length > 0 ? holder.children[0] : null
 
@@ -48,7 +72,7 @@ Item {
     slot._start(0)
     Qt.callLater(function() {
       slot._settled = true
-      if (!slot.fresh) slot._start(slot.wanted ? 1 : 0)
+      if (!slot.fresh || slot.landing) slot._start(slot.wanted ? 1 : 0)
       else slot.appear = slot.wanted ? 1 : 0
     })
   }
@@ -62,7 +86,8 @@ Item {
   }
 
   readonly property real full: slot.child ? slot.child.width : 0
-  width: (slot.motion && slot.motion.layout) ? slot.full * slot.appear : (slot.appear > 0.001 ? slot.full : 0)
+  readonly property real _open: (slot.motion && slot.motion.layout) ? slot.full * slot.appear : (slot.appear > 0.001 ? slot.full : 0)
+  width: slot._open + (-slot._spacing - slot._open) * slot._lift
   height: slot.child ? slot.child.height : 0
   visible: slot.appear > 0.001
   // A zoomed element raises itself over its neighbours; in the Row that
@@ -74,7 +99,7 @@ Item {
     width: slot.full
     height: slot.height
     x: Math.round((slot.width - slot.full) / 2)
-    opacity: slot.appear
+    opacity: slot.landing ? 0 : slot.appear
     // A leaving element takes no clicks, hovers or drops during its exit.
     enabled: slot.wanted
     scale: (slot.motion && slot.motion.scale) ? 0.6 + 0.4 * slot.appear : 1
