@@ -2,9 +2,9 @@ import QtQuick
 import qs.Commons
 
 // The element a drag inside the dock holds, picked up off the row. While
-// held its slot folds away (RowSlot.liftKey) and a copy of it follows the
-// pointer, whole and opaque; the drop gap opens as wide as the element
-// (DropGap). On the drop the row takes its final shape at once (`snapping`)
+// held a copy of it follows the pointer, whole and opaque; the drop gap
+// opens as wide as the element (DropGap) and its slot (RowSlot.liftKey)
+// gives up as much room as the gaps take, so the dock keeps its width. On the drop the row takes its final shape at once (`snapping`)
 // and the copy settles into the element's new place, or fades where the
 // element goes into a group or off the dock. Lives in the card, so its
 // coordinates are the drag's (DockPressDrag.mapTarget).
@@ -33,6 +33,26 @@ Item {
   // The slot the copy lands in; its element stays hidden until it has.
   property string landKey: ""
   property bool _fade: false
+
+  // The room the open drop gaps take (DropGap reports its own), and what it
+  // was when the drop came.
+  property real gapSum: 0
+  property real heldGapSum: 0
+  property var _gaps: []
+  function noteGap(g, w) {
+    var list = lift._gaps
+    var found = false
+    for (var i = list.length - 1; i >= 0; i--) {
+      if (list[i].g !== g) continue
+      found = true
+      if (w > 0) list[i].w = w
+      else list.splice(i, 1)
+    }
+    if (!found && w > 0) list.push({ g: g, w: w })
+    var sum = 0
+    for (var j = 0; j < list.length; j++) sum += list[j].w
+    lift.gapSum = sum
+  }
 
   // Room around the element for what spills past its box (badges, a lifted
   // icon).
@@ -76,7 +96,9 @@ Item {
 
   // Before the drop changes the row: what follows lands without easing.
   function drop() {
-    if (lift.phase === "held") lift.snapping = true
+    if (lift.phase !== "held") return
+    lift.heldGapSum = lift.gapSum
+    lift.snapping = true
   }
 
   // After it: the copy lands in the slot keyed `toKey`, or fades ("" or

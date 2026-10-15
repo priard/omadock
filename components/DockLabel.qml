@@ -66,7 +66,10 @@ Item {
   // "playing without a window" mark; its window marks wait for the name to
   // open. A name folded for room keeps all of them.
   property real marksLevel: label.sideMarks && ((label.folded && label.marksHeld) ? label.backgroundMarks : label.hasMarks) ? 1 : 0
-  Behavior on marksLevel { NumberAnimation { duration: (label.motion ? label.motion.base : 0); easing.type: Easing.OutCubic } }
+  Behavior on marksLevel {
+    enabled: !label._landing
+    NumberAnimation { duration: (label.motion ? label.motion.base : 0); easing.type: Easing.OutCubic }
+  }
   // The column keeps the plate's own padding to the plate's edge (the room a
   // name has at the far end), the marks' own width and a gap to the art or the
   // name: the sizes are the ones the row draws with, from DockMarkGeometry.js,
@@ -168,7 +171,14 @@ Item {
   property real progress: label.wantOpen ? 1 : 0
   // A foldable name widens its tile only where layout eases (Full); at
   // Reduced the width snaps and the name fades (nameFade).
-  Behavior on progress { NumberAnimation { duration: (label.motion && (label.motion.layout || !label.foldable) ? label.motion.base : 0); easing.type: Easing.OutCubic } }
+  // While a drag holds an element, and while it settles, a tile opens or
+  // closes its name at once: the tile a drop creates stands at the width
+  // the drop gap held for it (DockLift). Names do not move otherwise then.
+  readonly property bool _landing: !!label.root && !!label.root.dockCard && !!label.root.dockCard.liftRef && label.root.dockCard.liftRef.phase !== ""
+  Behavior on progress {
+    enabled: !label._landing
+    NumberAnimation { duration: (label.motion && (label.motion.layout || !label.foldable) ? label.motion.base : 0); easing.type: Easing.OutCubic }
+  }
   property real nameFade: label.wantOpen ? 1 : 0
   Behavior on nameFade { NumberAnimation { duration: (label.motion ? label.motion.fast : 0); easing.type: Easing.OutCubic } }
   // The plate stays put while the name folds into it.

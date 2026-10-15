@@ -40,6 +40,11 @@ Item {
   }
   // A spacer leaves the Row's layout while closed.
   visible: gap.spacer ? gap.width > 0.5 : gap.open
+  // The room it takes in the row, the spacing a spacer brings included:
+  // the held element's slot gives the same up (RowSlot).
+  readonly property real taken: gap.width + (gap.spacer && gap.visible && gap.root ? gap.root.gapWidth : 0)
+  onTakenChanged: if (gap.lift) gap.lift.noteGap(gap, gap.taken)
+  Component.onDestruction: if (gap.lift) gap.lift.noteGap(gap, 0)
 
   Rectangle {
     visible: gap.open && !gap.lifting
