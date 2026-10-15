@@ -97,10 +97,16 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   style keeps the section gaps without lines. In priard 2026-10-15.
 
 - `feat/drag-lift` (from experimental, no PR yet): a dragged app, group
-  or folder lifts off the row (its slot folds, a copy follows the
-  pointer), the drop gap opens to the element's width, and the drop
-  lands in one step. In priard 2026-10-15; mouse drags still to be
-  tested by hand.
+  or folder lifts off the row (a copy follows the pointer), the drop gap
+  opens to the element's width while its own slot gives up the same room
+  (the dock keeps its width), and the drop lands in one step. In priard
+  2026-10-15; mouse drags still to be tested by hand.
+
+- `feat/group-motion` (from `feat/drag-lift`, no PR yet): group changes
+  hand slots over (a group made on an app, Ungroup, the last app of a
+  group), the copy flies into a group it is dropped on, an app dragged
+  out of an opened group gets an icon copy and a full gap, and the last
+  app of a group stays in the group's place. In priard 2026-10-15.
 
 ## Fork only
 
