@@ -19,7 +19,7 @@
  "components/DockIconButton.qml::unused-imports": 1,
  "components/DockItem.qml::incompatible-type": 1,
  "components/DockPopupWindow.qml::missing-type": 3,
- "components/DockPopupWindow.qml::unresolved-type": 4,
+ "components/DockPopupWindow.qml::unresolved-type": 5,
  "components/DockSurface.qml::property-override": 1,
  "components/DropGhost.qml::unused-imports": 1,
  "components/FileStackRow.qml::missing-property": 2,
