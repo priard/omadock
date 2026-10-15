@@ -152,6 +152,8 @@ Item {
     if (lift.phase !== "held") return
     lift.heldGapSum = lift.gapSum
     lift.snapping = true
+    dwellTimer.stop()
+    lift.dwellKey = ""
   }
 
   // After it: the copy lands in the slot keyed `toKey`, flies into it
@@ -174,6 +176,8 @@ Item {
   }
 
   function _finish() {
+    dwellTimer.stop()
+    lift.dwellKey = ""
     var into = lift.phase === "settle" ? lift._intoKey : ""
     lift.phase = ""
     lift.key = ""
@@ -268,6 +272,32 @@ Item {
     id: handClear
     interval: 2000
     onTriggered: { lift._open = []; lift.handTo = ({}) }
+  }
+
+  // A drag aimed at a group or another app ("group:<id>", "app:<id>", ""
+  // for none) becomes its target only once held there a moment: the halo
+  // shows then, and only then does a drop go into the group.
+  property string dwellKey: ""
+  readonly property int dwellMs: 500
+  function dwell(key) {
+    if (key === lift.dwellKey) return
+    lift.dwellKey = key
+    dwellTimer.stop()
+    if (lift.root) {
+      lift.root.dropTargetAppId = ""
+      lift.root.dropTargetGroupId = ""
+    }
+    if (key !== "") dwellTimer.restart()
+  }
+  Timer {
+    id: dwellTimer
+    interval: lift.dwellMs
+    onTriggered: {
+      if (!lift.root || lift.phase !== "held" || lift.snapping) return
+      var k = lift.dwellKey
+      if (k.indexOf("group:") === 0) lift.root.dropTargetGroupId = k.slice(6)
+      else if (k.indexOf("app:") === 0) lift.root.dropTargetAppId = k.slice(4)
+    }
   }
 
   // A drag that ends without a drop (released outside the card) goes home.

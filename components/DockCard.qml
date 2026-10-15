@@ -58,8 +58,10 @@ Item {
   ]) : []
   // Where the accent line of a drag inside the dock stands (DropGap): the
   // insert index in the pinned run or among the folders, -1 for none.
+  // A drag held over a group or an app keeps its gap where it was, so
+  // nothing moves while it is aimed there (DockLift.dwell).
   readonly property int dropLineRow: (root && !root.dragRemoveArmed && root.dropRowIndex >= 0
-    && ((root.dragAppId !== "" && root.dropTargetAppId === "" && root.dropTargetGroupId === "") || root.dragGroupId !== ""))
+    && (root.dragAppId !== "" || root.dragGroupId !== ""))
     ? root.dropRowIndex : -1
   readonly property int dropLineFolder: (root && !root.dragRemoveArmed && root.dragFolderPath !== "") ? root.dropFolderIndex : -1
 
