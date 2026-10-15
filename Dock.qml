@@ -314,10 +314,10 @@ Item {
   // Without the split, a divider's slot gets half the margin an icon has
   // inside its own slot on each side. Squeezed against its neighbours, the
   // line made every difference in icon width show; with the full margin it
-  // stood too far apart. Half sits between the two.
-  readonly property real separatorWidth: root.placement.split
-    ? Math.max(Style.space(1), root.sectionGap + 2 * root.baseRowLeft - 2 * root.gapWidth)
-    : root.labelPlates ? root.plateSpacing.separator : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
+  // stood too far apart. Half sits between the two. Hidden takes the slot
+  // and its spacing out (-gapWidth): the sections meet one gap apart.
+  readonly property real separatorWidth: root.placement.split ? Math.max(Style.space(1), root.sectionGap + 2 * root.baseRowLeft - 2 * root.gapWidth)
+    : root.dividerStyle === "none" ? -root.gapWidth : root.labelPlates ? root.plateSpacing.separator : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
   readonly property int groupSlots: (root.appGroups && DockModel.isList(root.appGroups)) ? root.appGroups.length : 0
   // Folders and buttons share the folder section, so they share its slot count.
   readonly property int folderSlots: (root.pinnedFolders ? root.pinnedFolders.length : 0)

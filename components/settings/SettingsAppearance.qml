@@ -235,7 +235,7 @@ Column {
   ChoiceRow {
     key: "dividerStyle"
     label: "Divider style"
-    hint: "Theme draws the lines like the border, in its colour, opacity and width. Custom sets the width and opacity by hand. Hidden keeps the gap between sections without a line, for docks whose plates already show the sections."
+    hint: "Theme draws the lines like the border, in its colour, opacity and width. Custom sets the width and opacity by hand. Hidden drops the lines and the room around them, for docks whose plates already show the sections."
     visible: root ? !root.placement.split : true
     options: (root && !root.showBorder)
       ? [{ value: "simple", label: "Simple" }, { value: "custom", label: "Custom" }, { value: "none", label: "Hidden" }]

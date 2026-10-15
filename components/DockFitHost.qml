@@ -54,6 +54,7 @@ Item {
   // Dock.separatorWidth at spacing fraction t (split sections widen with it).
   function separatorWidthAt(t) {
     if (root.placement.split) return Math.max(Style.space(1), Style.space(root.sectionSpacing) * t + 2 * root.baseRowLeft - 2 * host.gapAt(t))
+    if (root.dividerStyle === "none") return -host.gapAt(t)
     return root.labelPlates ? root.plateSpacing.separator : Style.space(1) + Style.space(7)
   }
 
