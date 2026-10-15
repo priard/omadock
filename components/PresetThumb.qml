@@ -207,6 +207,7 @@ Item {
           width: Style.space(5)
           height: parent.height
           Rectangle {
+            visible: thumb.dividerStyle !== "none"
             anchors.centerIn: parent
             width: thumb.dividerW
             height: thumb.dividerH

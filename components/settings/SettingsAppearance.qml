@@ -227,7 +227,7 @@ Column {
     key: "dividerLength"
     label: "Divider length style"
     hint: "Classic preserves the original icon-height lines. Long uses an adjustable share of the dock height."
-    visible: root ? !root.placement.split : true
+    visible: root ? (!root.placement.split && root.dividerStyle !== "none") : true
     options: [{ value: "classic", label: "Classic" }, { value: "long", label: "Long" }]
     value: root ? root.dividerGeometry : "classic"
     onPicked: function(v) { root.setOption("dividerGeometry", v) }
@@ -235,11 +235,11 @@ Column {
   ChoiceRow {
     key: "dividerStyle"
     label: "Divider style"
-    hint: "Theme draws the lines like the border, in its colour, opacity and width. Custom sets the width and opacity by hand."
+    hint: "Theme draws the lines like the border, in its colour, opacity and width. Custom sets the width and opacity by hand. Hidden keeps the gap between sections without a line, for docks whose plates already show the sections."
     visible: root ? !root.placement.split : true
     options: (root && !root.showBorder)
-      ? [{ value: "simple", label: "Simple" }, { value: "custom", label: "Custom" }]
-      : [{ value: "simple", label: "Simple" }, { value: "theme", label: "Theme" }, { value: "custom", label: "Custom" }]
+      ? [{ value: "simple", label: "Simple" }, { value: "custom", label: "Custom" }, { value: "none", label: "Hidden" }]
+      : [{ value: "simple", label: "Simple" }, { value: "theme", label: "Theme" }, { value: "custom", label: "Custom" }, { value: "none", label: "Hidden" }]
     value: root ? root.dividerStyle : "simple"
     onPicked: function(v) { root.setDividerStyle(v) }
   }
@@ -271,7 +271,7 @@ Column {
     key: "dividerHeight"
     label: "Divider height"
     hint: "Length of the lines between sections, as a share of the dock's height."
-    visible: root ? (!root.placement.split && root.dividerGeometry === "long") : false
+    visible: root ? (!root.placement.split && root.dividerGeometry === "long" && root.dividerStyle !== "none") : false
     minimum: 20
     maximum: 100
     step: 5

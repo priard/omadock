@@ -79,7 +79,7 @@ QtObject {
     root.sectionSpacing = parsed && typeof parsed.sectionSpacing === "number" ? Math.max(0, Math.min(48, Math.round(parsed.sectionSpacing))) : 18
     root.dividerGeometry = parsed && parsed.dividerGeometry === "long" ? "long" : "classic"
     root.dividerHeight = parsed && typeof parsed.dividerHeight === "number" && isFinite(parsed.dividerHeight) ? Math.max(20, Math.min(100, Math.round(parsed.dividerHeight))) : 70
-    root.dividerStyle = parsed && ["theme", "custom"].indexOf(parsed.dividerStyle) >= 0 ? parsed.dividerStyle : "simple"
+    root.dividerStyle = parsed && ["theme", "custom", "none"].indexOf(parsed.dividerStyle) >= 0 ? parsed.dividerStyle : "simple"
     root.dividerWidth = parsed && typeof parsed.dividerWidth === "number" && isFinite(parsed.dividerWidth) ? Math.max(1, Math.min(6, Math.round(parsed.dividerWidth * 2) / 2)) : 1.5
     root.dividerOpacity = parsed && typeof parsed.dividerOpacity === "number" && isFinite(parsed.dividerOpacity) ? Math.max(0, Math.min(1, parsed.dividerOpacity)) : 0.4
     // Theme dividers without a border, saved before they turned custom.

@@ -42,7 +42,7 @@ var SETTINGS_SEARCH = [
   { key: "borderOpacityTheme", page: "appearance", label: "Border opacity from theme", terms: ["rim"] },
   { key: "borderOpacity", page: "appearance", label: "Border opacity", terms: ["rim"] },
   { key: "dividerLength", page: "appearance", label: "Divider length style", terms: ["divider", "lines", "classic"] },
-  { key: "dividerStyle", page: "appearance", label: "Divider style", terms: ["divider", "lines"] },
+  { key: "dividerStyle", page: "appearance", label: "Divider style", terms: ["divider", "lines", "hide", "hidden"] },
   { key: "dividerWidth", page: "appearance", label: "Divider width", terms: ["divider"] },
   { key: "dividerOpacity", page: "appearance", label: "Divider opacity", terms: ["divider"] },
   { key: "dividerHeight", page: "appearance", label: "Divider height", terms: ["divider", "length"] },

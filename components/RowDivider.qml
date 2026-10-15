@@ -51,7 +51,8 @@ Item {
   // The line, placed by the card (70% of its height by default, as on
   // macOS). It overflows the slot, so it does not grow the row.
   Rectangle {
-    visible: !divider.lineHidden
+    // "Hidden" dividers keep the gap between sections and draw no line.
+    visible: !divider.lineHidden && !!divider.root && divider.root.dividerStyle !== "none"
     anchors.horizontalCenter: parent.horizontalCenter
     y: divider.root && divider.root.dividerGeometry === "long" && divider.cardRef
       ? divider.cardRef.dividerTop - divider.rowY - divider.y : (divider.root ? divider.root.iconCenterOffset : 0)
