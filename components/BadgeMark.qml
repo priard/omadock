@@ -75,7 +75,11 @@ Rectangle {
   color: badge.badgeColor.a > 0 ? badge.badgeColor : (root ? root.badgeFill : Color.accent)
   border.width: 1
   border.color: badge.rim
-  z: 2
+  property bool isSecondary: false
+  z: badge.isSecondary ? 2 : 3
+
+  readonly property real stackShiftX: badge.isSecondary ? Style.space(9) : 0
+  readonly property real stackShiftY: 0
 
   // Placed by x/y, not by switching anchors: when the corner changes, the
   // left/right (or top/bottom) anchor bindings update one at a time, the
@@ -86,11 +90,11 @@ Rectangle {
   readonly property real refY: (!badge.anchorRef || badge.anchorRef === badge.parent) ? 0 : badge.anchorRef.y
   readonly property real overhang: Style.space(3)
   x: !badge.anchorRef ? 0
-    : badge.onRight ? badge.refX + badge.anchorRef.width + badge.overhang - badge.width
-    : badge.refX - badge.overhang
+    : badge.onRight ? badge.refX + badge.anchorRef.width + badge.overhang - badge.width - badge.stackShiftX
+    : badge.refX - badge.overhang + badge.stackShiftX
   y: !badge.anchorRef ? 0
-    : badge.atBottom ? badge.refY + badge.anchorRef.height + badge.overhang - badge.height
-    : badge.refY - badge.overhang
+    : badge.atBottom ? badge.refY + badge.anchorRef.height + badge.overhang - badge.height - badge.stackShiftY
+    : badge.refY - badge.overhang + badge.stackShiftY
 
   Text {
     id: badgeText

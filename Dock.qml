@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Services.Mpris
+import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
 import "DockModel.js" as DockModel
@@ -13,7 +14,6 @@ import "DockLayout.js" as DockLayout
 import "DockMotion.js" as DockMotion
 import "components"
 import "components/logic"
-
 Item {
   id: root
 
@@ -1700,7 +1700,7 @@ Item {
   }
 
   function mediaPlayerFor(appId) { return pinLogic.mediaPlayerFor(root, appId) }
-
+  function isMicActiveFor(appId) { return pinLogic.isMicActiveFor(root, appId) }
   // Player for the app whose context menu is open, if any.
   readonly property var contextPlayer: root.mediaPlayerFor(root.contextAppId)
 

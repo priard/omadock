@@ -736,6 +736,16 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
 
+### v4.7.0 — 2026-10-17
+
+Drag-and-drop you can feel, dividers that disappear, and badges that know what your apps are doing.
+
+- **A drag that lifts off the row** — contributed by [@priard](https://github.com/priard) ([#69](https://github.com/thepathless/omadock/pull/69)): the dragged tile now rises into a live copy that follows the pointer while the row parts where it will land — and the dock holds its width throughout, so the drop target no longer flickers under a still pointer and pinned apps stop popping out and back in on drop.
+- **Steady drop places, groups on a held hover** — contributed by [@priard](https://github.com/priard) ([#70](https://github.com/thepathless/omadock/pull/70)): neighbours move once, past their middle, instead of jumping back and forth across three zones; resting half a second over an app or group shows its halo, and only then does a drop make or fill a group — a quick drag can no longer create one by accident. Group changes (forming, filling, dragging out, ungrouping) hand their slots over instead of growing and shrinking on opposite curves.
+- **Hidden dividers** — contributed by [@priard](https://github.com/priard) ([#68](https://github.com/thepathless/omadock/pull/68)): a new Hidden divider style for docks whose plates already show the sections — no line, and the sections meet exactly one ordinary gap apart.
+- **Smart media, privacy and progress badges** — contributed by [@NothingManTR](https://github.com/NothingManTR) ([#71](https://github.com/thepathless/omadock/pull/71), building on #67): a tile shows what's playing (with WebApp attribution, so YouTube in a dedicated tile badges the tile while the host browser yields), when the microphone is live, and how far a long download or build has come — with a stacked layout when several states are active at once.
+- **Verification**: 254 Node + 116 Python tests, `qmllint` 0 errors, structure-check PASSED, plugin validate and manifest-check clean, smoke PASSED.
+
 ### v4.6.1 — 2026-10-15
 
 Corrections to what v4.6.0 advertised, plus one internal restructure. Nothing in this release changes what the dock looks like on screen; the two behaviour fixes are both in the wrapper's answer and in what the published notes claimed.

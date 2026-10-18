@@ -37,9 +37,31 @@ Item {
     ? DockTasks.taskStatusFor(DockModel, root.taskMap, item.appId, root.dockModel)
     : null
 
-  readonly property var badgeView: {
-    return DockTasks.resolveBadgeView(item.notificationCount, item.taskInfo, item.isFocused)
+  readonly property bool micActive: root ? root.isMicActiveFor(item.appId) : false
+  readonly property var privacyInfo: item.micActive ? ({
+    active: true,
+    label: "Microphone active"
+  }) : null
+
+  readonly property var activePlayer: root ? root.mediaPlayerFor(item.appId) : null
+  readonly property var mediaInfo: (item.activePlayer && item.activePlayer.isPlaying) ? ({
+    isPlaying: true,
+    trackTitle: item.activePlayer.trackTitle || item.activePlayer.identity || "",
+    trackArtist: item.activePlayer.trackArtist || ""
+  }) : null
+
+  readonly property var badgeStack: {
+    return DockTasks.resolveBadgeStack(
+      item.notificationCount,
+      item.taskInfo,
+      item.isFocused,
+      item.mediaInfo,
+      item.privacyInfo
+    )
   }
+
+  readonly property var badgeView: item.badgeStack ? item.badgeStack.primary : null
+  readonly property var secondaryBadgeView: item.badgeStack ? item.badgeStack.secondary : null
 
   signal activateRequested(string appId)
   signal newWindowRequested(string appId)
@@ -309,8 +331,20 @@ Item {
       // The badge rides on the icon, so hover effects move it too.
       overlay: [
         BadgeMark {
+          id: secondaryBadge
           rootRef: item.rootRef
           anchorRef: parent
+          isSecondary: true
+          count: item.secondaryBadgeView ? item.secondaryBadgeView.count : 0
+          glyph: item.secondaryBadgeView ? item.secondaryBadgeView.glyph : ""
+          badgeColor: item.secondaryBadgeView ? item.secondaryBadgeView.color : "transparent"
+          rim: Color.bar.background
+        },
+        BadgeMark {
+          id: primaryBadge
+          rootRef: item.rootRef
+          anchorRef: parent
+          isSecondary: false
           count: item.badgeView ? item.badgeView.count : item.notificationCount
           glyph: item.badgeView ? item.badgeView.glyph : ""
           badgeColor: item.badgeView ? item.badgeView.color : "transparent"
@@ -633,7 +667,7 @@ Item {
             }
 
             Row {
-              visible: item.taskInfo !== null
+              visible: item.taskInfo !== null || item.privacyInfo !== null || item.mediaInfo !== null
               anchors.horizontalCenter: parent.horizontalCenter
               spacing: Style.space(4)
 
@@ -642,11 +676,13 @@ Item {
                 height: Style.space(6)
                 radius: width / 2
                 anchors.verticalCenter: parent.verticalCenter
-                color: DockTasks.statusColor(item.taskInfo ? item.taskInfo.status : "")
+                color: (item.badgeView && item.badgeView.color !== "transparent")
+                  ? item.badgeView.color
+                  : DockTasks.statusColor(item.taskInfo ? item.taskInfo.status : "")
               }
 
               Text {
-                text: DockTasks.chipLabel(item.taskInfo)
+                text: DockTasks.chipLabel(item.taskInfo, item.mediaInfo, item.privacyInfo)
                 textFormat: Text.PlainText
                 color: Util.alpha(Color.tooltip.text, 0.85)
                 font.family: Style.font.family

@@ -4,6 +4,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Services.Mpris
+import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
@@ -49,27 +50,130 @@ QtObject {
     root.dropFolderCheckRef.running = true
   }
 
+  function isBrowserAppId(root, id) {
+    if (!id) return false
+    var s = String(id).toLowerCase().replace(/\.desktop$/, "")
+    return s === "helium"
+        || s === "chromium"
+        || s === "google-chrome"
+        || s === "google-chrome-stable"
+        || s === "chrome"
+        || s === "brave"
+        || s === "brave-browser"
+        || s === "firefox"
+        || s === "zen"
+        || s === "zen-browser"
+        || s === "microsoft-edge"
+        || s === "microsoft-edge-stable"
+        || s === "microsoft-edge-dev"
+        || s === "edge"
+        || s === "opera"
+        || s === "vivaldi"
+  }
+
+  function isBrowserPlayer(root, p) {
+    if (!p) return false
+    var entry = String(p.desktopEntry || "").toLowerCase().replace(/\.desktop$/, "")
+    var ident = String(p.identity || "").toLowerCase()
+    return isBrowserAppId(root, entry) || isBrowserAppId(root, ident)
+  }
+
+  function webAppClaimingPlayer(root, p) {
+    if (!root || !root.dockModel || !p) return null
+    var track = String(p.trackTitle || (p.metadata && p.metadata["xesam:title"]) || "").toLowerCase().trim()
+    var lists = [root.dockModel.pinned, root.dockModel.running, root.dockModel.grouped]
+    var webAppFallback = null
+
+    for (var l = 0; l < lists.length; l++) {
+      var arr = lists[l] || []
+      for (var i = 0; i < arr.length; i++) {
+        var ent = arr[i]
+        if (!ent) continue
+        var entId = String(ent.appId || ent.id || "")
+        if (isBrowserAppId(root, entId)) continue
+        var wins = ent.windowList || []
+        for (var w = 0; w < wins.length; w++) {
+          var win = wins[w]
+          if (!win) continue
+          var wTitle = String(win.title || "").toLowerCase()
+          if (track && track.length >= 2 && (wTitle.indexOf(track) >= 0 || track.indexOf(wTitle) >= 0)) {
+            return ent
+          }
+          var wApp = String(win.appId || "").toLowerCase()
+          if (wApp.indexOf("chrome-") === 0 || wApp.indexOf("chromium-") === 0) {
+            if (!webAppFallback) webAppFallback = ent
+          }
+        }
+      }
+    }
+    return !track ? webAppFallback : null
+  }
+
   // ------------------------------------------------- media controls
   // The MPRIS player an app exposes, matched on the player's DesktopEntry
-  // (or, failing that, its Identity) against the dock app id. Proxies such as
-  // playerctld name no app, so they never match. A playing instance wins
-  // when an app exposes several (e.g. browser tabs).
+  // (or, failing that, its Identity) against the dock app id. When an app is
+  // a WebApp (e.g. YouTube, WhatsApp) running inside a browser host, the track
+  // title and window ownership attribute the player to the dedicated WebApp tile,
+  // and the generic host browser yields.
   function mediaPlayerFor(root, appId) {
     if (!appId || appId.indexOf("__") === 0) return null
     var list = (Mpris.players && Mpris.players.values) ? Mpris.players.values : []
     var fallback = null
+    var isBrowser = isBrowserAppId(root, appId)
+
     for (var i = 0; i < list.length; i++) {
       var p = list[i]
       if (!p) continue
-      var entry = String(p.desktopEntry || "").replace(/\.desktop$/, "")
-      var ident = String(p.identity || "")
-      var matches = (entry !== "" && DockModel.isAppMatch(appId, entry))
-        || (entry === "" && ident !== "" && DockModel.isAppMatch(appId, ident))
+
+      var browserPl = isBrowserPlayer(root, p)
+      var matches = false
+
+      if (browserPl) {
+        var claimant = webAppClaimingPlayer(root, p)
+        if (claimant) {
+          var cId = claimant.appId || claimant.id || ""
+          matches = (cId === appId || DockModel.isAppMatch(appId, cId))
+        } else if (isBrowser) {
+          var entry = String(p.desktopEntry || "").replace(/\.desktop$/, "")
+          var ident = String(p.identity || "")
+          matches = (entry !== "" && DockModel.isAppMatch(appId, entry))
+            || (entry === "" && ident !== "" && DockModel.isAppMatch(appId, ident))
+        }
+      } else {
+        var entry = String(p.desktopEntry || "").replace(/\.desktop$/, "")
+        var ident = String(p.identity || "")
+        matches = (entry !== "" && DockModel.isAppMatch(appId, entry))
+          || (entry === "" && ident !== "" && DockModel.isAppMatch(appId, ident))
+      }
+
       if (!matches) continue
       if (p.isPlaying) return p
       if (!fallback) fallback = p
     }
     return fallback
+  }
+
+  // ------------------------------------------------- privacy / audio capture
+  // Returns true when an app is actively recording audio from a PipeWire source
+  // (e.g. Discord, Meet, OBS, Audacity).
+  function isMicActiveFor(root, appId) {
+    if (!appId || appId.indexOf("__") === 0) return false
+    if (typeof Pipewire === "undefined" || !Pipewire || !Pipewire.nodes) return false
+    var list = (Pipewire.nodes && Pipewire.nodes.values) ? Pipewire.nodes.values : []
+    for (var i = 0; i < list.length; i++) {
+      var node = list[i]
+      if (!node || !node.isStream || node.isSink || (node.audio && node.audio.muted)) continue
+      var props = node.properties || {}
+      var appIdProp = props["application.id"] || ""
+      var binProp = props["application.process.binary"] || ""
+      var nameProp = node.name || ""
+      var descProp = node.description || ""
+      if (appIdProp && DockModel.isAppMatch(appId, appIdProp)) return true
+      if (binProp && DockModel.isAppMatch(appId, binProp)) return true
+      if (nameProp && DockModel.isAppMatch(appId, nameProp)) return true
+      if (descProp && DockModel.isAppMatch(appId, descProp)) return true
+    }
+    return false
   }
 
   // The desktop entry id an app launches through (same lookup as launchApp).

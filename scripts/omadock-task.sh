@@ -160,8 +160,18 @@ case "$1" in
     call_ipc taskStatus
     exit $?
     ;;
+  progress)
+    shift
+    call_ipc reportTask "$1" "progress" "${2:-0}" "${3:-In progress}" 0
+    exit $?
+    ;;
+  mic|record)
+    shift
+    call_ipc reportTask "$1" "mic" 0 "${2:-Microphone active}" 0
+    exit $?
+    ;;
   "")
-    echo "Usage: omadock-task <command...> | report <args> | clear <appId> | status" >&2
+    echo "Usage: omadock-task <command...> | report <args> | progress <appId> <percent> [title] | mic <appId> [title] | clear <appId> | status" >&2
     exit 1
     ;;
 esac

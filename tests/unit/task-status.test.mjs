@@ -40,6 +40,9 @@ test("normalizeTaskStatus: status keyword overrides and bounds", () => {
   const explicitRun = M.normalizeTaskStatus(ID, "kitty", "busy", 0, "sleep 10", 0)
   assert.equal(explicitRun.status, "running")
 
+  const explicitMic = M.normalizeTaskStatus(ID, "discord", "mic", 0, "Voice call", 0)
+  assert.equal(explicitMic.status, "privacy")
+
   const negativeDur = M.normalizeTaskStatus(ID, "xterm", "done", 0, "true", -10)
   assert.equal(negativeDur.duration, 0)
 
@@ -213,7 +216,7 @@ test("the status look has one owner, and the hover chip reads it", () => {
   // label, so the badge and the chip could disagree about what a status looks
   // like. DockTasks.js is now the only file that spells a status colour.
   const root = new URL("../../", import.meta.url).pathname
-  const palette = ["#f38ba8", "#89b4fa", "#a6e3a1"]
+  const palette = ["#f38ba8", "#89b4fa", "#a6e3a1", "#fab387", "#cba6f7"]
   const offenders = []
   const walk = (dir) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -246,6 +249,12 @@ test("the status look has one owner, and the hover chip reads it", () => {
   assert.equal(M.statusColor("running"), M.resolveBadgeView(0, { status: "running" }, false).color)
   assert.equal(M.statusColor("success"), M.resolveBadgeView(0, { status: "success" }, false).color)
   assert.equal(M.statusColor("error"), M.resolveBadgeView(0, { status: "error" }, false).color)
+  assert.equal(M.statusColor("privacy"), "#fab387")
+  assert.equal(M.statusGlyph("privacy"), "󰍬")
+  assert.equal(M.statusColor("media"), "#cba6f7")
+  assert.equal(M.statusGlyph("media"), "󰎆")
+  assert.equal(M.statusColor("progress"), "#89b4fa")
+  assert.equal(M.statusGlyph("progress"), "↓")
 
   // The chip's text is built by the same module, including its fallbacks.
   assert.equal(M.chipLabel({ status: "success", exitCode: 0, title: "cargo build", duration: 14 }),
@@ -253,13 +262,27 @@ test("the status look has one owner, and the hover chip reads it", () => {
   assert.equal(M.chipLabel({ status: "error", exitCode: 3, title: "cargo test", duration: 7 }),
     "cargo test (7s) [Exit 3]")
   assert.equal(M.chipLabel({ status: "running", exitCode: 0, title: "", duration: 0 }), "Task completed")
+  assert.equal(M.chipLabel({ status: "progress", progress: 45, title: "curl" }), "curl (45%)")
   assert.equal(M.chipLabel(null), "")
+
+  // Media and privacy in hover chip
+  assert.equal(M.chipLabel(null, { isPlaying: true, trackTitle: "Bohemian Rhapsody", trackArtist: "Queen" }),
+    "🎵 Bohemian Rhapsody — Queen")
+  assert.equal(M.chipLabel(null, null, { active: true }),
+    "Microphone active")
+  assert.equal(M.chipLabel({ status: "running", exitCode: 0, title: "cargo build", duration: 5 }, { isPlaying: true, trackTitle: "Song", trackArtist: "Band" }),
+    "cargo build (5s) · 🎵 Song — Band")
+  assert.equal(M.chipLabel(null, { isPlaying: true, trackTitle: "Song", trackArtist: "Band" }, { active: true }),
+    "Microphone active · 🎵 Song — Band")
 })
 
 test("resolveBadgeView: priorities and states", () => {
   const errTask = { status: "error", exitCode: 1, title: "test", duration: 1 }
   const runTask = { status: "running", exitCode: 0, title: "test", duration: 0 }
   const okTask = { status: "success", exitCode: 0, title: "test", duration: 5 }
+  const progTask = { status: "progress", progress: 65, title: "download" }
+  const mediaActive = { isPlaying: true, trackTitle: "Song", trackArtist: "Artist" }
+  const privacyActive = { active: true, label: "Microphone active" }
 
   // Error takes priority even if notifications exist
   const viewErr = M.resolveBadgeView(3, errTask, false)
@@ -298,4 +321,115 @@ test("resolveBadgeView: priorities and states", () => {
   const viewEmpty = M.resolveBadgeView(0, null, false)
   assert.equal(viewEmpty.mode, "none")
   assert.equal(viewEmpty.count, 0)
+
+  // Privacy outranks notification count
+  const viewPrivNotif = M.resolveBadgeView(2, null, false, null, privacyActive)
+  assert.equal(viewPrivNotif.mode, "status")
+  assert.equal(viewPrivNotif.glyph, "󰍬")
+  assert.equal(viewPrivNotif.color, "#fab387")
+
+  // Media playing badge
+  const viewMedia = M.resolveBadgeView(0, null, false, mediaActive, null)
+  assert.equal(viewMedia.mode, "status")
+  assert.equal(viewMedia.glyph, "󰎆")
+  assert.equal(viewMedia.color, "#cba6f7")
+
+  // Progress badge
+  const viewProg = M.resolveBadgeView(0, progTask, false, null, null)
+  assert.equal(viewProg.mode, "status")
+  assert.equal(viewProg.glyph, "65%")
+  assert.equal(viewProg.color, "#89b4fa")
 })
+
+test("resolveBadgeStack: dual badge stacking priorities", () => {
+  const errTask = { status: "error", exitCode: 1, title: "test", duration: 1 }
+  const runTask = { status: "running", exitCode: 0, title: "test", duration: 0 }
+  const mediaActive = { isPlaying: true, trackTitle: "Song", trackArtist: "Artist" }
+  const privacyActive = { active: true, label: "Microphone active" }
+
+  // Error (primary) + Media (secondary)
+  const stackErrMedia = M.resolveBadgeStack(0, errTask, false, mediaActive, null)
+  assert.equal(stackErrMedia.primary.status, "error")
+  assert.equal(stackErrMedia.primary.glyph, "!")
+  assert.notEqual(stackErrMedia.secondary, null)
+  assert.equal(stackErrMedia.secondary.status, "media")
+  assert.equal(stackErrMedia.secondary.glyph, "󰎆")
+
+  // Privacy (primary) + Notification count (secondary)
+  const stackPrivNotif = M.resolveBadgeStack(4, null, false, null, privacyActive)
+  assert.equal(stackPrivNotif.primary.status, "privacy")
+  assert.equal(stackPrivNotif.primary.glyph, "󰍬")
+  assert.notEqual(stackPrivNotif.secondary, null)
+  assert.equal(stackPrivNotif.secondary.count, 4)
+
+  // Notification (primary) + Media (secondary)
+  const stackNotifMedia = M.resolveBadgeStack(2, null, false, mediaActive, null)
+  assert.equal(stackNotifMedia.primary.count, 2)
+  assert.equal(stackNotifMedia.secondary.status, "media")
+  assert.equal(stackNotifMedia.secondary.glyph, "󰎆")
+
+  // Running task (primary) + Media (secondary)
+  const stackRunMedia = M.resolveBadgeStack(0, runTask, false, mediaActive, null)
+  assert.equal(stackRunMedia.primary.status, "running")
+  assert.equal(stackRunMedia.primary.glyph, "●")
+  assert.equal(stackRunMedia.secondary.status, "media")
+  assert.equal(stackRunMedia.secondary.glyph, "󰎆")
+
+  // Privacy (primary) + Media (secondary)
+  const stackPrivMedia = M.resolveBadgeStack(0, null, false, mediaActive, privacyActive)
+  assert.equal(stackPrivMedia.primary.status, "privacy")
+  assert.equal(stackPrivMedia.secondary.status, "media")
+
+  // Single active state -> secondary is null
+  const stackSingle = M.resolveBadgeStack(0, null, false, mediaActive, null)
+  assert.equal(stackSingle.primary.status, "media")
+  assert.equal(stackSingle.secondary, null)
+})
+
+test("mediaPlayerFor: attributes webapp media to dedicated tile and suppresses host browser", () => {
+  const pinLogicQml = readFileSync(new URL("../../components/logic/DockPinLogic.qml", import.meta.url), "utf8")
+  const Ctx = vm.createContext({
+    DockModel: ID,
+    Mpris: { players: { values: [] } }
+  })
+  const fns = pinLogicQml.match(/function\s+[A-Za-z0-9_]+\s*\([^)]*\)\s*\{[\s\S]*?\n  \}/g) || []
+  for (const fn of fns) vm.runInContext(fn, Ctx)
+
+  const heliumPlayer = {
+    desktopEntry: "helium",
+    identity: "Helium",
+    trackTitle: "Sizin Bu Kazalar Şaka Mıııı?",
+    isPlaying: true
+  }
+
+  const mockRootWithWebApp = {
+    dockModel: {
+      pinned: [
+        { appId: "helium", windowList: [{ title: "GitHub - Helium", appId: "helium" }] },
+        { appId: "YouTube", windowList: [{ title: "(165) Sizin Bu Kazalar Şaka Mıııı? - YouTube", appId: "chrome-youtube.com__-Profile_1" }] }
+      ],
+      running: []
+    }
+  }
+
+  Ctx.Mpris.players.values = [heliumPlayer]
+
+  // Dedicated WebApp tile receives the player
+  assert.equal(Ctx.mediaPlayerFor(mockRootWithWebApp, "YouTube"), heliumPlayer)
+  // Host browser yields
+  assert.equal(Ctx.mediaPlayerFor(mockRootWithWebApp, "helium"), null)
+
+  // When media is played in a normal browser tab (no webapp window running), the host browser matches
+  const mockRootTabOnly = {
+    dockModel: {
+      pinned: [
+        { appId: "helium", windowList: [{ title: "(165) Sizin Bu Kazalar Şaka Mıııı? - YouTube - Helium", appId: "helium" }] },
+        { appId: "YouTube", windowList: [] }
+      ],
+      running: []
+    }
+  }
+  assert.equal(Ctx.mediaPlayerFor(mockRootTabOnly, "helium"), heliumPlayer)
+  assert.equal(Ctx.mediaPlayerFor(mockRootTabOnly, "YouTube"), null)
+})
+
