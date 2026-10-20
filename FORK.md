@@ -110,6 +110,11 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   app of a group stays in the group's place. In priard 2026-10-15,
   released in v4.7.0.
 
+- #72 `feat/floating-dock-mode` (from experimental): on Omarchy 4.5+ a
+  Behavior choice of which dock floating workspaces get: Omarchy's dock
+  switched off (default), OmaDock hidden there, or both. Opened and in
+  priard 2026-10-20; a real Super+L cycle still to be tested by hand.
+
 ## Fork only
 
 - `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
