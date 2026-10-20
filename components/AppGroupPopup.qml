@@ -3,6 +3,7 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 import "../DockModel.js" as DockModel
+import "strings"
 
 BorderSurface {
   id: appGroupPopup
@@ -99,7 +100,7 @@ BorderSurface {
 
         Text {
           id: titleLabel
-          text: (appGroupPopup.activeGroup && appGroupPopup.activeGroup.name) ? appGroupPopup.activeGroup.name : "Folder"
+          text: (appGroupPopup.activeGroup && appGroupPopup.activeGroup.name) ? appGroupPopup.activeGroup.name : Tr.t("common.folder", "Folder")
           textFormat: Text.PlainText
           color: Color.menu.text
           font.family: Style.font.family

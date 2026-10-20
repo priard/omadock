@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Commons
 import qs.Ui
+import "../strings"
 import "../../DockLayout.js" as DockLayout
 
 // Settings page: alignment and monitor rows.
@@ -13,7 +14,7 @@ Column {
   width: parent.width
 
 
-  SectionLabel { text: "Position" }
+  SectionLabel { title: "Position" }
 
   ChoiceRow {
     key: "layout"
@@ -34,9 +35,9 @@ Column {
     readonly property bool spreadOk: root ? DockLayout.spreadAvailable(root.layout, root.splitSections) : false
     hint: !spreadOk
       ? (root && root.alignment === "spread"
-        ? "Both sides needs Split sections (Appearance); centred until then."
-        : "Both sides needs Split sections (Appearance).")
-      : (root && root.alignment === "spread" ? "Folders and drives go to the right edge." : "")
+        ? Tr.t("setting.alignment.hintSpreadCentred", "Both sides needs Split sections (Appearance); centred until then.")
+        : Tr.t("setting.alignment.hintSpreadNeedsSplit", "Both sides needs Split sections (Appearance)."))
+      : (root && root.alignment === "spread" ? Tr.t("setting.alignment.hintSpread", "Folders and drives go to the right edge.") : "")
     options: {
       var list = [
         { value: "left", label: "Left" },
@@ -51,7 +52,7 @@ Column {
     onPicked: function(v) { root.setDockAlignment(v) }
   }
 
-  SectionLabel { text: "Monitors" }
+  SectionLabel { title: "Monitors" }
 
   SwitchRow {
     key: "multiMonitor"
@@ -70,21 +71,21 @@ Column {
   }
   SettingRow {
     key: "monitorSelect"
-    label: root && root.multiMonitor ? "Primary monitor" : "Monitor"
+    label: root && root.multiMonitor ? Tr.t("setting.monitorSelect.labelPrimary", "Primary monitor") : Tr.t("setting.monitorSelect.labelSingle", "Monitor")
     hint: root && root.multiMonitor
-      ? "Plays the alert sounds."
-      : "Automatic picks the first connected output."
+      ? Tr.t("setting.monitorSelect.hintPrimary", "Plays the alert sounds.")
+      : Tr.t("setting.monitorSelect.hintSingle", "Automatic picks the first connected output.")
 
     Dropdown {
       width: Style.space(200)
       showLabel: false
       options: {
-        var list = [{ value: "", label: "Automatic" }]
+        var list = [{ value: "", label: Tr.t("setting.monitorSelect.option.automatic", "Automatic") }]
         var screens = root ? root.realScreens : []
         for (var i = 0; i < screens.length; i++)
           list.push({ value: screens[i].name, label: screens[i].name + (screens[i].model ? " — " + screens[i].model : "") })
         if (root && root.screenName && !root.screenForName(root.screenName))
-          list.push({ value: root.screenName, label: root.screenName + " (disconnected)" })
+          list.push({ value: root.screenName, label: Tr.t("setting.monitorSelect.disconnected", "%1 (disconnected)").arg(root.screenName) })
         return list
       }
       value: root ? root.screenName : ""

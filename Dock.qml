@@ -217,7 +217,7 @@ Item {
     property string pendingName: ""
     onExited: function (exitCode, exitStatus) {
       if (exitCode !== 0 && launchProc.pendingName !== "")
-        root.notifyAppMissing(launchProc.pendingName, "It cannot be launched — reinstall the app or unpin it from the dock.")
+        root.notifyAppMissing(launchProc.pendingName, "launch")
       launchProc.pendingName = ""
     }
   }
@@ -2055,7 +2055,7 @@ Item {
     }
   }
 
-  function notifyAppMissing(name, detail) { return contextLogic.notifyAppMissing(root, name, detail) }
+  function notifyAppMissing(name, reason) { return contextLogic.notifyAppMissing(root, name, reason) }
 
   function launchDesktopAction(action, appName) { return contextLogic.launchDesktopAction(root, action, appName) }
 

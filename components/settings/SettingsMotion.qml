@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 // Settings page: hover motion, launch bounce, shadow and blur/grain rows.
 // Instantiated by SettingsPanel, which injects root (the Dock, for
@@ -12,7 +13,7 @@ Column {
   width: parent.width
 
 
-  SectionLabel { text: "Motion" }
+  SectionLabel { title: "Motion" }
 
   ChoiceRow {
     key: "animations"
@@ -48,7 +49,7 @@ Column {
     onToggled: root.setOption("launchBounce", !root.launchBounce)
   }
 
-  SectionLabel { text: "Shadow" }
+  SectionLabel { title: "Shadow" }
 
   SwitchRow {
     key: "showShadow"
@@ -76,7 +77,7 @@ Column {
     width: parent.width
     visible: root ? root.showBackground : true
 
-    SectionLabel { text: "Blur & Grain" }
+    SectionLabel { title: "Blur & Grain" }
 
     SwitchRow {
       key: "blurSystem"
@@ -89,8 +90,8 @@ Column {
       key: "blur"
       label: "Blur"
       hint: panel.systemBlurEnabled
-        ? "Frosted glass behind the dock."
-        : "Hyprland blur is off (decoration:blur:enabled), so this has no visible effect."
+        ? Tr.t("setting.blur.hintOn", "Frosted glass behind the dock.")
+        : Tr.t("setting.blur.hintOff", "Hyprland blur is off (decoration:blur:enabled), so this has no visible effect.")
       visible: root ? root.blurMode !== "system" : false
       checked: root ? root.blurMode === "on" : false
       onToggled: root.setBlurMode(root.blurMode === "on" ? "off" : "on")

@@ -5,6 +5,7 @@ import qs.Ui
 import "../DockModel.js" as DockModel
 import "../DockLabels.js" as DockLabels
 import "../DockTasks.js" as DockTasks
+import "strings"
 
 Item {
   id: item
@@ -40,7 +41,7 @@ Item {
   readonly property bool micActive: root ? root.isMicActiveFor(item.appId) : false
   readonly property var privacyInfo: item.micActive ? ({
     active: true,
-    label: "Microphone active"
+    label: Tr.t("chip.micActive", "Microphone active")
   }) : null
 
   readonly property var activePlayer: root ? root.mediaPlayerFor(item.appId) : null
@@ -165,8 +166,8 @@ Item {
   readonly property string displayName: root ? root.labelName(item.appId, item.name) : item.name
   readonly property string tooltipText: {
     if (item.displayName === "") return ""
-    if (item.starting) return item.displayName + " [starting…]"
-    if (item.minimized) return item.displayName + " [minimized]"
+    if (item.starting) return item.displayName + " [" + Tr.t("tooltip.starting", "starting…") + "]"
+    if (item.minimized) return item.displayName + " [" + Tr.t("tooltip.minimized", "minimized") + "]"
     if (item.workspaceHint !== "") return item.displayName + " [" + item.workspaceHint + "]"
     return item.displayName
   }
@@ -682,7 +683,7 @@ Item {
               }
 
               Text {
-                text: DockTasks.chipLabel(item.taskInfo, item.mediaInfo, item.privacyInfo)
+                text: DockTasks.chipLabel(item.taskInfo, item.mediaInfo, item.privacyInfo, Tr.t)
                 textFormat: Text.PlainText
                 color: Util.alpha(Color.tooltip.text, 0.85)
                 font.family: Style.font.family
@@ -769,7 +770,7 @@ Item {
             Text {
               visible: root ? (!root.advancedTooltips && item.tooltipWindows.length > 8) : false
               anchors.horizontalCenter: parent.horizontalCenter
-              text: "+" + (item.tooltipWindows.length - 8) + " more"
+              text: Tr.t("tooltip.moreWindows", "+%1 more").arg(item.tooltipWindows.length - 8)
               textFormat: Text.PlainText
               color: Util.alpha(Color.tooltip.text, 0.6)
               font.family: Style.font.family

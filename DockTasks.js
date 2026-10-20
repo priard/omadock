@@ -181,21 +181,23 @@ function statusGlyph(status) { return TASK_GLYPH[status] || "" }
 function statusColor(status) { return TASK_COLOR[status] || "transparent" }
 
 // What the hover chip says: what ran, how long it took, why it failed, and what
-// media or privacy services are active.
-function chipLabel(taskInfo, mediaInfo, privacyInfo) {
+// media or privacy services are active. t(key, english), when given, is the
+// dock's translator (Tr.t).
+function chipLabel(taskInfo, mediaInfo, privacyInfo, t) {
+  var tr = t || function(key, english) { return english }
   var parts = []
   if (taskInfo) {
-    var title = taskInfo.title ? taskInfo.title : (taskInfo.status === "error" ? "Task failed" : (taskInfo.status === "privacy" ? "Microphone active" : "Task completed"))
+    var title = taskInfo.title ? taskInfo.title : (taskInfo.status === "error" ? tr("chip.taskFailed", "Task failed") : (taskInfo.status === "privacy" ? tr("chip.micActive", "Microphone active") : tr("chip.taskCompleted", "Task completed")))
     if (taskInfo.status === "progress" && taskInfo.progress > 0) {
       parts.push(title + " (" + taskInfo.progress + "%)")
     } else {
       var dur = taskInfo.duration > 0 ? " (" + taskInfo.duration + "s)" : ""
-      var code = (taskInfo.status === "error" && taskInfo.exitCode !== 0) ? " [Exit " + taskInfo.exitCode + "]" : ""
+      var code = (taskInfo.status === "error" && taskInfo.exitCode !== 0) ? " [" + tr("chip.exit", "Exit %1").replace("%1", taskInfo.exitCode) + "]" : ""
       parts.push(title + dur + code)
     }
   }
   if (privacyInfo && privacyInfo.active) {
-    parts.push(privacyInfo.label ? privacyInfo.label : "Microphone active")
+    parts.push(privacyInfo.label ? privacyInfo.label : tr("chip.micActive", "Microphone active"))
   }
   if (mediaInfo && mediaInfo.isPlaying) {
     var track = (mediaInfo.trackTitle || mediaInfo.title || "").trim()
@@ -205,7 +207,7 @@ function chipLabel(taskInfo, mediaInfo, privacyInfo) {
     } else if (track) {
       parts.push("🎵 " + track)
     } else {
-      parts.push("🎵 Now playing")
+      parts.push("🎵 " + tr("chip.nowPlaying", "Now playing"))
     }
   }
   return parts.join(" · ")

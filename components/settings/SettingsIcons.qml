@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 // Settings page: icon style, tint, grid, contrast and icon size/spacing rows.
 // Instantiated by SettingsPanel, which injects root (the Dock, for
@@ -12,7 +13,7 @@ Column {
   width: parent.width
 
 
-  SectionLabel { text: "Icons" }
+  SectionLabel { title: "Icons" }
 
   ChoiceRow {
     key: "iconStyle"
@@ -41,7 +42,7 @@ Column {
   }
   SliderRow {
     key: "iconGrid"
-    label: root && root.iconStyle === "dots" ? "Dots across" : "Pixels across"
+    label: root && root.iconStyle === "dots" ? Tr.t("setting.iconGrid.labelDots", "Dots across") : Tr.t("setting.iconGrid.labelPixels", "Pixels across")
     hint: "Fewer is chunkier."
     visible: root ? (root.iconStyle === "pixel" || root.iconStyle === "dots") : false
     minimum: 8
@@ -93,7 +94,7 @@ Column {
     onToggled: root.setOption("iconHoverReveal", !root.iconHoverReveal)
   }
 
-  SectionLabel { text: "Size & Spacing" }
+  SectionLabel { title: "Size & Spacing" }
 
   SliderRow {
     key: "iconSize"
@@ -108,7 +109,7 @@ Column {
   SliderRow {
     key: "itemSpacing"
     label: "Spacing"
-    hint: (root && root.labelPlates) ? "Gap between icons. Label plates keep it between 4 and 12 px." : "Gap between icons."
+    hint: (root && root.labelPlates) ? Tr.t("setting.itemSpacing.hintPlates", "Gap between icons. Label plates keep it between 4 and 12 px.") : Tr.t("setting.itemSpacing.hintPlain", "Gap between icons.")
     minimum: 0
     maximum: 16
     step: 1

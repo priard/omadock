@@ -1,6 +1,7 @@
 import QtQuick 6.11
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 // Section heading for a settings page; can carry a search key so a whole
 // section ("Folder color") is reachable from the search box.
@@ -12,6 +13,9 @@ Text {
   property string key: ""
   // Set by SettingsPanel while this section is the picked search target.
   property bool highlighted: false
+  // The English heading; shown translated as "section.<slug>" ("Dock Items"
+  // is section.dock-items).
+  property string title: ""
 
   Rectangle {
     anchors.fill: parent
@@ -25,7 +29,7 @@ Text {
   width: parent ? parent.width : implicitWidth
   topPadding: Style.spacing.xxl
   bottomPadding: Style.spacing.sm
-  text: ""
+  text: Tr.t("section." + sectionLabel.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""), sectionLabel.title)
   textFormat: Text.PlainText
   color: Util.alpha(Color.menu.text, 0.55)
   font.family: Style.font.family

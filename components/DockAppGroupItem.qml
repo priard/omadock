@@ -4,6 +4,7 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 import "../DockModel.js" as DockModel
+import "strings"
 
 Item {
   id: gitem
@@ -28,7 +29,7 @@ Item {
   readonly property real iconCenterX: iconSlot.x + iconSlot.width / 2
 
   readonly property string groupId: (groupData && groupData.id) ? groupData.id : ""
-  readonly property string groupName: (groupData && groupData.name) ? groupData.name : "Folder"
+  readonly property string groupName: (groupData && groupData.name) ? groupData.name : Tr.t("common.folder", "Folder")
   readonly property var groupApps: (groupData && DockModel.isList(groupData.apps)) ? DockModel.toArray(groupData.apps) : []
 
   signal openGroupRequested(var gdata, real cx, real cy)
@@ -413,7 +414,7 @@ Item {
   // Hover tooltip: the member windows as preview cards, like an app's.
   HoverTooltip {
     dockRoot: root
-    text: gitem.groupName + " (" + gitem.groupApps.length + (gitem.groupApps.length === 1 ? " app)" : " apps)")
+    text: Tr.tn("tooltip.groupApps", gitem.groupApps.length, gitem.groupApps.length === 1 ? "%1 (%2 app)" : "%1 (%2 apps)").arg(gitem.groupName).arg(gitem.groupApps.length)
     windows: gitem.tooltipWindows
     cycleIndex: gitem.previewIndex
     fallbackIcon: Quickshell.iconPath("folder", true)

@@ -7,6 +7,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
+import "../strings"
 
 // Logic extracted from Dock.qml: stateless functions, the dock root
 // is passed in and owns all state. Bodies are verbatim.
@@ -69,7 +70,7 @@ QtObject {
     if (ids.length === 0) return
     var newGroup = {
       id: "group_" + Date.now(),
-      name: "Group " + (root.appGroups ? (root.appGroups.length + 1) : 1),
+      name: Tr.t("groups.numbered", "Group %1").arg(root.appGroups ? (root.appGroups.length + 1) : 1),
       icon: "folder",
       apps: ids,
       cols: 3
@@ -81,9 +82,9 @@ QtObject {
   function createAppGroupFromDrop(root, targetAppId, draggedAppId) {
     if (!targetAppId || !draggedAppId || targetAppId === draggedAppId) return
     var targetEntry = DockModel.entryFor(root.appRows, targetAppId)
-    var folderName = "Folder"
+    var folderName = Tr.t("common.folder", "Folder")
     if (targetEntry && targetEntry.name) {
-      folderName = targetEntry.name + " & more"
+      folderName = Tr.t("groups.andMore", "%1 & more").arg(targetEntry.name)
     }
 
     // The group takes the place of the app it was dropped on.

@@ -1,6 +1,7 @@
 import QtQuick 6.11
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 // Settings page: pinned folder rows and the folder colour picker.
 // Instantiated by SettingsPanel, which injects root (the Dock, for
@@ -12,7 +13,7 @@ Column {
   width: parent.width
 
 
-  SectionLabel { text: "Pinned folders" }
+  SectionLabel { title: "Pinned folders" }
 
   Repeater {
     model: [
@@ -48,7 +49,7 @@ Column {
       hint: modelData.path
 
       Button {
-        text: "Remove"
+        text: Tr.t("common.remove", "Remove")
         foreground: Color.menu.text
         bordered: true
         onClicked: root.toggleFolderPin(modelData.path, modelData.name, modelData.icon)
@@ -62,7 +63,7 @@ Column {
     hint: "Pick any directory to pin as a stack."
 
     Button {
-      text: "Add folder…"
+      text: Tr.t("folders.add", "Add folder…")
       foreground: Color.menu.text
       bordered: true
       onClicked: {
@@ -74,7 +75,7 @@ Column {
 
   SectionLabel {
     key: "folderColor"
-    text: "Folder color"
+    title: "Folder color"
   }
 
   Flow {
@@ -83,7 +84,7 @@ Column {
     bottomPadding: Style.spacing.lg
 
     Button {
-      text: "Theme"
+      text: Tr.t("folders.colorTheme", "Theme")
       foreground: Color.menu.text
       bordered: true
       selected: root ? (root.folderColor === "theme" || !root.folderColor) : true
@@ -93,7 +94,7 @@ Column {
     // Monochrome outlines in black or white, whichever reads
     // better on what is behind them: the dock, or a stack popup.
     Button {
-      text: "Auto B/W"
+      text: Tr.t("folders.colorAuto", "Auto B/W")
       foreground: Color.menu.text
       bordered: true
       selected: root ? root.folderColor === "bw" : false

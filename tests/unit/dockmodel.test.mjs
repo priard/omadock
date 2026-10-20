@@ -107,6 +107,15 @@ test("searchSettings: 'pixl' finds the pixel icon style", () => {
   assert.equal(hits[0].key, "iconStyle")
 })
 
+test("searchSettings: a translated label matches and is what the hit shows", () => {
+  const pl = (e) => (e.key === "autohide" ? "Autoukrywanie" : e.label)
+  const hits = M.searchSettings("autoukr", null, null, pl)
+  assert.equal(hits[0].key, "autohide")
+  assert.equal(hits[0].label, "Autoukrywanie")
+  // English still finds it, labelled in the dock's language.
+  assert.equal(M.searchSettings("autohide", null, null, pl)[0].label, "Autoukrywanie")
+})
+
 test("searchSettings: 'shad' finds the shadow toggle", () => {
   const hits = M.searchSettings("shad")
   assert.ok(hits.length > 0)

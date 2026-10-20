@@ -1,6 +1,7 @@
 import QtQuick 6.11
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 // SettingRow with a button-group choice.
 
@@ -11,7 +12,11 @@ SettingRow {
   signal picked(string value)
 
   ButtonGroup {
-    options: choiceRow.options
+    // "setting.<key>.option.<value>"; options built at run time (monitor
+    // names) have no entry and keep their label.
+    options: choiceRow.options.map(function(o) {
+      return choiceRow.key === "" ? o : Object.assign({}, o, { label: Tr.t("setting." + choiceRow.key + ".option." + o.value, o.label) })
+    })
     value: choiceRow.value
     foreground: Color.menu.text
     background: Color.menu.background

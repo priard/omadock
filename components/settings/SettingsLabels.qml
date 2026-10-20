@@ -28,7 +28,7 @@ Column {
   }
   Component.onCompleted: labelsPage.refreshNameRows()
 
-  SectionLabel { text: "Labels" }
+  SectionLabel { title: "Labels" }
 
   ChoiceRow {
     key: "labelMode"
@@ -72,7 +72,7 @@ Column {
       onPicked: function(v) { root.setOption("labelPinned", v) }
     }
 
-    SectionLabel { text: "Look" }
+    SectionLabel { title: "Look" }
 
     ChoiceRow {
       key: "labelFont"
@@ -208,7 +208,7 @@ Column {
       onCommitted: function(v) { root.setOption("labelMaxWidth", Math.round(v)) }
     }
 
-    SectionLabel { text: "Names"; visible: root ? root.labelKind === "all" || root.labelKind === "apps" : false }
+    SectionLabel { title: "Names"; visible: root ? root.labelKind === "all" || root.labelKind === "apps" : false }
 
     Repeater {
       model: (root && (root.labelKind === "all" || root.labelKind === "apps")) ? labelsPage.nameRows : []

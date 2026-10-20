@@ -1,6 +1,7 @@
 import QtQuick 6.11
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 import Quickshell
 
@@ -14,11 +15,11 @@ Column {
   width: parent.width
 
 
-  SectionLabel { text: "omadock" }
+  SectionLabel { title: "omadock" }
 
   SettingRow {
-    label: "Version"
-    hint: "Free and open-source application dock for Omarchy · MIT license"
+    label: Tr.t("about.version", "Version")
+    hint: Tr.t("about.versionHint", "Free and open-source application dock for Omarchy · MIT license")
     Text {
       text: (root && root.manifest && root.manifest.version) ? "v" + root.manifest.version : "unknown"
       textFormat: Text.PlainText
@@ -28,8 +29,8 @@ Column {
     }
   }
   SettingRow {
-    label: "Project & feedback"
-    hint: "Report bugs, follow development, or contribute."
+    label: Tr.t("about.project", "Project & feedback")
+    hint: Tr.t("about.projectHint", "Report bugs, follow development, or contribute.")
     Button {
       text: "GitHub"
       foreground: Color.menu.text
@@ -38,7 +39,7 @@ Column {
     }
   }
 
-  SectionLabel { text: "Updates" }
+  SectionLabel { title: "Updates" }
   ChoiceRow {
     key: "updateChannel"
     label: "Update channel"
@@ -51,7 +52,7 @@ Column {
     }
   }
 
-  SectionLabel { text: "Supporters & acknowledgments" }
+  SectionLabel { title: "Supporters & acknowledgments" }
 
   Text {
     width: parent.width
@@ -67,10 +68,10 @@ Column {
 
   SettingRow {
     label: "Supporter #1 — thepathless"
-    hint: "The maker. Its first and forever supporter."
+    hint: Tr.t("about.makerHint", "The maker. Its first and forever supporter.")
 
     Button {
-      text: "Support ❤"
+      text: Tr.t("about.support", "Support ❤")
       foreground: Color.menu.text
       bordered: true
       onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/sponsors/thepathless"))
@@ -78,18 +79,18 @@ Column {
   }
 
   SettingRow {
-    label: "Supporters wall"
-    hint: "Everyone who has supported omadock, honored in the repository."
+    label: Tr.t("about.wall", "Supporters wall")
+    hint: Tr.t("about.wallHint", "Everyone who has supported omadock, honored in the repository.")
 
     Button {
-      text: "View wall"
+      text: Tr.t("about.viewWall", "View wall")
       foreground: Color.menu.text
       bordered: true
       onClicked: Util.execDetached("uwsm-app -- xdg-open " + Util.shellQuote("https://github.com/thepathless/omadock/blob/main/SPONSORS.md"))
     }
   }
 
-  SectionLabel { text: "Code Contributors" }
+  SectionLabel { title: "Code Contributors" }
 
   SettingRow {
     label: "@priard (Lukasz)"
@@ -163,7 +164,7 @@ Column {
     }
   }
 
-  SectionLabel { text: "Bug Hunters & Diagnostics" }
+  SectionLabel { title: "Bug Hunters & Diagnostics" }
 
   SettingRow {
     label: "@justinlharter"

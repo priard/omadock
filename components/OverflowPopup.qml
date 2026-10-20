@@ -5,6 +5,7 @@ import qs.Ui
 import "../DockIcons.js" as DockIcons
 import "../DockLabels.js" as DockLabels
 import "../DockModel.js" as DockModel
+import "strings"
 
 // The items the dock's fit moved out of the row (DockFit.js, DockFitHost),
 // in dock order, as an opened group shows its apps: icon, name, window
@@ -34,7 +35,7 @@ BorderSurface {
       if (kind === "pin") {
         var p = dock.pinnedRowByKey[key]
         if (!p) continue
-        if (p.group) out.push({ id: id, kind: "group", title: p.group.name || "Group", icon: pop.folderIcon(p.group.icon || "folder"), data: p.group })
+        if (p.group) out.push({ id: id, kind: "group", title: p.group.name || Tr.t("groups.defaultName", "Group"), icon: pop.folderIcon(p.group.icon || "folder"), data: p.group })
         else if (p.entry) out.push({ id: id, kind: "app", title: dock.labelName(p.entry.appId, p.entry.name), icon: pop.appIcon(p.entry), data: p.entry })
       } else if (kind === "run") {
         var r = dock.runningByKey[key]
@@ -42,14 +43,14 @@ BorderSurface {
       } else if (kind === "tile") {
         var t = card ? card.tileByKey[key] : null
         var wins = t ? (t.windows ? t.windows : [t.win]) : []
-        if (wins.length > 0 && wins[0]) out.push({ id: id, kind: "tile", title: wins[0].title || wins[0].appId || "Window", icon: pop.appIcon(pop.root.entryForId(wins[0].appId || "") || { appId: wins[0].appId || "" }), data: { wins: wins, appId: wins[0].appId || "" } })
+        if (wins.length > 0 && wins[0]) out.push({ id: id, kind: "tile", title: wins[0].title || wins[0].appId || Tr.t("common.window", "Window"), icon: pop.appIcon(pop.root.entryForId(wins[0].appId || "") || { appId: wins[0].appId || "" }), data: { wins: wins, appId: wins[0].appId || "" } })
       } else if (kind === "folder") {
         var f = right ? right.folderByKey[key] : null
         if (f) out.push({ id: id, kind: "folder", title: f.name || DockLabels.folderBaseName(f.path || ""),
           icon: f.command ? pop.folderIcon(f.icon || "application-x-executable") : pop.folderIcon(DockIcons.folderIconFor(f.path, f.icon || "")), data: f })
       } else if (kind === "drive") {
         var d = right ? right.driveByKey[key] : null
-        if (d) out.push({ id: id, kind: "drive", title: d.name || "USB Drive", icon: pop.folderIcon(d.icon || "drive-removable-media"), data: d })
+        if (d) out.push({ id: id, kind: "drive", title: d.name || Tr.t("common.usbDrive", "USB Drive"), icon: pop.folderIcon(d.icon || "drive-removable-media"), data: d })
       } else if (kind === "button") {
         out.push({ id: id, kind: "omarchy", title: "Omarchy", icon: Quickshell.iconPath("view-app-grid", true), data: null })
       }

@@ -3,6 +3,7 @@ import Quickshell
 import qs.Commons
 import qs.Ui
 import "../DockLabels.js" as DockLabels
+import "strings"
 
 // The open folder stack: a fixed header (Back, folder name, entry count), a
 // scrolling body and a fixed footer. The body is a list ("stack" view) or a
@@ -129,7 +130,7 @@ BorderSurface {
         anchors.right: parent.right
         anchors.rightMargin: Style.space(8)
         anchors.verticalCenter: parent.verticalCenter
-        text: ((root ? root.activeStackName : "") || "Folder")
+        text: ((root ? root.activeStackName : "") || Tr.t("common.folder", "Folder"))
           + ((root && root.activeStackTotalCount > 0) ? "  (" + DockLabels.stackCountLabel(root.activeStackTotalCount, root.activeStackTruncated) + ")" : "")
         textFormat: Text.PlainText
         color: Util.alpha(Color.menu.text, 0.7)
@@ -186,7 +187,7 @@ BorderSurface {
       visible: folderStackPopover.entries.length === 0 && !(root && root.activeStackLoading)
       width: parent.width
       horizontalAlignment: Text.AlignHCenter
-      text: (root && root.activeStackFailed) ? "Folder could not be read" : "Folder is empty"
+      text: (root && root.activeStackFailed) ? Tr.t("folder.unreadable", "Folder could not be read") : Tr.t("folder.empty", "Folder is empty")
       textFormat: Text.PlainText
       color: Util.alpha(Color.menu.text, 0.45)
       font.family: Style.font.family
@@ -262,9 +263,9 @@ BorderSurface {
     // The listing is capped (scripts/list-folder.py); say so instead of
     // silently truncating.
     ContextRow {
-      readonly property string moreLabel: root ? DockLabels.stackMoreLabel(root.activeStackTotalCount, root.activeStackEntries.length, root.activeStackTruncated) : ""
-      visible: moreLabel !== ""
-      text: moreLabel + " — open in File Manager"
+      readonly property int moreCount: root ? Math.max(0, root.activeStackTotalCount - root.activeStackEntries.length) : 0
+      visible: moreCount > 0
+      text: Tr.t("folder.moreOpen", "+ %1 more — open in File Manager").arg(DockLabels.stackCountLabel(moreCount, root ? root.activeStackTruncated : false))
       onTriggered: {
         if (!root) return
         Util.execArgv(["uwsm-app", "--", "xdg-open", root.activeStackPath])
@@ -273,7 +274,7 @@ BorderSurface {
     }
 
     ContextRow {
-      text: "Open in File Manager"
+      text: Tr.t("menu.openFileManager", "Open in File Manager")
       onTriggered: {
         if (!root) return
         Util.execArgv(["uwsm-app", "--", "xdg-open", root.activeStackPath])

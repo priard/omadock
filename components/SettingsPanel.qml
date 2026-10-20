@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Ui
 import "../SettingsSearch.js" as SettingsSearch
 import "settings"
+import "strings"
 
 // Full-screen overlay holding the dock settings: a sidebar of categories and
 // a scrollable page of controls. Every control writes straight through the
@@ -135,8 +136,16 @@ PanelWindow {
 
   function pageLabelOf(id) {
     for (var i = 0; i < panel.pages.length; i++)
-      if (panel.pages[i].id === id) return panel.pages[i].label
+      if (panel.pages[i].id === id) return Tr.t("page." + id, panel.pages[i].label)
     return ""
+  }
+
+  // A search hit in the dock's language: its own entry ("search.<key>",
+  // for rows whose label changes), else its row's label, else its
+  // section's, else the English one.
+  function searchLabel(entry) {
+    var section = String(entry.label).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    return Tr.t("search." + entry.key, Tr.t("setting." + entry.key + ".label", Tr.t("section." + section, entry.label)))
   }
 
   function close() {
@@ -288,7 +297,7 @@ PanelWindow {
           font.bold: true
         }
         Text {
-          text: "Dock settings"
+          text: Tr.t("panel.title", "Dock settings")
           textFormat: Text.PlainText
           color: Util.alpha(Color.menu.text, 0.55)
           font.family: Style.font.family
@@ -299,9 +308,9 @@ PanelWindow {
         TextField {
           id: searchField
           width: parent.width
-          placeholderText: "Search settings"
+          placeholderText: Tr.t("panel.search", "Search settings")
           foreground: Color.menu.text
-          onTextChanged: panel.searchHits = text.trim() === "" ? [] : SettingsSearch.searchSettings(text)
+          onTextChanged: panel.searchHits = text.trim() === "" ? [] : SettingsSearch.searchSettings(text, null, null, panel.searchLabel)
         }
 
         Column {
@@ -358,7 +367,7 @@ PanelWindow {
             visible: panel.searchHits.length === 0
             topPadding: Style.spacing.sm
             bottomPadding: Style.spacing.sm
-            text: "No matches"
+            text: Tr.t("panel.noMatches", "No matches")
             textFormat: Text.PlainText
             color: Util.alpha(Color.menu.text, 0.55)
             font.family: Style.font.family
@@ -412,7 +421,7 @@ PanelWindow {
               anchors.left: navIcon.right
               anchors.leftMargin: Style.spacing.lg
               anchors.verticalCenter: parent.verticalCenter
-              text: navItem.modelData.label
+              text: Tr.t("page." + navItem.modelData.id, navItem.modelData.label)
               textFormat: Text.PlainText
               color: navItem.current ? Color.accent : Color.menu.text
               font.family: Style.font.family
@@ -458,7 +467,7 @@ PanelWindow {
         anchors.verticalCenter: parent.verticalCenter
         iconText: "󰅖"
         foreground: Color.menu.text
-        tooltipText: "Close (Esc)"
+        tooltipText: Tr.t("panel.close", "Close (Esc)")
         onClicked: panel.close()
       }
     }

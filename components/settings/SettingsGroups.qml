@@ -1,6 +1,7 @@
 import QtQuick 6.11
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 // Settings page: group look rows and the app group list.
 // Instantiated by SettingsPanel, which injects root (the Dock, for
@@ -12,7 +13,7 @@ Column {
   width: parent.width
 
 
-  SectionLabel { text: "Look" }
+  SectionLabel { title: "Look" }
 
   ChoiceRow {
     key: "groupStyle"
@@ -38,14 +39,14 @@ Column {
     onPicked: function(v) { root.setOption("groupIconEffects", v) }
   }
 
-  SectionLabel { text: "Groups" }
+  SectionLabel { title: "Groups" }
 
   Text {
     width: parent.width
     visible: !root || root.appGroups.length === 0
     topPadding: Style.spacing.lg
     bottomPadding: Style.spacing.lg
-    text: "No groups yet. Drag one dock icon onto another, or create one from the apps that are running now."
+    text: Tr.t("groups.empty", "No groups yet. Drag one dock icon onto another, or create one from the apps that are running now.")
     textFormat: Text.PlainText
     color: Util.alpha(Color.menu.text, 0.55)
     wrapMode: Text.WordWrap
@@ -101,7 +102,7 @@ Column {
             spacing: Style.spacing.md
 
             Text {
-              text: groupRow.modelData.name || "Group"
+              text: groupRow.modelData.name || Tr.t("groups.defaultName", "Group")
               textFormat: Text.PlainText
               color: nameMouse.containsMouse ? Color.accent : Color.menu.text
               font.family: Style.font.family
@@ -132,7 +133,7 @@ Column {
             visible: groupRow.editing
             anchors.verticalCenter: parent.verticalCenter
             width: Math.min(parent.width, Style.space(260))
-            placeholderText: "Group name"
+            placeholderText: Tr.t("groups.namePlaceholder", "Group name")
             maximumLength: 120   // DockModel.MAX_APP_GROUP_NAME
             foreground: Color.menu.text
             Keys.onReturnPressed: groupRow.finishEdit(true)
@@ -166,7 +167,7 @@ Column {
         id: removeButton
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        text: "Remove"
+        text: Tr.t("common.remove", "Remove")
         foreground: Color.menu.text
         bordered: true
         onClicked: root.removeAppGroup(groupRow.modelData.id)
@@ -184,7 +185,7 @@ Column {
   Item { width: 1; height: Style.spacing.xxl }
 
   Button {
-    text: "Create group from running apps"
+    text: Tr.t("groups.createFromRunning", "Create group from running apps")
     foreground: Color.menu.text
     bordered: true
     onClicked: root.createAppGroupFromRunning()

@@ -1,6 +1,7 @@
 import QtQuick
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 // Settings page: visibility, click behaviour, attention and tooltip rows.
 // Instantiated by SettingsPanel, which injects root (the Dock, for
@@ -12,7 +13,7 @@ Column {
   width: parent.width
 
 
-  SectionLabel { text: "Visibility" }
+  SectionLabel { title: "Visibility" }
 
   ChoiceRow {
     key: "autohide"
@@ -54,7 +55,7 @@ Column {
     onPicked: function(v) { root.floatingWatch.choice = v; root.saveConfig() }
   }
 
-  SectionLabel { text: "Clicking an app" }
+  SectionLabel { title: "Clicking an app" }
 
   ChoiceRow {
     key: "minimizeMode"
@@ -105,7 +106,7 @@ Column {
     onCommitted: function(v) { root.setOption("wheelStepDelay", Math.round(v)) }
   }
 
-  SectionLabel { text: "Attention" }
+  SectionLabel { title: "Attention" }
 
   SwitchRow {
     key: "badges"
@@ -178,21 +179,21 @@ Column {
       width: Style.space(200)
       showLabel: false
       options: [
-        { value: "bell", label: "Bell" },
-        { value: "message-new-instant", label: "Message chime" },
-        { value: "complete", label: "Complete ding" },
-        { value: "dialog-information", label: "Information pop" },
-        { value: "dialog-warning", label: "Warning alert" },
-        { value: "phone-incoming-call", label: "Phone ring" },
-        { value: "alarm-clock-elapsed", label: "Alarm beeps" },
-        { value: "none", label: "Mute" }
+        { value: "bell", label: Tr.t("setting.urgentSound.option.bell", "Bell") },
+        { value: "message-new-instant", label: Tr.t("setting.urgentSound.option.message-new-instant", "Message chime") },
+        { value: "complete", label: Tr.t("setting.urgentSound.option.complete", "Complete ding") },
+        { value: "dialog-information", label: Tr.t("setting.urgentSound.option.dialog-information", "Information pop") },
+        { value: "dialog-warning", label: Tr.t("setting.urgentSound.option.dialog-warning", "Warning alert") },
+        { value: "phone-incoming-call", label: Tr.t("setting.urgentSound.option.phone-incoming-call", "Phone ring") },
+        { value: "alarm-clock-elapsed", label: Tr.t("setting.urgentSound.option.alarm-clock-elapsed", "Alarm beeps") },
+        { value: "none", label: Tr.t("setting.urgentSound.option.none", "Mute") }
       ]
       value: root ? (root.urgentSound ? root.urgentSoundName : "none") : "bell"
       onChanged: function(v) { root.setUrgentSoundName(v) }
     }
   }
 
-  SectionLabel { text: "Previews & Tooltips" }
+  SectionLabel { title: "Previews & Tooltips" }
 
   SwitchRow {
     key: "tooltips"

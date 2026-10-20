@@ -1,6 +1,7 @@
 import QtQuick 6.11
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 // Base settings row: label + optional hint on the left, control slot on
 // the right. A non-empty key makes the row a search target; SettingsPanel
@@ -15,6 +16,10 @@ Item {
   property string key: ""
   // Set by SettingsPanel while this row is the picked search target.
   property bool highlighted: false
+  // A row with a key translates its own texts ("setting.<key>.label" and
+  // ".hint"); a page passes a row whose text changes already translated.
+  readonly property string shownLabel: settingRow.key !== "" ? Tr.t("setting." + settingRow.key + ".label", settingRow.label) : settingRow.label
+  readonly property string shownHint: settingRow.key !== "" && settingRow.hint !== "" ? Tr.t("setting." + settingRow.key + ".hint", settingRow.hint) : settingRow.hint
   default property alias control: slot.data
 
   Rectangle {
@@ -41,7 +46,7 @@ Item {
     // are always plain text, never markup.
     Text {
       width: parent.width
-      text: settingRow.label
+      text: settingRow.shownLabel
       textFormat: Text.PlainText
       color: Color.menu.text
       font.family: Style.font.family
@@ -51,7 +56,7 @@ Item {
     Text {
       width: parent.width
       visible: settingRow.hint !== ""
-      text: settingRow.hint
+      text: settingRow.shownHint
       textFormat: Text.PlainText
       color: Util.alpha(Color.menu.text, 0.55)
       font.family: Style.font.family

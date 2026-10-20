@@ -1,6 +1,7 @@
 import QtQuick 6.11
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 // Settings page: background, border, divider, shape and dock-item rows.
 // Instantiated by SettingsPanel, which injects root (the Dock, for
@@ -12,7 +13,7 @@ Column {
   width: parent.width
 
 
-  SectionLabel { text: "Background" }
+  SectionLabel { title: "Background" }
 
   SwitchRow {
     key: "showBackground"
@@ -51,14 +52,14 @@ Column {
           spacing: Style.spacing.sm
 
           Button {
-            text: "Theme"
+            text: Tr.t("setting.gradient.theme", "Theme")
             foreground: Color.menu.text
             bordered: true
             selected: root ? (root.dockBgColor === "theme" || !root.dockBgColor) : true
             onClicked: root.setDockBgColor("theme")
           }
           Button {
-            text: "None"
+            text: Tr.t("setting.gradient.none", "None")
             foreground: Color.menu.text
             bordered: true
             selected: root ? root.dockBgColor === "none" : false
@@ -105,7 +106,7 @@ Column {
         bottomPadding: Style.spacing.lg
 
         Repeater {
-          model: root ? [{ id: "theme", name: "Theme", colors: root.themeGradientColors }].concat(root.gradientPresets) : []
+          model: root ? [{ id: "theme", name: Tr.t("setting.gradient.theme", "Theme"), colors: root.themeGradientColors }].concat(root.gradientPresets) : []
           delegate: Column {
             id: paletteTile
             required property var modelData
@@ -182,7 +183,7 @@ Column {
 
   }
 
-  SectionLabel { text: "Border" }
+  SectionLabel { title: "Border" }
 
   SwitchRow {
     key: "border"
@@ -280,7 +281,7 @@ Column {
     onCommitted: function(v) { root.setOption("dividerHeight", Math.round(v)) }
   }
 
-  SectionLabel { text: "Shape" }
+  SectionLabel { title: "Shape" }
 
   ChoiceRow {
     key: "corners"
@@ -345,7 +346,7 @@ Column {
     onPicked: function(v) { root.setOption("indicatorShape", v) }
   }
 
-  SectionLabel { text: "Dock Items" }
+  SectionLabel { title: "Dock Items" }
 
   SwitchRow {
     key: "appsButton"

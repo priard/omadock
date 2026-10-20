@@ -1,4 +1,5 @@
 import QtQuick
+import "../strings"
 import "../../DockModel.js" as DockModel
 import "../../DockPresets.js" as DockPresets
 import "../../Buttons.js" as Buttons
@@ -315,8 +316,8 @@ QtObject {
 
   function nextPresetName(root) {
     for (var n = 1; n <= DockModel.MAX_PRESETS + 1; n++)
-      if (!presetNameTaken(root, "Preset " + n, "")) return "Preset " + n
-    return "Preset"
+      if (!presetNameTaken(root, Tr.t("presets.numbered", "Preset %1").arg(n), "")) return Tr.t("presets.numbered", "Preset %1").arg(n)
+    return Tr.t("presets.default", "Preset")
   }
 
   function replacePreset(root, i, preset) {

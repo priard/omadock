@@ -7,6 +7,7 @@ import Quickshell.Services.Mpris
 import qs.Commons
 import qs.Ui
 import "../../DockModel.js" as DockModel
+import "../strings"
 
 // Logic extracted from Dock.qml: stateless functions, the dock root
 // is passed in and owns all state. Bodies are verbatim.
@@ -46,10 +47,10 @@ QtObject {
   }
 
   function folderColorLabel(root, colorId) {
-    if (!colorId || colorId === "theme" || colorId === "auto") return "Auto (Theme)"
-    if (colorId === "white") return "White"
-    if (colorId === "black") return "Black"
-    if (colorId === "bw") return "Black or white"
+    if (!colorId || colorId === "theme" || colorId === "auto") return Tr.t("folderColor.auto", "Auto (Theme)")
+    if (colorId === "white") return Tr.t("folderColor.white", "White")
+    if (colorId === "black") return Tr.t("folderColor.black", "Black")
+    if (colorId === "bw") return Tr.t("folderColor.bw", "Black or white")
     var map = {
       "Yaru-sage": "Sage Green",
       "Yaru-olive": "Olive",
@@ -62,7 +63,7 @@ QtObject {
       "Yaru-prussiangreen": "Teal",
       "Yaru-dark": "Charcoal"
     }
-    return map[colorId] || colorId
+    return map[colorId] ? Tr.t("folderColor." + colorId, map[colorId]) : colorId
   }
 
   function setFolderColor(root, color) {
@@ -185,20 +186,24 @@ QtObject {
   // The label comes from list-drives.py, already cleaned; it is escaped
   // again because notification bodies render markup.
   function notifyUnsafeRemoval(root, name) {
-    var label = String(name || "A drive").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    var label = String(name || Tr.t("notify.aDrive", "A drive")).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     Quickshell.execDetached([
       "bash", root.scriptPath("notify.sh"), "drive-removable-media",
-      "Drive removed without ejecting",
-      label + " was removed while still mounted. Recent changes may not have been written; eject it from the dock next time."
+      Tr.t("notify.unsafeRemovalTitle", "Drive removed without ejecting"),
+      Tr.t("notify.unsafeRemovalBody", "%1 was removed while still mounted. Recent changes may not have been written; eject it from the dock next time.").arg(label)
     ])
   }
 
-  function notifyAppMissing(root, name, detail) {
-    var label = String(name || "This app").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  // reason: what failed, "launch" or "pin"; anything else gets the general advice.
+  function notifyAppMissing(root, name, reason) {
+    var label = String(name || Tr.t("notify.thisApp", "This app")).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    var advice = reason === "launch" ? Tr.t("notify.missingLaunch", "It cannot be launched — reinstall the app or unpin it from the dock.")
+      : reason === "pin" ? Tr.t("notify.missingPin", "It cannot be pinned to the dock — reinstall the app first.")
+      : Tr.t("notify.missingAdvice", "Reinstall the app or unpin it from the dock.")
     Quickshell.execDetached([
       "bash", root.scriptPath("notify.sh"), "dialog-error",
-      "App no longer installed",
-      label + " is no longer installed. " + String(detail || "Reinstall the app or unpin it from the dock.")
+      Tr.t("notify.missingTitle", "App no longer installed"),
+      Tr.t("notify.missingBody", "%1 is no longer installed. %2").arg(label).arg(advice)
     ])
   }
 

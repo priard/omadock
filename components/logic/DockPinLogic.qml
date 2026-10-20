@@ -273,7 +273,7 @@ QtObject {
     // installed desktop entry — the pin could only ever bounce silently.
     // Unpinning bypasses the check so stale pins can always be removed.
     if (!DockModel.isPinned(root.pinnedIds, id) && !root.resolveDesktopEntry(id)) {
-      root.notifyAppMissing(id, "It cannot be pinned to the dock — reinstall the app first.")
+      root.notifyAppMissing(id, "pin")
       return
     }
     root.setPinned(DockModel.togglePinned(root.pinnedIds, id))

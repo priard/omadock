@@ -1,6 +1,7 @@
 import QtQuick 6.11
 import qs.Commons
 import qs.Ui
+import "strings"
 
 // A context-menu row that turns into a name field in place: Enter saves,
 // Escape cancels, and a blank name restores the default (the owner decides
@@ -24,7 +25,7 @@ Item {
   id: rename
 
   property var dockRoot: null
-  property string text: "Rename…"
+  property string text: Tr.t("menu.rename", "Rename…")
   // The name the field opens with, and the default shown when it is blank.
   property string current: ""
   property string placeholder: ""

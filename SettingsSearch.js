@@ -122,19 +122,24 @@ var SETTINGS_SEARCH = [
 // Ranked search over SETTINGS_SEARCH (or any entry list in the same shape).
 // Every query character must land in order on some term; the best-scoring
 // term of each entry is its score.
-function searchSettings(query, entries, limit) {
+// translate(entry), when given, is the label in the dock's language
+// (SettingsPanel.searchLabel): a query matches it as well as the English
+// label and terms, and the hit carries it.
+function searchSettings(query, entries, limit, translate) {
   var list = entries == null ? SETTINGS_SEARCH : entries
   var cap = limit == null ? 8 : limit
   var out = []
   for (var i = 0; i < list.length; i++) {
     var e = list[i]
+    var shown = translate ? translate(e) : e.label
     var best = fuzzyScore(query, e.label)
+    if (shown !== e.label) best = Math.max(best, fuzzyScore(query, shown))
     var terms = e.terms || []
     for (var j = 0; j < terms.length; j++) {
       var s = fuzzyScore(query, terms[j])
       if (s > best) best = s
     }
-    if (best >= 0) out.push({ key: e.key, page: e.page, label: e.label, score: best })
+    if (best >= 0) out.push({ key: e.key, page: e.page, label: shown, score: best })
   }
   out.sort(function (a, b) { return b.score - a.score })
   return out.slice(0, cap)

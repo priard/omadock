@@ -1,6 +1,7 @@
 import QtQuick 6.11
 import qs.Commons
 import qs.Ui
+import "../strings"
 
 import ".."
 import "../../DockPresets.js" as DockPresets
@@ -21,7 +22,7 @@ Column {
     width: parent.width
     SectionLabel {
       key: "presets"
-      text: "Presets"
+      title: "Presets"
     }
   }
 
@@ -95,7 +96,7 @@ Column {
           color: Qt.rgba(0, 0, 0, 0.45)
           Text {
             anchors.centerIn: parent
-            text: "Apply"
+            text: Tr.t("presets.apply", "Apply")
             textFormat: Text.PlainText
             color: "#ffffff"
             font.family: Style.font.family
@@ -165,7 +166,7 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             width: Math.min(parent.width, Style.space(220))
             maximumLength: 40
-            placeholderText: "Preset name"
+            placeholderText: Tr.t("presets.namePlaceholder", "Preset name")
             foreground: Color.menu.text
             Keys.onReturnPressed: presetRow.finishEdit(true)
             Keys.onEnterPressed: presetRow.finishEdit(true)
@@ -192,26 +193,26 @@ Column {
 
         Button {
           visible: !presetRow.confirming
-          text: "Apply"
+          text: Tr.t("presets.apply", "Apply")
           foreground: Color.accent
           onClicked: { panel.endPresetEdit(); root.applyPreset(presetRow.modelData.id) }
         }
         Button {
           visible: !presetRow.confirming && !presetRow.builtin
-          text: "Update"
+          text: Tr.t("presets.update", "Update")
           foreground: Color.menu.text
           onClicked: { panel.endPresetEdit(); root.updatePreset(presetRow.modelData.id) }
         }
         Button {
           visible: !presetRow.confirming && !presetRow.builtin
-          text: "Delete"
+          text: Tr.t("presets.delete", "Delete")
           foreground: Color.menu.text
           onClicked: { panel.endPresetEdit(); panel.confirmDeletePresetId = presetRow.modelData.id }
         }
         Button {
           visible: presetRow.confirming
           // Button text is not pinned to PlainText: no name here.
-          text: "Delete?"
+          text: Tr.t("presets.deleteConfirm", "Delete?")
           foreground: Color.urgent
           bordered: true
           onClicked: {
@@ -221,7 +222,7 @@ Column {
         }
         Button {
           visible: presetRow.confirming
-          text: "Keep"
+          text: Tr.t("presets.keep", "Keep")
           foreground: Color.menu.text
           onClicked: panel.confirmDeletePresetId = ""
         }
@@ -239,7 +240,7 @@ Column {
   Item { width: 1; height: Style.spacing.xxl }
 
   Button {
-    text: root && root.canSavePreset ? "Save current look" : "6 of 6 — delete one to save a new look"
+    text: root && root.canSavePreset ? Tr.t("presets.save", "Save current look") : Tr.t("presets.full", "6 of 6 — delete one to save a new look")
     foreground: Color.menu.text
     bordered: true
     enabled: root ? root.canSavePreset : false
