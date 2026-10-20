@@ -7,7 +7,7 @@
  "Dock.qml::unresolved-type": 4,
  "Dock.qml::unused-imports": 3,
  "DockHost.qml::block-scope-var-declaration": 10,
- "components/AppGridHost.qml::block-scope-var-declaration": 4,
+ "components/AppGridHost.qml::block-scope-var-declaration": 3,
  "components/AppGridHost.qml::missing-property": 4,
  "components/AppGroupPopup.qml::block-scope-var-declaration": 12,
  "components/AppGroupPopup.qml::missing-property": 3,
@@ -106,6 +106,7 @@
  "components/settings/SettingsPresets.qml::unresolved-type": 1,
  "components/settings/SliderRow.qml::missing-property": 2,
  "components/settings/SliderRow.qml::unresolved-type": 1,
+ "components/strings/Tr.qml::missing-property": 1,
  "tests/live/interactions-shell.qml::syntax": 1,
  "tests/live/label-metrics-shell.qml::syntax": 1,
  "tests/live/tasks-shell.qml::syntax": 1
