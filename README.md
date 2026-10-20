@@ -770,6 +770,15 @@ The pixel label font is [Silkscreen](https://fonts.google.com/specimen/Silkscree
 
 Full release notes, historical changelogs, and upgrade guides across all versions are available on [**GitHub Releases**](https://github.com/thepathless/omadock/releases).
 
+### v4.8.0 — 2026-10-21
+
+OmaDock meets Omarchy 4.5: floating workspaces get one dock, the Omarchy button opens the app grid, and the dock speaks your language.
+
+- **Choose which dock floating workspaces get** — contributed by [@priard](https://github.com/priard) ([#72](https://github.com/thepathless/omadock/pull/72)): Omarchy 4.5 brings floating workspaces (Super+L) and its own dock on them. New **Settings → Behavior → Floating workspaces**: *Hide Omarchy dock* (default — OmaDock everywhere), *Hide OmaDock* (Omarchy's dock on floating workspaces instead), or *Show both*. The choice is offered only where Omarchy 4.5's dock exists; on 4.0 nothing changes.
+- **Omarchy's app grid behind the Omarchy button** — contributed by [@priard](https://github.com/priard) ([#73](https://github.com/thepathless/omadock/pull/73)): a new **Settings → Appearance → Omarchy button opens** choice between the Omarchy menu and Omarchy 4.5's searchable app grid. Apps can be dragged out of the grid onto the dock — the drop line shows where they land, and letting go pins or moves them. The grid is Omarchy's own, loaded only on first open; if it cannot load, the button opens the menu as before.
+- **The dock speaks your language** — contributed by [@priard](https://github.com/priard) ([#74](https://github.com/thepathless/omadock/pull/74)): dock strings now follow Omarchy's display language (Setup → Language, 4.5+), with **Polish** shipping as the first translation. Settings rows, menus, tooltips and popups translate themselves; untranslated strings fall back to English. On Omarchy 4.0 the dock stays in English. Adding a language is documented in the new Translations section of the README.
+- **Verification**: 268 Node + 116 Python tests, `qmllint` 0 errors, structure-check PASSED, plugin validate and manifest-check clean, smoke PASSED, live probe suites (presets, label-metrics, tasks, teardown) green.
+
 ### v4.7.0 — 2026-10-17
 
 Drag-and-drop you can feel, dividers that disappear, and badges that know what your apps are doing.
