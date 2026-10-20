@@ -556,6 +556,30 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 
 ---
 
+## Translations
+
+On **Omarchy 4.5+** the dock speaks the language picked under **Setup → Language** (or `omarchy language <code>`) and switches with it live, no restart. It ships **English** and **Polish**. On Omarchy 4.0 there is no language mechanism, so the dock stays in English; it has no language setting of its own on purpose.
+
+### How it works
+
+- `components/strings/Tr.qml` creates Omarchy's `Commons.Translations` by name, pointed at `i18n/`. A shell without it (4.0) just gets the English text every call carries.
+- Catalogs are flat JSON files in `i18n/`, one per Omarchy language code: `en.json`, `pl.json`, and so on (`de`, `pt-BR`, `zh-CN`, …; the list is in `$OMARCHY_PATH/default/i18n/locales.json`). A string missing from a catalog falls back to its base language (`pt-BR` to `pt`), then to English, so a partial translation works.
+- A value is a string, or an object of plural forms keyed by CLDR category for strings that count: `{ "one": "%1 aplikacja", "few": "%1 aplikacje", "many": "%1 aplikacji", "other": "%1 aplikacji" }`. `%1`, `%2` are filled in by the code and must stay.
+
+### Adding a language
+
+1. Copy `i18n/en.json` to `i18n/<code>.json` (the code Omarchy uses for that language).
+2. Translate the values; leave the keys, the `%N` placeholders, and anything you do not want to translate yet (delete such lines rather than leaving English in them). For counted strings, give the plural forms your language needs, always including `other`.
+3. Use the terms Omarchy's own catalog uses (`$OMARCHY_PATH/default/i18n/<code>/shell.json`) so the dock reads like the rest of the shell.
+4. Check it: `node --test tests/unit/i18n.test.mjs` (keys and placeholders match English), then `omarchy language <code>` and look through the settings panel and the menus.
+
+### Adding or changing strings
+
+- In QML: `Tr.t("menu.unpin", "Unpin from Dock")`, with `.arg()` for placeholders, or `Tr.tn("menu.groupApps", n, n === 1 ? "%1 App" : "%1 Apps").arg(n)` for counts. Import it with `import "strings"` (from `components/`) or `import "../strings"`.
+- Settings rows with a `key` translate themselves (`setting.<key>.label`, `.hint`, `.option.<value>`), and `SectionLabel { title: "…" }` too (`section.<slug>`). Only a row whose text changes at run time needs explicit `Tr.t` calls.
+- JS modules cannot see `Tr`: pass the translator in (see `DockTasks.chipLabel`).
+- Then run `python3 tests/static/i18n-en.py` to add the new English entries to `i18n/en.json` (CI runs it with `--check`), and add the translations to the other catalogs.
+
 ## IPC & Keyboard Shortcuts
 
 omadock registers IPC commands callable directly by Quickshell.
@@ -713,6 +737,8 @@ qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 | `DockModel.js` | Pure model logic and every safety bound (parsing caps, identity resolution). |
 | `components/` | QML UI components (dock items, popups, tooltips, shaders) and `SettingsPanel.qml`, the settings shell (sidebar, search, page assembly). |
 | `components/settings/` | The settings module: one file per settings page plus the shared row family (`SettingRow`, `SwitchRow`, `ChoiceRow`, `SliderRow`, `Swatch`, `SectionLabel`). Pages wire `root` (the Dock) into rows; the panel owns search-jump state and registers rows by their `key`. |
+| `components/strings/` | `Tr`, the translation singleton (Omarchy 4.5's `Commons.Translations`, created by name). |
+| `i18n/` | Translation catalogs, one JSON file per language code; `en.json` holds every key (see [Translations](#translations)). |
 | `scripts/` | Python helpers (folder/drive scans, notification watcher, keybinding setup) plus `bind-keys.sh`. |
 | `shaders/` | Hover/icon-style fragment shaders with precompiled `.qsb` bundles. |
 | `tests/unit/` | Node and Python unit suites — what CI runs on every PR. |
