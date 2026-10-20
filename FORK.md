@@ -115,6 +115,13 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   switched off (default), OmaDock hidden there, or both. Opened and in
   priard 2026-10-20; a real Super+L cycle still to be tested by hand.
 
+- #73 `feat/app-grid` (from experimental): on Omarchy 4.5+ the Omarchy
+  button can open Omarchy's own app grid (loaded from its files, not
+  copied); an app dragged out of it onto the dock is pinned where it is
+  dropped. Opened and in priard 2026-10-20; a real mouse drag still to be
+  tested by hand. Overlaps #72 in ci.yml, the README table and
+  SettingsSearch.js.
+
 ## Fork only
 
 - `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
