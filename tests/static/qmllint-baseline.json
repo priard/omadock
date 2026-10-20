@@ -7,6 +7,8 @@
  "Dock.qml::unresolved-type": 4,
  "Dock.qml::unused-imports": 3,
  "DockHost.qml::block-scope-var-declaration": 10,
+ "components/AppGridHost.qml::block-scope-var-declaration": 4,
+ "components/AppGridHost.qml::missing-property": 4,
  "components/AppGroupPopup.qml::block-scope-var-declaration": 12,
  "components/AppGroupPopup.qml::missing-property": 3,
  "components/CappedFileView.qml::block-scope-var-declaration": 1,
