@@ -112,21 +112,18 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
 
 - #72 `feat/floating-dock-mode` (from experimental): on Omarchy 4.5+ a
   Behavior choice of which dock floating workspaces get: Omarchy's dock
-  switched off (default), OmaDock hidden there, or both. Opened and in
-  priard 2026-10-20; a real Super+L cycle still to be tested by hand.
+  switched off (default), OmaDock hidden there, or both. Merged
+  2026-10-20, released in v4.8.0.
 
 - #73 `feat/app-grid` (from experimental): on Omarchy 4.5+ the Omarchy
   button can open Omarchy's own app grid (loaded from its files, not
   copied); an app dragged out of it onto the dock is pinned where it is
-  dropped. Opened and in priard 2026-10-20; a real mouse drag still to be
-  tested by hand. Overlaps #72 in ci.yml, the README table and
-  SettingsSearch.js.
+  dropped. Merged 2026-10-20, released in v4.8.0.
 
 - #74 `feat/i18n` (from experimental): on Omarchy 4.5+ the dock follows
   the Omarchy language (Commons.Translations, created by name), Polish
   shipped, README section on adding languages, catalog check in CI.
-  Opened and in priard 2026-10-20; menus and popups in Polish still to be
-  looked through by hand.
+  Merged 2026-10-20, released in v4.8.0.
 
 ## Fork only
 
