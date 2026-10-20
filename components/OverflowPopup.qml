@@ -86,7 +86,10 @@ BorderSurface {
     }
     else if (cell.kind === "drive") dock.openFolderStack(cell.data.mountpoint, cell.title, at.x)
     else if (cell.kind === "tile") dock.restoreWindowBatch(cell.data.wins)
-    else if (cell.kind === "omarchy") Quickshell.execDetached(["omarchy-menu", "toggle", "root"])
+    else if (cell.kind === "omarchy") {
+      if (dock.sharedState) dock.sharedState.appGrid.openLauncher()
+      else Quickshell.execDetached(["omarchy-menu", "toggle", "root"])
+    }
   }
   function menu(cell, item) {
     var dock = pop.root

@@ -61,8 +61,11 @@ Item {
   // A drag held over a group or an app keeps its gap where it was, so
   // nothing moves while it is aimed there (DockLift.dwell).
   readonly property int dropLineRow: (root && !root.dragRemoveArmed && root.dropRowIndex >= 0
-    && (root.dragAppId !== "" || root.dragGroupId !== ""))
+    && (root.dragAppId !== "" || root.dragGroupId !== "" || cardWrapper.gridDragHere))
     ? root.dropRowIndex : -1
+  // An app dragged out of Omarchy's app grid is over this dock (AppGridHost).
+  readonly property bool gridDragHere: !!root && !!root.sharedState && root.sharedState.appGrid.dragScreen !== ""
+    && !!root.dockScreen && root.sharedState.appGrid.dragScreen === String(root.dockScreen.name || "")
   readonly property int dropLineFolder: (root && !root.dragRemoveArmed && root.dragFolderPath !== "") ? root.dropFolderIndex : -1
 
   DockDragLogic { id: dragLogic }
@@ -464,7 +467,7 @@ Item {
           glyph: "\ue900"
           glyphColor: root ? root.dockForeground : Color.bar.text
           tooltip: "Omarchy"
-          onPressed: Quickshell.execDetached(["omarchy-menu", "toggle", "root"])
+          onPressed: root && root.sharedState ? root.sharedState.appGrid.openLauncher() : Quickshell.execDetached(["omarchy-menu", "toggle", "root"])
           onMiddleClicked: Quickshell.execDetached(["omarchy-launch-terminal"])
           onMenuRequested: function(cx, cy) {
             if (root) root.openDockSettingsMenu(cx, cy)

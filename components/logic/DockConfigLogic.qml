@@ -123,6 +123,7 @@ QtObject {
     root.autohide = parsed && parsed.autohide !== false
     root.intelligentAutohide = parsed && parsed.intelligentAutohide !== false
     root.showAppsButton = parsed && parsed.showAppsButton !== false
+    if (root.sharedState) root.sharedState.appGrid.mode = (parsed && parsed.appsButtonAction === "grid") ? "grid" : "menu"
     root.showTooltips = parsed && parsed.showTooltips !== false
     root.showMinimizedTiles = parsed ? parsed.showMinimizedTiles !== false : true
     root.advancedTooltips = parsed && parsed.advancedTooltips !== false
@@ -189,6 +190,7 @@ QtObject {
     conf.autohide = root.autohide
     conf.intelligentAutohide = root.intelligentAutohide
     conf.showAppsButton = root.showAppsButton
+    if (root.sharedState) conf.appsButtonAction = root.sharedState.appGrid.mode
     conf.showTooltips = root.showTooltips
     conf.showMinimizedTiles = root.showMinimizedTiles
     conf.hoverEffect = root.hoverEffect

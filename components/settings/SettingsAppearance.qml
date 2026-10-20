@@ -354,6 +354,19 @@ Column {
     checked: root ? root.showAppsButton : true
     onToggled: root.setOption("showAppsButton", !root.showAppsButton)
   }
+  // Omarchy 4.5+ only: the grid is Omarchy's own (AppGridHost).
+  ChoiceRow {
+    key: "appsButtonAction"
+    label: "Omarchy button opens"
+    hint: "The app grid searches every app and lets you drag one onto the dock to pin it."
+    visible: !!root && root.showAppsButton && !!root.sharedState && root.sharedState.appGrid.available
+    options: [
+      { value: "menu", label: "Omarchy menu" },
+      { value: "grid", label: "App grid" }
+    ]
+    value: root && root.sharedState ? root.sharedState.appGrid.mode : "menu"
+    onPicked: function(v) { root.sharedState.appGrid.mode = v; root.saveConfig() }
+  }
   SwitchRow {
     key: "removableDrives"
     label: "Removable drives"

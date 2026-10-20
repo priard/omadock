@@ -81,6 +81,14 @@ Item {
     property var parkedAt: ({})
     property var parkSlots: ({})
     property var taskStatus: ({})
+    // The apps button's launcher and the grid's drags (AppGridHost).
+    readonly property var appGrid: appGridHost
+  }
+
+  AppGridHost {
+    id: appGridHost
+    omarchyPath: host.omarchyPath
+    docks: host.orderedDocks
   }
 
   Variants {

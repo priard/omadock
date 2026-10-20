@@ -52,6 +52,7 @@ var SETTINGS_SEARCH = [
   { key: "panelSpacing", page: "appearance", label: "Panel spacing", terms: ["gap", "split"] },
   { key: "indicators", page: "appearance", label: "Indicators", terms: ["dots", "bars", "running", "shape"] },
   { key: "appsButton", page: "appearance", label: "Omarchy button", terms: ["launcher", "start", "menu", "logo"] },
+  { key: "appsButtonAction", page: "appearance", label: "Omarchy button opens", terms: ["launcher", "app grid", "apps", "menu", "drag", "pin"] },
   { key: "removableDrives", page: "appearance", label: "Removable drives", terms: ["usb", "media", "eject"] },
   { key: "iconStyle", page: "icons", label: "Icon style", terms: ["pixel", "pixel style", "mono", "monochrome", "dots", "dot matrix", "original"] },
   { key: "iconTint", page: "icons", label: "Icon colour", terms: ["color", "tint", "bw", "black", "white", "accent"] },

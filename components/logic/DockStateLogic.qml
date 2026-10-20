@@ -109,7 +109,7 @@ QtObject {
       return
     }
 
-    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (root.revealHoverRef && root.revealHoverRef.hovered) || root.contextAppId !== "" || root.dockDragActive || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen || root.externalDragOver || root.appDropTargetId !== ""
+    var isHovered = (root.cardHover && root.cardHover.hovered) || (root.hitboxHover && root.hitboxHover.hovered) || (root.revealHoverRef && root.revealHoverRef.hovered) || root.contextAppId !== "" || root.dockDragActive || root.activeStackFolder !== "" || root.activeAppGroupId !== "" || root.settingsPanelOpen || root.externalDragOver || root.appDropTargetId !== "" || (root.sharedState && root.sharedState.appGrid.isOver(root))
 
     // Hovered, Context Menu Open, or Dragging: keep visible
     if (isHovered) {

@@ -539,6 +539,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `labelMaxWidth` | `int` | `140` | Longest label in px (80–240) before the name is shortened. |
 | `labelNames` | `object` | `{}` | Per-app label text, `{ "appId": "Name" }` (up to 200 entries, 40 characters each). |
 | `keepPointer` | `bool` | `true` | Focusing a window from the dock keeps the pointer where it is instead of warping it to the window centre. |
+| `appsButtonAction` | `string` | `"menu"` | What the Omarchy button opens: `"menu"` (the Omarchy menu) or, on Omarchy 4.5+, `"grid"`: Omarchy's own app grid (search, keyboard, Keep in dock), from which an app dragged onto the dock is pinned where it is dropped. Settings → Appearance → Omarchy button opens. |
 | `animations` | `string` | `"full"` | How the dock moves: `"full"` (items, dividers, popups, marks and the badge ease in and out), `"reduced"` (short fades only: no movement, bounces or label typing) or `"off"` (everything changes at once). Settings → Motion & Effects → Animations. |
 | `folderColor` | `string` | `"theme"` | `"theme"`, `"symbolic"`, `"white"`, `"black"`, `"Yaru-blue"`, etc. |
 | `hoverEffect` | `string` | `"zoom"` | Hover mode: magnification `"zoom"` or `"wave"`; effects `"lift"`, `"glow"`, `"glitch"` (shaders); or `"off"`. |
