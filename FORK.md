@@ -122,6 +122,12 @@ Sync: `git fetch upstream && git merge upstream/main && git push fork priard`
   tested by hand. Overlaps #72 in ci.yml, the README table and
   SettingsSearch.js.
 
+- #74 `feat/i18n` (from experimental): on Omarchy 4.5+ the dock follows
+  the Omarchy language (Commons.Translations, created by name), Polish
+  shipped, README section on adding languages, catalog check in CI.
+  Opened and in priard 2026-10-20; menus and popups in Polish still to be
+  looked through by hand.
+
 ## Fork only
 
 - `bench/results/` history, `tests/run-all.sh` with the qmllint baseline
