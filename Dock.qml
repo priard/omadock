@@ -222,7 +222,6 @@ Item {
     }
   }
 
-
   // Build the index once at load, but only when the host withheld its own
   // library — with a host library present the index would be dead weight.
   Component.onCompleted: {
@@ -650,6 +649,7 @@ Item {
 
   property bool autohide: true
   property bool intelligentAutohide: true
+  readonly property FloatingDockWatch floatingWatch: FloatingDockWatch { dockRoot: root }
   property bool showAppsButton: true
   property bool showTooltips: true
   property bool showMinimizedTiles: true
@@ -2167,8 +2167,8 @@ Item {
     WlrLayershell.keyboardFocus: (root.contextRenaming || (appGroupLoader.item && appGroupLoader.item.body.isEditingName))
       ? WlrKeyboardFocus.OnDemand
       : WlrKeyboardFocus.None
-    exclusionMode: (!root.autohide) ? ExclusionMode.Normal : ExclusionMode.Ignore
-    exclusiveZone: (!root.autohide) ? Math.round((dockCardComp ? dockCardComp.dockCard.height + dockCardComp.shadowRoom : 0) + root.edgeGap * 2) : 0
+    exclusionMode: (!root.autohide && !root.floatingWatch.yieldDock) ? ExclusionMode.Normal : ExclusionMode.Ignore
+    exclusiveZone: (!root.autohide && !root.floatingWatch.yieldDock) ? Math.round((dockCardComp ? dockCardComp.dockCard.height + dockCardComp.shadowRoom : 0) + root.edgeGap * 2) : 0
     anchors {
       bottom: true
       left: true
@@ -2224,7 +2224,7 @@ Item {
         var cardW = (dockCardComp && dockCardComp.dockCard.width > 0) ? dockCardComp.dockCard.width : Style.space(320)
         return Math.min(parent.width, cardW + Style.space(96))
       }
-      height: (root.autohide && !root.dockVisible) ? root.revealHeight : 0
+      height: (root.autohide && !root.dockVisible && !root.floatingWatch.yieldDock) ? root.revealHeight : 0
       visible: height > 0
 
       HoverHandler {

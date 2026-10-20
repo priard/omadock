@@ -62,15 +62,22 @@ Item {
   // see the header. Empty means no write is waiting to be confirmed.
   property string _writePending: ""
   property int _writeRetries: 0
+  property bool _superseded: false
 
   signal loaded()
   signal fileChanged()
+  // The file is missing or unreadable. State stays as it was; a reader for
+  // which a deleted file means something (a workspace mode) clears its own.
+  signal missing()
 
   // One-shot gated read. Safe to call at any time: a superseded in-flight
   // read is terminated and re-queued. It is asynchronous: text is still the
   // previous content when reload() returns, so read it from onLoaded only.
   function reload() {
     if (!root.path) return
+    // The stopped read exits before the new one starts (code 2 from its
+    // trap): that exit is not the file going missing.
+    root._superseded = gate.running
     gate.running = false
     gate.running = true
   }
@@ -147,6 +154,8 @@ Item {
     // Process flushes the stdout collector (streamEnded) before emitting
     // exited, so gateOut.text is complete here.
     onExited: (exitCode, exitStatus) => {
+      var superseded = root._superseded
+      root._superseded = false
       if (exitCode === 0) {
         var content = gateOut.text
         // Held off: this read was started before our own write, so it is the
@@ -169,9 +178,11 @@ Item {
         root.oversized = true
         root.text = ""
         root.loaded()
+      } else if (exitCode === 2 && !superseded) {
+        root.missing()
       }
-      // Anything else (exit 2 / reader killed by timeout / crash) leaves
-      // state untouched, matching FileView's loadFailed behavior.
+      // Exit 2 (after missing()) or anything else (reader killed by timeout /
+      // crash) leaves state untouched, matching FileView's loadFailed behavior.
     }
   }
 }

@@ -39,6 +39,20 @@ Column {
     value: root ? root.revealDelay : 160
     onCommitted: function(v) { root.setOption("revealDelay", Math.round(v)) }
   }
+  // Omarchy 4.5+ only: its own dock is what this chooses against.
+  ChoiceRow {
+    key: "floatingDock"
+    label: "Floating workspaces"
+    hint: "Omarchy shows its own dock on floating workspaces. Hiding it runs omarchy plugin disable omarchy.dock; after removing omadock, bring it back with omarchy plugin enable omarchy.dock."
+    visible: root ? root.floatingWatch.available : false
+    options: [
+      { value: "hide-omarchy", label: "Hide Omarchy dock" },
+      { value: "hide-omadock", label: "Hide OmaDock" },
+      { value: "both", label: "Show both" }
+    ]
+    value: root ? root.floatingWatch.choice : "hide-omarchy"
+    onPicked: function(v) { root.floatingWatch.choice = v; root.saveConfig() }
+  }
 
   SectionLabel { text: "Clicking an app" }
 

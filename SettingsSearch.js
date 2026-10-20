@@ -73,6 +73,7 @@ var SETTINGS_SEARCH = [
   { key: "grain", page: "motion", label: "Grain", terms: ["noise", "film", "texture"] },
   { key: "autohide", page: "behavior", label: "Autohide", terms: ["hide", "reveal", "visibility", "intelligent"] },
   { key: "revealDelay", page: "behavior", label: "Reveal delay", terms: ["autohide", "delay"] },
+  { key: "floatingDock", page: "behavior", label: "Floating workspaces", terms: ["omarchy dock", "floating", "layout", "hide", "super l"] },
   { key: "minimizeMode", page: "behavior", label: "Minimize on click", terms: ["park", "click"] },
   { key: "restoreWorkspace", page: "behavior", label: "Restore on", terms: ["minimize", "park", "windows", "origin"] },
   { key: "restoreSlot", page: "behavior", label: "Restore original slot", terms: ["minimize", "park", "position", "layout"] },

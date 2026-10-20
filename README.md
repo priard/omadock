@@ -84,6 +84,12 @@ omarchy plugin update omadock --yes
 omarchy plugin remove omadock --yes
 ```
 
+On Omarchy 4.5+ OmaDock switches Omarchy's own dock off by default (Settings → Behavior → Floating workspaces). Bring it back after removing OmaDock:
+
+```bash
+omarchy plugin enable omarchy.dock
+```
+
 ---
 
 ## Features
@@ -486,6 +492,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 | `perMonitorApps` | `bool` | `true` | With `multiMonitor`, each dock lists only the windows on its own monitor. |
 | `autohide` | `bool` | `true` | Enables dock autohiding on hover exit. |
 | `intelligentAutohide` | `bool` | `true` | Hides dock only when windows overlap its bounding box (AABB). |
+| `floatingDock` | `string` | `"hide-omarchy"` | Omarchy 4.5+, which shows its own dock on floating workspaces (Super+L): `"hide-omarchy"` switches it off (`omarchy plugin disable omarchy.dock`), `"hide-omadock"` switches it on and hides OmaDock on floating workspaces, `"both"` leaves it alone. Settings → Behavior → Floating workspaces. |
 | `showRemovableDrives` | `bool` | `true` | Auto-detect and display removable USB thumb drives and storage. |
 | `warnUnsafeRemoval` | `bool` | `true` | Notify when a drive is pulled out while still mounted (it was not ejected first). |
 | `appGroups` | `array` | `[]` | App Folders / Groups configuration (name, custom icon, app ID list). |

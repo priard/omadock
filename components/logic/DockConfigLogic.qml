@@ -5,6 +5,7 @@ import "../../Buttons.js" as Buttons
 import "../../DockLabels.js" as DockLabels
 import "../../DockLayout.js" as DockLayout
 import "../../DockMotion.js" as DockMotion
+import "../../DockFloating.js" as DockFloating
 
 // Config and preset logic, extracted from Dock.qml so the root file only
 // declares state and wiring. Every function is stateless: the dock root is
@@ -140,6 +141,7 @@ QtObject {
       root.minimizeMode = "active"
     }
     root.restoreWorkspace = (parsed && parsed.restoreWorkspace === "origin") ? "origin" : "current"
+    root.floatingWatch.choice = DockFloating.normalizeChoice(parsed ? parsed.floatingDock : "")
     root.restoreSlot = !!(parsed && parsed.restoreSlot === true)
     root.keepPointer = parsed ? parsed.keepPointer !== false : true
     root.animations = DockMotion.normalizeLevel(parsed ? parsed.animations : "full")
@@ -240,6 +242,7 @@ QtObject {
     conf.minimizeMode = root.minimizeMode
     conf.clickToMinimize = root.minimizeMode !== "off"
     conf.restoreWorkspace = root.restoreWorkspace
+    conf.floatingDock = root.floatingWatch.choice
     conf.restoreSlot = root.restoreSlot
     conf.keepPointer = root.keepPointer
     conf.animations = root.animations
