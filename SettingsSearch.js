@@ -106,7 +106,6 @@ var SETTINGS_SEARCH = [
   { key: "labelReveal", page: "labels", label: "Reveal", terms: ["labels", "animation", "typewriter", "scramble", "slide"] },
   { key: "labelEffect", page: "labels", label: "Effect", terms: ["labels", "glow", "shadow", "outline", "stroke"] },
   { key: "labelMaxWidth", page: "labels", label: "Max width", terms: ["labels", "truncate", "shorten", "long names"] },
-  { key: "layout", page: "placement", label: "Layout", terms: ["panel", "taskbar", "dock", "full width", "bar", "edge"] },
   { key: "alignment", page: "placement", label: "Alignment", terms: ["left", "center", "right", "position", "both sides", "spread", "split"] },
   { key: "multiMonitor", page: "placement", label: "Show on all monitors", terms: ["monitor", "display", "multi"] },
   { key: "perMonitorApps", page: "placement", label: "Only this monitor's apps", terms: ["monitor", "display"] },

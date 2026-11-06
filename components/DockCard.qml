@@ -30,7 +30,7 @@ Item {
   readonly property var drivesRepeater: rightRow.drivesRepeater
   property alias runningRepeater: runningRepeater
   readonly property bool folderDropActive: folderDrop.containsDrag
-  // The card's box when it spans the window (panel, or a spread dock); null
+  // The card's box when it spans the window (a spread dock); null
   // while it hugs its icons. innerWidth is the room for the row inside it.
   readonly property var stretch: (root && parent) ? DockLayout.stretchedBox(root.placement, parent.width, Style.gapsOut * 2) : null
   readonly property real innerWidth: dockCard.width - dockCard.contentLeftInset - dockCard.contentRightInset
@@ -160,9 +160,9 @@ Item {
 
   // With shadows on, the card lifts by the room the drop shadow needs below
   // it (the gapsOut margin the layout already models); without one it sits
-  // where it always has. The panel's reserved band carries the same lift
-  // (Dock.qml exclusiveZone), so the card's top edge never crosses into it.
-  readonly property real shadowRoom: (root && !root.placement.panel && root.showShadow && root.showBackground && root.shadowStrength > 0) ? Style.space(5) : 0
+  // where it always has. The reserved band carries the same lift (Dock.qml
+  // exclusiveZone), so the card's top edge never crosses into it.
+  readonly property real shadowRoom: (root && root.showShadow && root.showBackground && root.shadowStrength > 0) ? Style.space(5) : 0
   anchors.bottom: parent ? parent.bottom : undefined
   anchors.bottomMargin: (root && root.dockVisible) ? root.edgeGap + cardWrapper.shadowRoom : -(dockCard.height + (root ? root.edgeGap : 0) + cardWrapper.shadowRoom + 10)
 
@@ -207,9 +207,9 @@ Item {
   // Expanded interactive hitbox: eliminates dead gaps below dockCard and adds generous hysteresis
   Item {
     id: dockHitbox
-    x: (root && root.placement.panel) ? 0 : -Style.space(24)
+    x: -Style.space(24)
     y: (root && root.dockVisible) ? -Style.space(18) : 0
-    width: dockCard.width + ((root && root.placement.panel) ? 0 : Style.space(48))
+    width: dockCard.width + Style.space(48)
     height: dockCard.height + ((root && root.dockVisible) ? (root.edgeGap + Style.space(18)) : 0)
     z: -1
 
@@ -392,7 +392,7 @@ Item {
     color: "transparent"
     borderSpec: (root && !root.showBorder)
       ? Border.none()
-      : Border.flat("transparent", (root && root.placement.panel) ? dockCard.effectiveBorderWidth + " 0 0 0" : dockCard.effectiveBorderWidth)
+      : Border.flat("transparent", dockCard.effectiveBorderWidth)
     radius: root ? root.cardRadius(height) : Style.cornerRadius
     padding: dockCard.devSnap(Style.space(5))
     // With label plates the sides match the gap between plates.

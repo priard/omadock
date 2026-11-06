@@ -105,7 +105,6 @@ QtObject {
       }
     }
     root.alignment = DockLayout.normalizeAlignment(parsed ? (parsed.alignment || parsed.position) : "")
-    root.layout = DockLayout.normalizeLayout(parsed ? parsed.layout : "")
     root.showRemovableDrives = parsed ? parsed.showRemovableDrives !== false : true
     root.warnUnsafeRemoval = parsed ? parsed.warnUnsafeRemoval !== false : true
     if (parsed && DockModel.isList(parsed.appGroups)) {
@@ -177,7 +176,6 @@ QtObject {
   function buildConfig(root, base) {
     var conf = base && typeof base === "object" && !Array.isArray(base) ? base : {}
     conf.alignment = root.alignment || "center"
-    conf.layout = root.layout
     delete conf.position
     conf.showRemovableDrives = root.showRemovableDrives
     conf.warnUnsafeRemoval = root.warnUnsafeRemoval

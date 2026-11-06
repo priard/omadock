@@ -81,13 +81,6 @@ QtObject {
     root.syncVisibility()
   }
 
-  function setDockLayout(root, layout) {
-    root.layout = DockLayout.normalizeLayout(layout)
-    root.saveConfig()
-    if (root.intelligentAutohide) root.debounceOverlapTimerRef.restart()
-    root.syncVisibility()
-  }
-
   function setDockPosition(root, pos) {
     root.setDockAlignment(pos)
   }

@@ -205,11 +205,6 @@ Item {
     }
 
     // Layout is a config key; the other docks pick it up from the file.
-    function setLayout(layout: string): void {
-      var d = host.orderedDocks()
-      if (d.length > 0) d[0].setDockLayout(layout)
-    }
-
     function setPosition(pos: string): void {
       var d = host.orderedDocks()
       if (d.length > 0) d[0].setDockPosition(pos)
@@ -231,7 +226,6 @@ Item {
         settingsOpen: d[0].settingsPanelOpen,
         settingsPage: d[0].settingsPanelPage,
         configApplied: d[0].configApplied,
-        layout: d[0].layout,
         align: d[0].placement.align,
         gapsOut: d[0].outerGap,
         itemGap: d[0].gapWidth,

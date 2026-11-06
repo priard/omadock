@@ -286,7 +286,6 @@ Column {
   ChoiceRow {
     key: "corners"
     label: "Corners"
-    visible: root ? !root.placement.panel : true
     options: [
       { value: "theme", label: "Theme" },
       { value: "rounded", label: "Rounded" },
@@ -305,7 +304,7 @@ Column {
   SliderRow {
     key: "cornerRadius"
     label: "Corner radius"
-    visible: root ? (!root.placement.panel && root.dockShape === "rounded") : false
+    visible: root ? root.dockShape === "rounded" : false
     minimum: 2
     maximum: root ? root.maxRoundedRadius : 24
     step: 1
@@ -316,7 +315,6 @@ Column {
   SwitchRow {
     key: "splitSections"
     label: "Split sections"
-    visible: root ? !root.placement.panel : true
     hint: "Each part between the dividers becomes its own panel, with a gap in place of the divider."
     checked: root ? root.splitSections : false
     onToggled: root.setOption("splitSections", !root.splitSections)

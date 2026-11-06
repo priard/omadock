@@ -17,22 +17,11 @@ Column {
   SectionLabel { title: "Position" }
 
   ChoiceRow {
-    key: "layout"
-    label: "Layout"
-    hint: "Panel spans the screen's full width along the bottom edge."
-    options: [
-      { value: "dock", label: "Dock" },
-      { value: "panel", label: "Panel" }
-    ]
-    value: root ? root.layout : "dock"
-    onPicked: function(v) { root.setDockLayout(v) }
-  }
-  ChoiceRow {
     key: "alignment"
     label: "Alignment"
     // The Omarchy ButtonGroup has no disabled state: Both sides is left
     // out where it cannot apply, and the hint says why.
-    readonly property bool spreadOk: root ? DockLayout.spreadAvailable(root.layout, root.splitSections) : false
+    readonly property bool spreadOk: root ? DockLayout.spreadAvailable(root.splitSections) : false
     hint: !spreadOk
       ? (root && root.alignment === "spread"
         ? Tr.t("setting.alignment.hintSpreadCentred", "Both sides needs Split sections (Appearance); centred until then.")

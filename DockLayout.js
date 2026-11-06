@@ -1,11 +1,6 @@
-// Pure helpers for the dock's layout (Dock or Panel) and its alignment
-// (Dock.qml placement, components/DockCard.qml). Plain JS with no Qt
+// Pure helpers for the dock's alignment (Dock.qml placement,
+// components/DockCard.qml). Plain JS with no Qt
 // globals, so the node tests run it in a vm context like DockLabels.js.
-
-// "panel" spans the screen's bottom edge; anything else is the floating dock.
-function normalizeLayout(v) {
-  return String(v === undefined || v === null ? "" : v).toLowerCase() === "panel" ? "panel" : "dock"
-}
 
 // "spread" (Both sides) puts folders and drives at the right edge.
 function normalizeAlignment(v) {
@@ -13,29 +8,25 @@ function normalizeAlignment(v) {
   return (a === "left" || a === "right" || a === "spread") ? a : "center"
 }
 
-// Both sides needs room to open a gap: the full-width panel, or a dock
-// split into panels.
-function spreadAvailable(layout, splitSections) {
-  return normalizeLayout(layout) === "panel" || splitSections === true
+// Both sides needs room to open a gap: a dock split into panels.
+function spreadAvailable(splitSections) {
+  return splitSections === true
 }
 
-// What the dock draws for the stored settings. The panel is one bar, so
-// it ignores split sections; Both sides falls back to center where it
-// cannot open a gap, and to left when nothing would go right.
-function placement(layout, alignment, splitSections, hasRightGroup) {
-  var panel = normalizeLayout(layout) === "panel"
-  var split = !panel && splitSections === true
+// What the dock draws for the stored settings. Both sides falls back to
+// center where it cannot open a gap, and to left when nothing would go right.
+function placement(alignment, splitSections, hasRightGroup) {
+  var split = splitSections === true
   var align = normalizeAlignment(alignment)
-  if (align === "spread" && !spreadAvailable(layout, splitSections)) align = "center"
+  if (align === "spread" && !spreadAvailable(splitSections)) align = "center"
   if (align === "spread" && !hasRightGroup) align = "left"
-  return { panel: panel, split: split, align: align }
+  return { split: split, align: align }
 }
 
-// The card's x and width when it does not hug its icons: the panel spans
-// the window; a spread dock spans it less the inset on each side. null:
-// the card is as wide as its row.
+// The card's x and width when it does not hug its icons: a spread dock
+// spans the window less the inset on each side. null: the card is as wide
+// as its row.
 function stretchedBox(place, windowWidth, inset) {
-  if (place.panel) return { x: 0, width: windowWidth }
   if (place.align === "spread") return { x: inset, width: Math.max(0, windowWidth - 2 * inset) }
   return null
 }

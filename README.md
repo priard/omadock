@@ -195,8 +195,7 @@ Zero-CPU hardware integration for removable media and USB storage:
 
 Flexible screen placement tailored to your workflow:
 
-- **`"center"`, `"left"`, `"right"`, `"spread"`** along the bottom edge, with smooth cubic transitions. `"spread"` (Both sides) keeps the apps at the left edge and puts folders and drives at the right; it needs the panel layout or Split sections.
-- **Panel layout** (`"layout": "panel"`): a full-width bar on the bottom edge with square corners; alignment moves the icons inside it.
+- **`"center"`, `"left"`, `"right"`, `"spread"`** along the bottom edge, with smooth cubic transitions. `"spread"` (Both sides) keeps the apps at the left edge and puts folders and drives at the right; it needs Split sections.
 - **Popovers, tooltips, and menus** self-reposition so nothing clips at screen edges.
 - **Always fits the screen**: a dock that would be wider than its monitor makes room on its own, in this order: shorter labels, labels folded to their icons (closed pinned apps first), tighter spacing, smaller icons (down to half their size). Only then do items at the end of the row move into a **»** tile, which opens them in a popup (click and right click work as on the dock).
 
@@ -289,7 +288,7 @@ The settings at a glance:
 
 - **Shapes**: `Auto (Theme)`, `Rounded`, `Round (Pill)`, `Square`.
 - **Opacity**: `Auto (Theme)`, `100%`, `80%`, `65%`, `35%`, `0% (Transparent Specular)`.
-- **Placement & Alignment**: `Dock` or `Panel` layout; `Left`, `Center (Default)`, `Right`, `Both sides` along the screen edge.
+- **Placement & Alignment**: `Left`, `Center (Default)`, `Right`, `Both sides` along the screen edge.
 - **Color Presets**: Theme Auto, Pure Black, Mocha, Deep Slate, Midnight Blue, Dark Navy, Emerald Forest, Velvet Ruby.
 - **Icon Sizing**: Small (28px), Medium (36px), Large (44px), Extra Large (52px).
 - **Icon Styles**: `Original`, `Mono`, `Pixel` (coarse grid) and `Dots` (dithered dot matrix), with grid size, tint, contrast and hover-reveal controls.
@@ -453,8 +452,7 @@ Settings persist in `~/.config/omarchy/omadock.json` and are editable live:
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `alignment` | `string` | `"center"` | Dock placement along screen edge: `"center"`, `"left"`, `"right"`, `"spread"` (apps left, folders and drives right; panel layout or `splitSections` only). |
-| `layout` | `string` | `"dock"` | `"dock"` floats above the edge; `"panel"` spans the full width on the bottom edge. |
+| `alignment` | `string` | `"center"` | Dock placement along screen edge: `"center"`, `"left"`, `"right"`, `"spread"` (apps left, folders and drives right; `splitSections` only). |
 | `screen` | `string` | first monitor | Monitor for the single dock (e.g. `"DP-3"`). With `multiMonitor`, the dock on this monitor plays alert sounds. |
 | `multiMonitor` | `bool` | `false` | Runs one dock on every connected monitor. |
 | `perMonitorApps` | `bool` | `true` | With `multiMonitor`, each dock lists only the windows on its own monitor. |
@@ -577,7 +575,6 @@ Additional IPC methods available:
 - `reveal`: Force dock to slide into view.
 - `hide`: Force dock to slide out of view.
 - `setAlignment("center" | "left" | "right" | "spread")`: Change dock alignment dynamically.
-- `setLayout("dock" | "panel")`: Switch between the floating dock and the full-width panel.
 - `setPosition("bottom" | "top" | "left" | "right")`: Change dock edge position.
 - `openSettings`: Open the settings panel on the focused monitor's dock.
 - `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "about")`: Open the settings panel on a given page.
@@ -662,7 +659,6 @@ python3 -m unittest discover -s tests/unit -p 'test_*.py'
 # geometry, the marks on screen, the settings overlay's own state. Prefer the
 # suite above for anything else
 ./tests/live/ipc-roundtrip.sh   # opens the full-screen settings overlay
-./tests/live/layout.sh          # rewrites layout/alignment in the live config
 ./tests/live/config-fuzz.sh     # writes malformed configs over the live file
 
 # Live check of the running marks: opens its own windows with a terminal
@@ -706,7 +702,7 @@ qs -p /usr/share/omarchy/shell ipc call omadock restoreLast
 | `shaders/` | Hover/icon-style fragment shaders with precompiled `.qsb` bundles. |
 | `tests/unit/` | Node and Python unit suites — what CI runs on every PR. |
 | `tests/` | `smoke-test.sh` (live-shell probe) and `manifest-check.sh` (CI manifest gate). |
-| `tests/live/` | Live suites. `probe.sh` is the harness: a second Quickshell instance running this tree's `DockHost.qml` against a byte-copy of the config under a redirected HOME, off screen (autohide, `exclusiveZone: 0`), re-checking the owner's config md5 and shell PID at exit - and `probe_start` returns only once the dock has applied the config copy, so a suite's first read never races the load. Nothing is restarted and nothing is clicked. `presets.sh`, `teardown.sh` (a session leaves no process or directory behind) and `label-metrics.sh` (the shortening search survives its metrics being destroyed, via `PROBE_BODY`) run on it and are the non-intrusive ones; `ipc-roundtrip.sh`, `layout.sh` and `config-fuzz.sh` are marked INTRUSIVE because they drive the dock on this desktop and write the live config (see the note at the top of each). |
+| `tests/live/` | Live suites. `probe.sh` is the harness: a second Quickshell instance running this tree's `DockHost.qml` against a byte-copy of the config under a redirected HOME, off screen (autohide, `exclusiveZone: 0`), re-checking the owner's config md5 and shell PID at exit - and `probe_start` returns only once the dock has applied the config copy, so a suite's first read never races the load. Nothing is restarted and nothing is clicked. `teardown.sh` (a session leaves no process or directory behind) and `label-metrics.sh` (the shortening search survives its metrics being destroyed, via `PROBE_BODY`) run on it and are the non-intrusive ones; `ipc-roundtrip.sh` and `config-fuzz.sh` are marked INTRUSIVE because they drive the dock on this desktop and write the live config (see the note at the top of each). |
 | `assets/` | README imagery. |
 | `.github/workflows/ci.yml` | CI: test suites, QML syntax gate, manifest schema. |
 

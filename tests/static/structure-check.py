@@ -41,7 +41,6 @@ SHELL_CEILINGS = {
     "tests/live/probe.sh": 328,
     "tests/live/place-restore.sh": 250,
     "tests/live/teardown.sh": 125,
-    "tests/live/layout.sh": 115,
     "tests/live/ipc-roundtrip.sh": 115,
     "tests/live/label-metrics.sh": 110,
     "tests/live/config-fuzz.sh": 84,

@@ -8,7 +8,7 @@
 # in place, and it exercises the code the running dock LOADED - not this tree,
 # because the launcher runs Quickshell with QS_DISABLE_FILE_WATCHER=1. It is
 # kept for the wiring only a real dock can show: the settings panel's open and
-# page state, setLayout/setAlignment, and itemGeometry of the live items.
+# page state, setAlignment, and itemGeometry of the live items.
 #
 # Anything else belongs in a suite built on tests/live/probe.sh, which runs the
 # plugin's own DockHost.qml in a second Quickshell instance against a copy of
@@ -45,14 +45,9 @@ ipc reveal; sleep 0.5
 align=$(python3 -c "import json; print(json.load(open('$CFG')).get('alignment', 'center'))")
 ipc setAlignment "$align"; sleep 0.5
 
-layout=$(python3 -c "import json; print(json.load(open('$CFG')).get('layout', 'dock'))")
-ipc setLayout panel; sleep 0.5
-[ "$(st layout)" = panel ] || fail "setLayout panel"
 ipc setAlignment spread; sleep 0.5
-[ "$(st align)" = spread ] || [ "$(st align)" = left ] || fail "setAlignment spread in panel"
-ipc setLayout bogus; sleep 0.5
-[ "$(st layout)" = dock ] || fail "setLayout bogus -> dock"
-ipc setLayout "$layout"; ipc setAlignment "$align"; sleep 0.5
+[ "$(st align)" = spread ] || [ "$(st align)" = left ] || [ "$(st align)" = center ] || fail "setAlignment spread"
+ipc setAlignment "$align"; sleep 0.5
 
 ipc itemGeometry | python3 -c "import json,sys; assert len(json.load(sys.stdin)) > 0" || fail "itemGeometry empty"
 bash tests/smoke-test.sh >/dev/null || fail "smoke test"

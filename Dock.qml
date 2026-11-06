@@ -385,7 +385,6 @@ Item {
     : root.autoRoundedRadius
   readonly property int effectiveCardRadius: {
     var h = root.cardRadiusHeight
-    if (root.placement.panel) return 0
     if (root.dockShape === "round" || root.dockShape === "pill") return Math.round(h / 2)
     if (root.dockShape === "square") return 0
     if (root.dockShape === "theme" || root.dockShape === "auto") {
@@ -636,14 +635,11 @@ Item {
   // ------------------------------------------------- configuration options
 
   property string alignment: "center" // "center" | "left" | "right" | "spread"
-  property string layout: "dock"      // "dock" | "panel" (DockLayout.js)
-  // What the dock draws: { panel, split, align } (DockLayout.placement).
-  readonly property var placement: DockLayout.placement(root.layout, root.alignment, root.splitSections, root.folderSlots + root.driveSlots > 0)
-  // Margin between the card and the screen edge; the panel sits on it.
-  readonly property real edgeGap: root.placement.panel ? 0 : Style.gapsOut
-  // The shell's own gap to the screen edge (Hyprland's gaps_out / 2), 0 on a
-  // desktop that runs edge to edge. Read-only, reported by `state` so the live
-  // tests can tell what the panel had to gain over the dock.
+  // What the dock draws: { split, align } (DockLayout.placement).
+  readonly property var placement: DockLayout.placement(root.alignment, root.splitSections, root.folderSlots + root.driveSlots > 0)
+  // Margin between the card and the screen edge: the shell's own gap
+  // (Hyprland's gaps_out / 2), 0 on a desktop that runs edge to edge.
+  readonly property real edgeGap: Style.gapsOut
   readonly property real outerGap: Style.gapsOut
 
   property bool autohide: true
@@ -1221,7 +1217,6 @@ Item {
   function ejectDrive(dev, mountpoint, name) { return folderLogic.ejectDrive(root, dev, mountpoint, name) }
   function setDockAlignment(align) { return stateLogic.setDockAlignment(root, align) }
   function setDockPosition(pos) { return stateLogic.setDockPosition(root, pos) }
-  function setDockLayout(l) { return stateLogic.setDockLayout(root, l) }
 
   function openAppGroup(gdata, cx, cy) { return groupsLogic.openAppGroup(root, gdata, cx, cy) }
 
