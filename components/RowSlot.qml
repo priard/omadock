@@ -105,6 +105,7 @@ Item {
   Component.onCompleted: {
     slot._start(0)
     Qt.callLater(function() {
+      if (typeof slot._start !== "function") return  // destroyed before the deferred call ran
       var h = slot._handIn
       if (h && slot.fresh && slot.wanted) {
         slot._base = slot.lift.handBase(slot.liftKey)
