@@ -254,7 +254,7 @@ Right-click the Omarchy logo or empty dock space to access deep customization.
 
 ### Settings Panel
 
-Right-clicking either one opens the full settings panel directly: a sidebar with *Appearance*, *Icons*, *Motion & Effects*, *Behavior*, *Placement*, *Folders*, *App Groups*, *Presets* and *About*, with switches, sliders and dropdowns for every option. A fuzzy search box at the top of the sidebar finds any setting by name or synonym (typos included — `pixl` reaches the pixel icon style) and picking a hit jumps to and highlights that setting's row. Changes apply live, so the dock underneath previews them. Close it with <kbd>Esc</kbd>, the close button, or a click outside. The panel can also be opened from a keybind: `omarchy-shell omadock openSettings`.
+Right-clicking either one opens the full settings panel directly: a sidebar with *Appearance*, *Icons*, *Motion & Effects*, *Behavior*, *Placement*, *Folders*, *App Groups* and *About*, with switches, sliders and dropdowns for every option. A fuzzy search box at the top of the sidebar finds any setting by name or synonym (typos included — `pixl` reaches the pixel icon style) and picking a hit jumps to and highlights that setting's row. Changes apply live, so the dock underneath previews them. Close it with <kbd>Esc</kbd>, the close button, or a click outside. The panel can also be opened from a keybind: `omarchy-shell omadock openSettings`.
 
 The settings at a glance:
 
@@ -276,13 +276,13 @@ The settings at a glance:
       <th align="center" width="25%">Placement</th>
       <th align="center" width="25%">Folders</th>
       <th align="center" width="25%">App Groups</th>
-      <th align="center" width="25%">Presets</th>
+      <th align="center" width="25%"></th>
     </tr>
     <tr>
       <td align="center" valign="top"><img src="assets/preview-settings-5.png" width="200" alt="Placement settings page" /></td>
       <td align="center" valign="top"><img src="assets/preview-settings-6.png" width="200" alt="Folders settings page" /></td>
       <td align="center" valign="top"><img src="assets/preview-settings-7.png" width="200" alt="App Groups settings page" /></td>
-      <td align="center" valign="top"><img src="assets/preview-settings-8.png" width="200" alt="Presets settings page" /></td>
+      <td></td>
     </tr>
   </table>
 </div>
@@ -340,38 +340,6 @@ The dock follows your Omarchy theme's palette and wallpaper — three of the twe
 </div>
 
 ---
-
-### Presets
-
-*Settings → Presets* saves the current look (background, effects, border, dividers, icons, size and spacing) as a named preset, up to six, each with a small live thumbnail. Apply, update, rename or delete them there, or switch from the dock's right-click menu (*Presets ›*). Presets are kept in `omadock.json` under `presets`. A keybind can apply one by name:
-
-```bash
-omarchy-shell omadock applyPreset "Night"
-```
-
-### Shipped looks
-
-Seven looks ride with the dock and sit ahead of the presets you save — a fresh install with no `omadock.json` still offers every one of them. A shipped look and a saved preset can never appear as two rows under one name: the list carries a name once, and where they collide the preset you saved keeps it (it is the row you can rename, update or delete), so the shipped look of that name sits that one out rather than the other way round. They are read-only (no Update or Delete, and the name cannot be edited), so removing your own presets never removes them. `DockPresets.js` holds the definitions; the shipped keys are the ones that differ from the defaults, and every other key is filled from `DockModel.DEFAULT_LOOK` when the list is built, so a look key added later cannot leak the value the dock happens to hold.
-
-| Preset | The look | Built from |
-| :--- | :--- | :--- |
-| `thepathless:ristretto` | Dot-matrix icons on a Forest gradient with film grain, long custom dividers, the Glitch hover, and no rim or shadow | The maintainer's own dock |
-| `Glass` | Aurora gradient fill with grain, a rim that stays visible over it, long theme-coloured dividers and the Lift hover | [#13](https://github.com/thepathless/omadock/pull/13), [#45](https://github.com/thepathless/omadock/pull/45), [#17](https://github.com/thepathless/omadock/pull/17), [#19](https://github.com/thepathless/omadock/pull/19) by [@priard](https://github.com/priard) |
-| `Pixel` | Pixel icons on a B/W tint with a coarse grid and the tone controls that keep a poster-like icon readable | [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
-| `Mono` | The transparent dock — icons only, no card, rim or panel — in monochrome with the accent tint and the Glow hover | [#12](https://github.com/thepathless/omadock/pull/12), [#13](https://github.com/thepathless/omadock/pull/13), [#19](https://github.com/thepathless/omadock/pull/19) by [@priard](https://github.com/priard) |
-| `Panels` | Split sections: one panel per dock section over a quiet Mono gradient, with a pixel-snapped gap | [#14](https://github.com/thepathless/omadock/pull/14) and [#13](https://github.com/thepathless/omadock/pull/13) by [@priard](https://github.com/priard) |
-| `Nameplates` | Names always on, joined to their icon by a plate, with the window marks in the upright column beside the name | [#47](https://github.com/thepathless/omadock/pull/47) by [@priard](https://github.com/priard) |
-| `Silkscreen` | The same names in the bundled Silkscreen pixel font — small, on a pill, drawn with the outline that reads on any fill | [#47](https://github.com/thepathless/omadock/pull/47) by [@priard](https://github.com/priard) |
-
-The same list is scriptable end to end — list it, save the look on screen under a chosen name, remove one by id:
-
-```bash
-omarchy-shell omadock presets                       # [{"id":"…","name":"…","active":true,"builtin":false}]
-omarchy-shell omadock savePreset "Night"           # -> the new preset's id
-omarchy-shell omadock deletePreset <id>             # -> ok | not found
-```
-
-A name that is already taken — by one of your presets or by a shipped look — falls back to `Preset 1`, `Preset 2` and so on, so the call still returns an id. When you save a copy of a shipped look under a name of your own, the row you saved is the one marked `active`; the shipped row answers only when no preset of yours matches the look on screen.
 
 ## Controls Reference
 
@@ -612,12 +580,8 @@ Additional IPC methods available:
 - `setLayout("dock" | "panel")`: Switch between the floating dock and the full-width panel.
 - `setPosition("bottom" | "top" | "left" | "right")`: Change dock edge position.
 - `openSettings`: Open the settings panel on the focused monitor's dock.
-- `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "presets" | "about")`: Open the settings panel on a given page.
+- `openSettingsPage("appearance" | "icons" | "motion" | "behavior" | "placement" | "folders" | "groups" | "about")`: Open the settings panel on a given page.
 - `closeSettings`: Close the settings panel.
-- `applyPreset("<name>")`: Apply a saved appearance preset by name; returns `ok` or `not found`.
-- `presets()`: JSON list of every preset the dock holds — the shipped looks and the saved ones — each with `active` set on the one the look on screen matches, and `builtin: true` on a look that ships with the dock.
-- `savePreset("<name>")`: Save the look the dock has right now as a preset; returns its id, or an empty string when six are already saved. Shipped looks do not count against those six.
-- `deletePreset("<id>")`: Remove one saved preset; returns `ok` or `not found` (a shipped look is never removable).
 
 > [!NOTE]
 > The `-p /usr/share/omarchy/shell` flag is mandatory to target the active Omarchy system shell instance.
@@ -664,7 +628,7 @@ omarchy plugin validate ~/Projects/omadock
 ./tests/manifest-check.sh .
 
 # Test suites (Node: model, perf, hardening, marks and DockModel behaviour; Python: script helpers, drop check, the QML rules and the CappedFileView read gate)
-for f in DockModel.js DockLabels.js DockLayout.js DockMarks.js DockMarkGeometry.js DockPresets.js DockIcons.js DockOutput.js DockMotion.js DockKeys.js DockFit.js; do node --check "$f"; done
+for f in DockModel.js DockLabels.js DockLayout.js DockMarks.js DockMarkGeometry.js DockIcons.js DockOutput.js DockMotion.js DockKeys.js DockFit.js; do node --check "$f"; done
 node --test tests/unit/*.test.js tests/unit/*.test.mjs
 python3 -m unittest discover -s tests/unit -p 'test_*.py'
 
@@ -678,7 +642,6 @@ python3 -m unittest discover -s tests/unit -p 'test_*.py'
 # it loaded). PROBE_CFG_SRC=<file> copies another config in, e.g. a
 # fresh-install one; PROBE_BODY=<file> replaces the body of the probe's
 # ShellRoot with a fixture that reaches inside the dock
-./tests/live/presets.sh
 
 # A session must leave nothing behind: three fresh probe sessions are started
 # and stopped, then their helpers and scratch directories are counted. A dock

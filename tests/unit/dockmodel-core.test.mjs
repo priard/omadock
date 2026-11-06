@@ -1,5 +1,5 @@
 // Behaviour of DockModel.js that the dock relies on (pinning, grouping,
-// app matching, presets). DOCKMODEL overrides the file under test.
+// app matching). DOCKMODEL overrides the file under test.
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
@@ -128,36 +128,6 @@ test("readCapped counts bytes, not characters", () => {
   assert.equal(M.readCapped("abcd", 3), "")
 })
 
-test("cleanPresetName strips bidi/control characters and caps length", () => {
-  assert.equal(M.cleanPresetName("  a\u202eb\u0007  "), "ab")
-  assert.equal(M.cleanPresetName("x".repeat(100)).length, 40)
-})
-
-test("pickLook keeps look keys only, scalars, capped strings", () => {
-  const look = plain(M.pickLook({ bgColor: "x".repeat(100), foo: 1, iconSize: Infinity, shape: { a: 1 } }))
-  assert.equal(look.bgColor.length, 64)
-  assert.ok(!("foo" in look))
-  assert.equal(look.shape, "rounded")
-  assert.equal(look.iconSize, 0)
-  assert.equal(look.cornerRadius, -1)
-})
-
-test("every look key has a default, and pickLook fills the missing ones", () => {
-  assert.deepEqual(Object.keys(M.DEFAULT_LOOK).sort(), [...M.LOOK_KEYS].sort())
-  const look = plain(M.pickLook({ iconStyle: "dots" }))
-  assert.equal(look.iconStyle, "dots")
-  for (const k of M.LOOK_KEYS) if (k !== "iconStyle") assert.deepEqual(look[k], M.DEFAULT_LOOK[k], k)
-})
-
-test("boundPresets validates ids, drops duplicates, caps at six", () => {
-  const list = [{ id: "a", name: "A", look: {} }, { id: "a", name: "dup", look: {} }, { id: "bad id", name: "B", look: {} },
-    { id: "c", name: "", look: {} }, { id: "d", name: "D", look: [] }]
-  for (let i = 0; i < 10; i++) list.push({ id: "p" + i, name: "P" + i, look: {} })
-  const out = plain(M.boundPresets(list))
-  assert.equal(out.length, 6)
-  assert.deepEqual(out.slice(0, 2).map((p) => p.id), ["a", "p0"])
-})
-
 test("entryFor ignores the directories of an absolute Icon= path (issue #66)", () => {
   // An AppImage's Icon= is an absolute path; its directory names used to match
   // the web app id's "home" token, so the result depended on row order.
@@ -168,7 +138,3 @@ test("entryFor ignores the directories of an absolute Icon= path (issue #66)", (
   assert.equal(M.entryFor([drive, photo], id).name, "Drive")
 })
 
-test("lookIncludes compares only the preset's keys", () => {
-  assert.equal(M.lookIncludes({ grain: true, iconSize: 48 }, { grain: true }), true)
-  assert.equal(M.lookIncludes({ grain: false }, { grain: true }), false)
-})

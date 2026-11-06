@@ -165,9 +165,4 @@ QtObject {
     root.pendingNoWarpActions = root.pendingNoWarpActions.concat([action])
     if (!root.noWarpProcRef.running) root.noWarpProcRef.running = true
   }
-
-  function applyPresetAfterMenu(root, id) {
-    root.menuPresetTimerRef.presetId = id
-    root.menuPresetTimerRef.restart()
-  }
 }

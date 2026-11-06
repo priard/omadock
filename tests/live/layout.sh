@@ -10,7 +10,7 @@
 # LOADED, not this tree - the launcher sets QS_DISABLE_FILE_WATCHER=1. It
 # needs a dock that is really on screen, which is why it is not on
 # tests/live/probe.sh; everything that does not can run there instead (see
-# tests/live/presets.sh).
+# tests/live/probe.sh).
 #
 # The vertical difference between the two layouts is the shell's outer gap
 # (Style.gapsOut, Hyprland's gaps_out / 2), which the dock's `state` reports:

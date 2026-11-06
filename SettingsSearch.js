@@ -115,7 +115,6 @@ var SETTINGS_SEARCH = [
   { key: "folderColor", page: "folders", label: "Folder color", terms: ["folder", "colour", "yaru"] },
   { key: "groupStyle", page: "groups", label: "Tile style", terms: ["group", "tile", "frame"] },
   { key: "groupIconEffects", page: "groups", label: "Icon style", terms: ["group", "icons"] },
-  { key: "presets", page: "presets", label: "Presets", terms: ["preset", "look", "save", "restore"] },
   { key: "updateChannel", page: "about", label: "Update channel", terms: ["update", "stable", "experimental", "switch"] }
 ]
 

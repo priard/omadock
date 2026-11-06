@@ -173,7 +173,6 @@ Item {
   readonly property var themeIconsFileRef: themeIconsFile
   readonly property var debounceOverlapTimerRef: debounceOverlapTimer
   readonly property var hideTimerRef: hideTimer
-  readonly property var menuPresetTimerRef: menuPresetTimer
   readonly property var noWarpProcRef: noWarpProc
   readonly property var notificationBadgeTimerRef: notificationBadgeTimer
   readonly property var revealHoverRef: revealHover
@@ -1585,7 +1584,9 @@ Item {
 
   function applyLook(parsed) { configLogic.applyLook(root, parsed) }
 
-  function loadConfig() { configLogic.loadConfig(root, configFile.text) }
+  // Set once the config has been read and applied (the live tests' gate).
+  property bool configApplied: false
+  function loadConfig() { configLogic.loadConfig(root, configFile.text); root.configApplied = true }
 
   function rescanApps() { return contextLogic.rescanApps(root) }
 
@@ -1964,53 +1965,9 @@ Item {
 
   function buildConfig(base) { return configLogic.buildConfig(root, base) }
 
-  // The current look as a preset stores it.
-  readonly property var currentLook: DockModel.pickLook(root.buildConfig({}))
-
   function saveConfig() { return persistLogic.saveConfig(root) }
 
-  // ------------------------------------------------- appearance presets
-  // Named copies of the look (DockModel.LOOK_KEYS), at most six, kept in the
-  // config. Applying one goes through applyLook, like loading the config.
-  property var presets: []
-  readonly property bool canSavePreset: configLogic.savedCount(root) < DockModel.MAX_PRESETS
-  // Which row is the active preset; DockPresets.activeId picks it.
-  readonly property string activePresetId: configLogic.activePresetId(root)
-
-  function presetIndex(id) { return configLogic.presetIndex(root, id) }
-
-  function presetIdByName(name) { return configLogic.presetIdByName(root, name) }
-
   function itemGeometry() { return contextLogic.itemGeometry(root) }
-
-  function presetNameTaken(name, exceptId) { return configLogic.presetNameTaken(root, name, exceptId) }
-
-  function nextPresetName() { return configLogic.nextPresetName(root) }
-
-  function replacePreset(i, preset) { configLogic.replacePreset(root, i, preset) }
-
-  function savePreset(name) { return configLogic.savePreset(root, name) }
-
-  function renamePreset(id, name) { return configLogic.renamePreset(root, id, name) }
-
-  function updatePreset(id) { return configLogic.updatePreset(root, id) }
-
-  function deletePreset(id) { return configLogic.deletePreset(root, id) }
-
-  // The context menu is a layer popup that Hyprland fades out over ~200 ms.
-  // Restyling the dock under it (a border changes the card height and the
-  // popup's anchor) makes the fading menu jump over the new look, so a pick
-  // from the menu waits until the fade is over.
-  Timer {
-    id: menuPresetTimer
-    property string presetId: ""
-    interval: 250
-    onTriggered: root.applyPreset(presetId)
-  }
-
-  function applyPresetAfterMenu(id) { return stateLogic.applyPresetAfterMenu(root, id) }
-
-  function applyPreset(id) { return configLogic.applyPreset(root, id) }
 
   function activate(appId) { return windowLogic.activate(root, appId) }
 

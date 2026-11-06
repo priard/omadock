@@ -22,19 +22,6 @@ PanelWindow {
   // Id of the app group whose name is being edited; Esc then cancels the
   // edit instead of closing the panel.
   property string editingGroupId: ""
-  property string editingPresetId: ""
-  property string confirmDeletePresetId: ""
-  // The row of a just-saved preset opens its name for editing.
-  signal presetEditRequested(string id)
-  function startPresetEdit(id) { panel.presetEditRequested(id) }
-  // Leaves a preset rename without saving it. Called before any action that
-  // rebuilds the preset rows, which would drop the field but not the state
-  // (and the Escape shortcut stays off while a rename is open).
-  function endPresetEdit() {
-    if (panel.editingPresetId === "") return
-    panel.editingPresetId = ""
-    keyCatcher.forceActiveFocus()
-  }
 
   // Update channel as reported by `omadock-switch status`; probed on open.
   property string channel: ""
@@ -46,7 +33,7 @@ PanelWindow {
   property int currentBlurSize: 0
 
   // Categories in sidebar order. Page ids are also the IPC names
-  // (openSettingsPage), so "presets" and "about" keep their ids.
+  // (openSettingsPage), so "about" keeps its id.
   readonly property var pages: [
     { id: "appearance", label: "Appearance", glyph: "󰏘" },
     { id: "labels", label: "Labels", glyph: "󰓹" },
@@ -56,7 +43,6 @@ PanelWindow {
     { id: "placement", label: "Placement", glyph: "󰍹" },
     { id: "folders", label: "Folders", glyph: "󰉋" },
     { id: "groups", label: "App Groups", glyph: "󰀻" },
-    { id: "presets", label: "Presets", glyph: "󰆓" },
     { id: "about", label: "About", glyph: "󰋼" }
   ]
 
@@ -243,7 +229,7 @@ PanelWindow {
   Shortcut {
     sequence: "Escape"
     context: Qt.WindowShortcut
-    enabled: panel.editingGroupId === "" && panel.editingPresetId === ""
+    enabled: panel.editingGroupId === ""
     onActivated: panel.close()
   }
 
@@ -260,13 +246,12 @@ PanelWindow {
     radius: Style.cornerRadius
 
     // Swallow clicks so they never reach the scrim. A click on empty space
-    // also cancels a group or preset rename, since it would not move focus
+    // also cancels a group rename, since it would not move focus
     // by itself.
     MouseArea {
       anchors.fill: parent
       acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
       onPressed: {
-        panel.endPresetEdit()
         if (panel.editingGroupId === "") return
         panel.editingGroupId = ""
         keyCatcher.forceActiveFocus()
@@ -564,12 +549,6 @@ PanelWindow {
             root: panel.root
             panel: panel
             visible: panel.page === "groups"
-          }
-
-          SettingsPresets {
-            root: panel.root
-            panel: panel
-            visible: panel.page === "presets"
           }
 
           SettingsAbout {

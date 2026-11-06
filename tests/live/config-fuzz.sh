@@ -8,7 +8,7 @@
 # It copies malformed configs over the LIVE omadock.json one at a time (each
 # backed up and restored) and it exercises the code the running dock LOADED,
 # not this tree. A case that only needs the dock to read a config file runs on
-# tests/live/probe.sh instead, against a copy (see tests/live/presets.sh).
+# tests/live/probe.sh instead, against a copy (see tests/live/probe.sh).
 set -u
 cd "$(dirname "$0")/../.."
 . tests/live/common.sh

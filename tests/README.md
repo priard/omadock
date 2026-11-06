@@ -14,7 +14,7 @@ Touches nothing outside temporary directories.
 |---|---|
 | `unit/dockmodel.test.mjs` | regression tests for the hardening fixes: real arrays only, malformed config not overwritten, blur/sound/folder bounds, dropped paths |
 | `unit/model.test.js`, `unit/test_helpers.py`, `manifest-check.sh` | the upstream author's tests and manifest gate, also run by upstream CI |
-| `unit/dockmodel-core.test.mjs` | pinning, grouping, app matching, notification domains, presets and look bounds |
+| `unit/dockmodel-core.test.mjs` | pinning, grouping, app matching, notification domains and bounds |
 | `unit/test_list_folder.py` | stack listing: sorting, limits, hidden files, non-UTF-8 names, preview whitelist, 20 000 entry budget |
 | `unit/test_list_drives.py` | drive listing from lsblk JSON: skips, nesting, dedupe, icons, label cleanup |
 | `unit/test_eject_drive.py` | eject fallback order, missing tools, notification text sanitised |

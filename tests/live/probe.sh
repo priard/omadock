@@ -14,7 +14,7 @@
 #
 #   . tests/live/probe.sh
 #   probe_start || exit 1
-#   probe_ipc presets                     # IPC against the probe instance
+#   probe_ipc state                       # IPC against the probe instance
 #   probe_cfg                             # the probe's own config copy
 #   probe_cleanup                         # kill, remove, re-check the owner
 #
@@ -46,7 +46,7 @@
 # on a surviving process or scratch directory (tests/live/teardown.sh keeps it).
 #
 # Functions: probe_start, probe_ipc, probe_cfg, probe_ready, probe_wait_cfg,
-#            probe_wait_presets, probe_log, probe_log_tail, probe_pids,
+#            probe_log, probe_log_tail, probe_pids,
 #            probe_descendants, probe_pgid, probe_group_pids, probe_cmdlines,
 #            probe_stop, probe_cleanup.
 
@@ -127,16 +127,13 @@ probe_cmdlines() {
   echo $out
 }
 
-# 1 when the dock has applied its config copy: its preset listing is not empty
-# (DockConfigLogic.qml:120 is that list's only writer, and a merge always yields
-# the shipped looks, so an empty listing means the file is not read yet). A
-# first read before it lands sees no preset at all - measured 1 session in 8 -
-# which is what made presets.sh fail intermittently; probe_start waits on this
-# so no call site has to wait on its own.
+# 1 when the dock has applied its config copy (state().configApplied, set by
+# Dock.loadConfig). A first read before it lands raced the suites - measured
+# 1 session in 8 - so probe_start waits on this and no call site has to.
 probe_ready() {
-  probe_ipc presets 2>/dev/null | python3 -c 'import json,sys
+  probe_ipc state 2>/dev/null | python3 -c 'import json,sys
 d = json.load(sys.stdin)
-sys.exit(0 if isinstance(d, list) and d else 1)' 2>/dev/null
+sys.exit(0 if isinstance(d, dict) and d.get("configApplied") is True else 1)' 2>/dev/null
 }
 
 # Start the probe. 0 on success; on failure the log tail is printed and the
@@ -199,7 +196,7 @@ PY
 }
 
 # An IPC call against the probe, arguments passed through literally (the
-# endpoint takes names, not JSON - `applyPreset "Nameplates"`, never the id).
+# endpoint takes names, not JSON - `openSettingsPage about`).
 probe_ipc() { qs -p "$PROBE_DIR" ipc call omadock "$@"; }
 
 # The probe's config copy: the only file a live test may assert on or mutate.
@@ -208,7 +205,7 @@ probe_cfg() { echo "$PROBE_DIR/home/.config/omarchy/omadock.json"; }
 # Wait (up to ~8s) until a python predicate on the config copy holds: argv[1] is
 # the program, the config path is argv[2] and further arguments follow; it exits
 # non-zero while the dock has not written the file. Pacing only - the caller
-# keeps the assertion that explains a real failure (see probe_wait_presets).
+# keeps the assertion that explains a real failure .
 probe_wait_cfg() {
   local prog=$1 i
   shift
@@ -217,20 +214,6 @@ probe_wait_cfg() {
     sleep 0.2
   done
   return 1
-}
-
-# Wait until the presets in the config copy satisfy one condition: every id
-# given is present (`probe_wait_presets in <id>...`) or every id is absent
-# (`out <id>...`). A save or delete lands a moment after the IPC call returns.
-probe_wait_presets() {
-  local want=$1
-  shift
-  probe_wait_cfg 'import json,sys
-c = json.load(open(sys.argv[1]))
-ids = [p["id"] for p in c.get("presets") or []]
-hits = [i for i in sys.argv[3:] if i in ids]
-ok = hits == sys.argv[3:] if sys.argv[2] == "in" else not hits
-sys.exit(0 if ok else 1)' "$want" "$@"
 }
 
 probe_log() { echo "$PROBE_DIR/probe.log"; }

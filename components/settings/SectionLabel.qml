@@ -8,8 +8,8 @@ import "../strings"
 
 Text {
   id: sectionLabel
-  // Search key, as on SettingRow: lets a whole section ("Folder color",
-  // "Presets") be a search target even though it has no control row.
+  // Search key, as on SettingRow: lets a whole section ("Folder color")
+  // be a search target even though it has no control row.
   property string key: ""
   // Set by SettingsPanel while this section is the picked search target.
   property bool highlighted: false

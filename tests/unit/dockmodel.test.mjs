@@ -140,7 +140,7 @@ test("searchSettings: exact label outranks a synonym", () => {
 
 test("searchSettings: every hit names a page for the jump", () => {
   for (const hit of M.searchSettings("icon"))
-    assert.ok(["appearance", "icons", "motion", "behavior", "placement", "folders", "groups", "presets", "about"].includes(hit.page))
+    assert.ok(["appearance", "icons", "motion", "behavior", "placement", "folders", "groups", "about"].includes(hit.page))
 })
 
 test("searchSettings: garbage queries return nothing", () => {
@@ -172,29 +172,6 @@ test("every search key registers exactly one settings row", () => {
 test("the settings module keeps no retired page ids", () => {
   assert.ok(!settingsSources.includes('panel.page === "effects"'))
   assert.ok(!settingsSources.includes('panel.page === "size"'))
-})
-
-test("pickLook carries the label look keys, labels on or off, but not names", () => {
-  const look = plain(M.pickLook({
-    labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
-    labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
-    labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock", labelPinned: "running",
-    labelMode: "hover", labelKind: "apps", labelNames: { a: "A" }
-  }))
-  const want = {
-    labelFont: "pixel", labelSize: "large", labelColor: "accent", labelBackground: "plate",
-    labelReveal: "scramble", labelEffect: "glow", labelMaxWidth: 180,
-    labelWeight: "bold", labelShape: "square", labelIndicators: "after", labelPlateHeight: "dock", labelPinned: "running",
-    labelMode: "hover", labelKind: "apps"
-  }
-  for (const k in want) assert.equal(look[k], want[k], k)
-  assert.ok(!("labelNames" in look))
-})
-
-test("a preset from before labels turns them off", () => {
-  const look = plain(M.pickLook({ iconStyle: "dots" }))
-  assert.equal(look.labelMode, "off")
-  assert.equal(look.labelBackground, "none")
 })
 
 test("settings search finds the labels page", () => {

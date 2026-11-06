@@ -16,7 +16,7 @@
 # a test instead of accumulating.
 #
 # Non-intrusive: the sessions are the same hidden second instance
-# tests/live/presets.sh uses - this tree's DockHost.qml against a byte-copy of
+# tests/live/probe.sh uses - this tree's DockHost.qml against a byte-copy of
 # the config under a redirected HOME, autohide on, exclusiveZone 0. Nothing is
 # shown on screen and the owner's own config is only read.
 #

@@ -137,7 +137,6 @@ Item {
             dividerGeometry: d.dividerGeometry,
             dividerStyle: d.dividerStyle,
             hoverEffect: d.hoverEffect,
-            activePresetId: d.activePresetId,
             terminalHosts: d.terminalHosts,
             terminalApps: d.terminalApps,
             notificationBadges: d.notificationBadges,
@@ -216,41 +215,6 @@ Item {
       if (d.length > 0) d[0].setDockPosition(pos)
     }
 
-    // Applies a saved appearance preset by name, ignoring case.
-    function applyPreset(name: string): string {
-      var d = host.orderedDocks()
-      if (d.length === 0) return "not found"
-      var id = d[0].presetIdByName(String(name))
-      return (id !== "" && d[0].applyPreset(id)) ? "ok" : "not found"
-    }
-
-    // The preset list, read-only: every preset the dock holds and which of
-    // them the look on screen matches right now. `builtin: true` marks a look
-    // that ships with the dock (DockPresets.js) rather than one saved in
-    // omadock.json; shipped presets cannot be renamed, updated or removed.
-    function presets(): string {
-      var d = host.orderedDocks()
-      if (d.length === 0) return "[]"
-      var active = d[0].activePresetId
-      return JSON.stringify((d[0].presets || []).map(function(p) {
-        return { id: p.id, name: p.name, active: p.id === active, builtin: p.builtin === true }
-      }))
-    }
-
-    // Saves the look the dock has right now ("Save current look") under a
-    // name; returns the new preset's id, or "" when six are already saved.
-    function savePreset(name: string): string {
-      var d = host.orderedDocks()
-      return d.length > 0 ? String(d[0].savePreset(String(name))) : ""
-    }
-
-    // Removes one preset: "ok", or "not found" when no preset has that id.
-    function deletePreset(id: string): string {
-      var d = host.orderedDocks()
-      if (d.length === 0) return "not found"
-      return d[0].deletePreset(String(id)) ? "ok" : "not found"
-    }
-
     // Read-only: item rectangles of the focused monitor's dock (window
     // coordinates), used by tests/bench/bench.py and the live tests.
     function itemGeometry(): string {
@@ -266,7 +230,7 @@ Item {
         visible: d[0].dockVisible,
         settingsOpen: d[0].settingsPanelOpen,
         settingsPage: d[0].settingsPanelPage,
-        activePreset: d[0].activePresetId || "",
+        configApplied: d[0].configApplied,
         layout: d[0].layout,
         align: d[0].placement.align,
         gapsOut: d[0].outerGap,

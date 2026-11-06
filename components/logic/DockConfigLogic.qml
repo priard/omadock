@@ -1,22 +1,19 @@
 import QtQuick
-import "../strings"
 import "../../DockModel.js" as DockModel
-import "../../DockPresets.js" as DockPresets
 import "../../Buttons.js" as Buttons
 import "../../DockLabels.js" as DockLabels
 import "../../DockLayout.js" as DockLayout
 import "../../DockMotion.js" as DockMotion
 import "../../DockFloating.js" as DockFloating
 
-// Config and preset logic, extracted from Dock.qml so the root file only
+// Config logic, extracted from Dock.qml so the root file only
 // declares state and wiring. Every function is stateless: the dock root is
 // passed in and owns all state. Bodies are transcribed from Dock.qml — the
 // behavior contract is the unit tests plus the live smoke test.
 
 QtObject {
   // ------------------------------------------------------- the look
-  // The look: every value a preset holds, parsed and clamped exactly as the
-  // config file is. Used when the config loads and when a preset applies.
+  // The look, parsed and clamped from the config file.
   // Sets properties only; callers save and update the blur rule.
   function applyLook(root, parsed) {
     // Migrates the old boolean: an explicit magnification:false meant no growth.
@@ -24,7 +21,7 @@ QtObject {
       ? parsed.hoverEffect
       : ((parsed && parsed.magnification === false) ? "off" : "zoom")
     root.launchBounce = parsed && parsed.launchBounce !== false
-    // Label looks (a preset's, or the file's before readLabelConfig runs).
+    // Label looks (the file's, before readLabelConfig runs).
     var labelLook = DockLabels.pickLabelLook(parsed, root)
     for (var llk in labelLook) root[llk] = labelLook[llk]
     root.configuredIconSize = parsed && typeof parsed.iconSize === "number" && isFinite(parsed.iconSize) && parsed.iconSize > 0
@@ -118,9 +115,6 @@ QtObject {
     } else {
       root.appGroups = []
     }
-    // The shipped looks lead the list, then whatever the user saved: a fresh
-    // install has no config at all and still offers every shipped preset.
-    root.presets = DockPresets.merge(parsed ? DockModel.boundPresets(parsed.presets) : [], DockModel.pickLook)
     root.autohide = parsed && parsed.autohide !== false
     root.intelligentAutohide = parsed && parsed.intelligentAutohide !== false
     root.showAppsButton = parsed && parsed.showAppsButton !== false
@@ -263,120 +257,6 @@ QtObject {
     conf.wheelStepDelay = root.wheelStepDelay
     conf.pinnedFolders = DockModel.boundPinnedFolders(root.pinnedFolders)
     conf.pinnedButtons = Buttons.boundPinnedButtons(root.pinnedButtons)
-    // Only the saved presets reach the file: a shipped look is code, not state.
-    conf.presets = DockModel.boundPresets(DockPresets.userOnly(root.presets))
     return conf
-  }
-
-  // ------------------------------------------------- appearance presets
-  // Named copies of the look (DockModel.LOOK_KEYS), at most six, kept in the
-  // config. Applying one goes through applyLook, like loading the config.
-
-  function presetIndex(root, id) {
-    var list = root.presets || []
-    for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return i
-    return -1
-  }
-
-  // A preset the dock ships cannot be renamed, updated or removed -- the next
-  // load would bring it back -- so every mutation refuses its index here.
-  function presetEditable(root, i) {
-    var list = root.presets || []
-    return i >= 0 && list[i] && list[i].builtin !== true
-  }
-
-  // The saved presets, against DockModel.MAX_PRESETS (shipped ones are free).
-  function savedCount(root) {
-    return DockPresets.userCount(root.presets)
-  }
-
-  // The preset the look on screen matches, for the "active" mark.
-  // DockPresets.activeId settles which row that is when a saved preset and a
-  // shipped look are key-for-key equal: the row the user saved keeps it.
-  function activePresetId(root) {
-    return DockPresets.activeId(root.presets, root.currentLook, DockModel.lookIncludes)
-  }
-
-  // The preset with this name, ignoring case; "" when none or the name is
-  // longer than a preset name can be.
-  function presetIdByName(root, name) {
-    var raw = String(name == null ? "" : name).trim()
-    if (raw === "" || raw.length > DockModel.MAX_PRESET_NAME) return ""
-    var want = DockModel.cleanPresetName(raw).toLowerCase()
-    var list = root.presets || []
-    for (var i = 0; i < list.length; i++)
-      if (list[i] && list[i].name.toLowerCase() === want) return list[i].id
-    return ""
-  }
-
-  function presetNameTaken(root, name, exceptId) {
-    var id = presetIdByName(root, name)
-    return id !== "" && id !== exceptId
-  }
-
-  function nextPresetName(root) {
-    for (var n = 1; n <= DockModel.MAX_PRESETS + 1; n++)
-      if (!presetNameTaken(root, Tr.t("presets.numbered", "Preset %1").arg(n), "")) return Tr.t("presets.numbered", "Preset %1").arg(n)
-    return Tr.t("presets.default", "Preset")
-  }
-
-  function replacePreset(root, i, preset) {
-    var next = root.presets.slice()
-    next[i] = preset
-    root.presets = next
-    root.saveConfig()
-  }
-
-  // A new preset from the current look; returns its id, or "" when the list
-  // is full. A missing or taken name becomes "Preset N".
-  function savePreset(root, name) {
-    if (!root.canSavePreset) return ""
-    var clean = DockModel.cleanPresetName(name)
-    if (clean === "" || presetNameTaken(root, clean, "")) clean = nextPresetName(root)
-    var id = "preset_" + Date.now()
-    while (presetIndex(root, id) >= 0) id += "0"
-    root.presets = (root.presets || []).concat([{ id: id, name: clean, look: root.currentLook }])
-    root.saveConfig()
-    return id
-  }
-
-  // Refuses an empty name or one another preset has.
-  function renamePreset(root, id, name) {
-    var i = presetIndex(root, id)
-    var clean = DockModel.cleanPresetName(name)
-    if (!presetEditable(root, i) || clean === "" || presetNameTaken(root, clean, id)) return false
-    var p = root.presets[i]
-    replacePreset(root, i, { id: p.id, name: clean, look: p.look })
-    return true
-  }
-
-  function updatePreset(root, id) {
-    var i = presetIndex(root, id)
-    if (!presetEditable(root, i)) return false
-    var p = root.presets[i]
-    replacePreset(root, i, { id: p.id, name: p.name, look: root.currentLook })
-    return true
-  }
-
-  function deletePreset(root, id) {
-    var i = presetIndex(root, id)
-    if (!presetEditable(root, i)) return false
-    var next = root.presets.slice()
-    next.splice(i, 1)
-    root.presets = next
-    root.saveConfig()
-    return true
-  }
-
-  // A preset holds every look key: those it was saved without (they did not
-  // exist yet) were filled with their defaults when it was read
-  // (DockModel.pickLook), so applying it sets them back too.
-  function applyPreset(root, id) {
-    var i = presetIndex(root, id)
-    if (i < 0) return false
-    applyLook(root, root.presets[i].look)
-    root.applyBlurRule(false)
-    root.saveConfig()
-    return true
   }
 }

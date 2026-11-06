@@ -252,14 +252,6 @@ test('groups and folders retain their collection ceilings', () => {
   assert.equal(model.boundAppGroups(Array.from({ length: 100 }, (_, i) => ({ id: `g${i}` }))).length, 32)
   assert.equal(model.boundPinnedFolders(Array.from({ length: 100 }, () => ({ path: '/tmp' }))).length, 12)
 })
-test('presets include classic/long divider geometry and reject nonscalar look values', () => {
-  const look = plain(model.pickLook({ dividerGeometry: 'long', hoverEffect: 'glow', bgColor: {}, iconSize: Infinity }))
-  assert.equal(look.dividerGeometry, 'long')
-  assert.equal(look.hoverEffect, 'glow')
-  assert.equal(look.bgColor, 'theme')
-  assert.equal(look.iconSize, 0)
-  assert.deepEqual(plain(model.boundPresets({ length: 1e9 })), [])
-})
 test('ungroup retains application order without duplicating existing pins', () => {
   const row = [{ kind: 'group', id: 'g', group: { apps: ['kitty', 'firefox'] } },
     { kind: 'app', appId: 'firefox' }]
