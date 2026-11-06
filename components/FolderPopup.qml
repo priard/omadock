@@ -28,11 +28,16 @@ BorderSurface {
   radius: Style.cornerRadius
   padding: Style.space(4)
 
-  readonly property real maxAllowedHeight: root ? root.popupMaxHeight : 500
+  // About half the screen, not all the room above the dock: a big folder
+  // grows wider first and scrolls past this.
+  readonly property real maxAllowedHeight: root
+    ? Math.min(root.popupMaxHeight, Math.max(240, Math.round((root.dockScreen ? root.dockScreen.height : 1080) * 0.55)))
+    : 500
 
-  // Grid geometry: up to five columns, never wider than the entries need.
+  // Grid geometry: landscape rather than tall (about 1.5 columns per row),
+  // three to eight columns, never wider than the entries need.
   readonly property real tileWidth: Style.space(92)
-  readonly property int gridColumns: Math.max(3, Math.min(5, entries.length))
+  readonly property int gridColumns: Math.max(3, Math.min(8, entries.length, Math.ceil(Math.sqrt(entries.length * 1.5))))
   readonly property real gridWidth: gridColumns * (tileWidth + Style.space(4))
 
   // List rows size to their widest content; FileStackRow and ContextRow pick
@@ -247,6 +252,19 @@ BorderSurface {
         onDragFinished: function(action) { folderStackPopover.dragDone(action) }
       }
     }
+  }
+
+  // Scroll position, in the right padding so it covers no entry; only when
+  // the body overflows.
+  Rectangle {
+    readonly property var view: folderStackPopover.activeView
+    visible: folderStackPopover.isOpen && view.contentHeight > view.height + 1
+    x: folderStackPopover.width - folderStackPopover.contentRightInset + 1
+    y: body.y + view.visibleArea.yPosition * body.height
+    width: Math.max(2, Style.space(2))
+    height: Math.max(Style.space(16), view.visibleArea.heightRatio * body.height)
+    radius: width / 2
+    color: Util.alpha(Color.menu.text, 0.35)
   }
 
   // ---------------------------------------------------------------- footer
