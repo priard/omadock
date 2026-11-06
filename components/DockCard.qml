@@ -5,7 +5,6 @@ import qs.Commons
 import qs.Ui
 import "logic"
 import "../DockModel.js" as DockModel
-import "../DockLabels.js" as DockLabels
 import "../DockLayout.js" as DockLayout
 import "../DockKeys.js" as DockKeys
 
@@ -34,28 +33,12 @@ Item {
   // while it hugs its icons. innerWidth is the room for the row inside it.
   readonly property var stretch: (root && parent) ? DockLayout.stretchedBox(root.placement, parent.width, Style.gapsOut * 2) : null
   readonly property real innerWidth: dockCard.width - dockCard.contentLeftInset - dockCard.contentRightInset
-  // Label plates keep their edges on whole device pixels (the floating card
-  // snaps its x for them).
-  readonly property real plateDpr: (root && root.labelPlates) ? root.outputScale : 0
-  readonly property real rowOffset: (root && stretch) ? DockLayout.rowOffset(root.placement.align, innerWidth, row.implicitWidth, plateDpr) : 0
+  readonly property real rowOffset: (root && stretch) ? DockLayout.rowOffset(root.placement.align, innerWidth, row.implicitWidth) : 0
   // Both sides: how far the right group rests past a packed row, from the
   // resting widths, so the magnification wave never measures itself. The
   // gap and the spacing after it together take the card's free width.
   readonly property real spreadShift: (root && root.placement.align === "spread")
-    ? DockLayout.spreadHomeShift(innerWidth, (root.fitHostRef.plan.overflowFrom >= 0) ? root.fitHostRef.plan.rest : root.baseRowWidth + DockLabels.extrasTotal(root.labelExtras)) : 0
-  // Which label plates stand at their panel's edge, by label slot
-  // (DockLabels.plateEdges): the row's sections in order, cut where split
-  // sections cut the card into panels (as segments does).
-  readonly property var plateEdges: (root && root.labelPlates) ? DockLabels.plateEdges([
-    { n: root.fitHostRef.shown.button, labelled: true, cut: false },
-    { n: root.fitHostRef.shown.pinned, labelled: true, cut: false },
-    { n: root.fitHostRef.shown.tiles, labelled: false, cut: root.placement.split && root.hasLeftTileSeparator },
-    { n: root.fitHostRef.shown.running, labelled: true, cut: root.placement.split && root.hasSeparator },
-    { n: root.fitHostRef.shown.folders, labelled: true, cut: root.placement.split && (root.hasFolderSeparator || root.placement.align === "spread") },
-    { n: root.fitHostRef.shown.drives, labelled: true, cut: root.placement.split && root.hasDriveSeparator },
-    // The "»" tile ends the row (DockOverflowTile).
-    { n: root.fitHostRef.plan.overflowFrom >= 0 ? 1 : 0, labelled: true, cut: false }
-  ]) : []
+    ? DockLayout.spreadHomeShift(innerWidth, (root.fitHostRef.plan.overflowFrom >= 0) ? root.fitHostRef.plan.rest : root.baseRowWidth) : 0
   // Where the accent line of a drag inside the dock stands (DropGap): the
   // insert index in the pinned run or among the folders, -1 for none.
   // A drag held over a group or an app keeps its gap where it was, so
@@ -169,9 +152,10 @@ Item {
   x: {
     if (!parent) return 0
     if (cardWrapper.stretch) return cardWrapper.stretch.x
-    var ax = DockLabels.anchoredX(parent.width, width, Style.gapsOut * 2, root ? root.placement.align : "center", 0)
-    // Plate rows start on a whole device pixel, so every plate edge does.
-    return (root && root.labelPlates) ? DockLabels.gridRound(ax, root.outputScale) : ax
+    var align = root ? root.placement.align : "center"
+    if (align === "left") return Style.gapsOut * 2
+    if (align === "right") return parent.width - width - Style.gapsOut * 2
+    return Math.round((parent.width - width) / 2)
   }
 
   // Autohide: slides and fades at Full; at Reduced it only fades, the card
@@ -395,9 +379,6 @@ Item {
       : Border.flat("transparent", dockCard.effectiveBorderWidth)
     radius: root ? root.cardRadius(height) : Style.cornerRadius
     padding: dockCard.devSnap(Style.space(5))
-    // With label plates the sides match the gap between plates.
-    leftPadding: (root && root.labelPlates) ? root.plateSpacing.edge : padding
-    rightPadding: (root && root.labelPlates) ? root.plateSpacing.edge : padding
     z: 1
 
     Repeater {
@@ -452,7 +433,6 @@ Item {
     Row {
       id: row
       z: 1
-      // Plate rows keep the spacing on the device-pixel grid.
       spacing: root ? root.gapWidth : Style.space(4)
 
       x: dockCard.contentLeftInset + cardWrapper.rowOffset
@@ -523,7 +503,6 @@ Item {
                 windows: entry.windows || 0
                 windowList: entry.windowList || []
                 homeCenter: rowSlot.home
-                labelSlot: (root && !rowWrap.leaving) ? root.appsSlots + rowSlot.index : -1
                 dropLineHere: !rowWrap.leaving && cardWrapper.dropLineRow === rowSlot.index
                 pinned: true
                 active: root ? (entry.appId === root.activeId) : false
@@ -551,7 +530,6 @@ Item {
                 rootRef: cardWrapper.rootRef
                 groupData: rowSlot.modelData.group || ({})
                 homeCenter: rowSlot.home
-                labelSlot: (root && !rowWrap.leaving) ? root.appsSlots + rowSlot.index : -1
                 dropLineHere: !rowWrap.leaving && cardWrapper.dropLineRow === rowSlot.index
                 onOpenGroupRequested: function(gdata, cx, cy) {
                   if (root) root.openAppGroup(gdata, cx, cy)
@@ -667,7 +645,6 @@ Item {
               root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx,
               (root.hasLeftTileSeparator ? 1 : 0) + (root.hasSeparator ? 1 : 0),
               root.tilesFixedWidth) : 0
-            labelSlot: (root && !runWrap.leaving) ? root.appsSlots + root.pinnedSection.length + root.groupSlots + visibleIdx : -1
             pinned: false
             active: root ? (entry.appId === root.activeId) : false
             onActivateRequested: function(aid) { if (root) root.activate(aid) }
@@ -700,7 +677,7 @@ Item {
       Item {
         id: spreadGap
         visible: root ? root.placement.align === "spread" : false
-        width: visible ? DockLayout.spreadGap(cardWrapper.innerWidth, spreadGap.x, rightRow.implicitWidth, row.spacing, cardWrapper.plateDpr) : 0
+        width: visible ? DockLayout.spreadGap(cardWrapper.innerWidth, spreadGap.x, rightRow.implicitWidth, row.spacing) : 0
         height: 1
       }
 

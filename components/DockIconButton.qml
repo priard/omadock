@@ -41,13 +41,6 @@ Item {
   // sit low in their line box.
   // Drawn through DockIconArt so the dock's icon style (pixel, dot matrix…)
   // and icon shadow apply to the button like to every other icon.
-  // A plate of its own with always-on plate labels (TilePlate).
-  TilePlate {
-    id: buttonPlate
-    rootRef: btn.rootRef
-    hovered: area.containsMouse
-  }
-
   DockIconArt {
     id: glyphBox
     anchors.horizontalCenter: parent.horizontalCenter
@@ -58,8 +51,7 @@ Item {
     scale: btn.magnifyScale * (area.pressed ? 0.92 : 1.0)
     transformOrigin: Item.Bottom
     iconStyle: root ? root.iconStyle : "original"
-    // On its plate the mono/dots tint is chosen against the plate.
-    tint: (root && buttonPlate.visible) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
+    tint: root ? root.iconTintColor : Color.bar.text
     grid: root ? root.iconGrid : 16
     outputScale: root ? root.outputScale : 1
     contrast: root ? root.iconContrast : 0
@@ -91,11 +83,7 @@ Item {
       textFormat: Text.PlainText
       font.family: "omarchy"
       font.pixelSize: Math.max(1, Math.round(glyphBox.width * btn.glyphFill / inkRatio))
-      // On its plate the glyph takes the labels' ink, which always reads on
-      // the plate; the theme's text colour or accent may not. With the mono
-      // or dots style it follows the icons' colour, chosen against the plate.
-      color: buttonPlate.visible ? ((glyphBox.shownStyle === "mono" || glyphBox.shownStyle === "dots") ? glyphBox.tint : buttonPlate.ink)
-        : area.containsMouse ? Color.accent
+      color: area.containsMouse ? Color.accent
         : ((glyphBox.shownStyle === "mono" || glyphBox.shownStyle === "dots") ? glyphBox.tint : btn.glyphColor)
       x: Math.round(glyphBox.width / 2 - (glyphMetrics.tightBoundingRect.x + glyphMetrics.tightBoundingRect.width / 2))
       y: Math.round(glyphBox.height / 2 - (glyphText.baselineOffset + glyphMetrics.tightBoundingRect.y + glyphMetrics.tightBoundingRect.height / 2))

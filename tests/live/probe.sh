@@ -169,7 +169,7 @@ PY
   ln -s /usr/share/omarchy/shell/Commons "$PROBE_DIR/Commons"
   ln -s /usr/share/omarchy/shell/Ui "$PROBE_DIR/Ui"
   # PROBE_BODY names a QML file whose contents become the body of ShellRoot,
-  # for a test that must reach inside the dock (tests/live/label-metrics.sh).
+  # for a test that must reach inside the dock.
   # The body declares its own `Od.DockHost { ... }`; QtQuick, Quickshell,
   # Quickshell.Io and qs.Commons as C are imported, so it holds no imports.
   {

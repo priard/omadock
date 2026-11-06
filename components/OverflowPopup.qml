@@ -36,10 +36,10 @@ BorderSurface {
         var p = dock.pinnedRowByKey[key]
         if (!p) continue
         if (p.group) out.push({ id: id, kind: "group", title: p.group.name || Tr.t("groups.defaultName", "Group"), icon: pop.folderIcon(p.group.icon || "folder"), data: p.group })
-        else if (p.entry) out.push({ id: id, kind: "app", title: dock.labelName(p.entry.appId, p.entry.name), icon: pop.appIcon(p.entry), data: p.entry })
+        else if (p.entry) out.push({ id: id, kind: "app", title: dock.appName(p.entry.appId, p.entry.name), icon: pop.appIcon(p.entry), data: p.entry })
       } else if (kind === "run") {
         var r = dock.runningByKey[key]
-        if (r) out.push({ id: id, kind: "app", title: dock.labelName(r.appId, r.name), icon: pop.appIcon(r), data: r })
+        if (r) out.push({ id: id, kind: "app", title: dock.appName(r.appId, r.name), icon: pop.appIcon(r), data: r })
       } else if (kind === "tile") {
         var t = card ? card.tileByKey[key] : null
         var wins = t ? (t.windows ? t.windows : [t.win]) : []

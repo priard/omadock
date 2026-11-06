@@ -361,11 +361,11 @@ MARK=$(errs_now)
 capture before-settings.ppm
 settings=$(step settings-open) || fail "the settings step did not answer"
 expect_true "the settings panel did not open" "$settings" open
-for page in appearance labels icons motion behavior placement folders groups about; do
+for page in appearance icons motion behavior placement folders groups about; do
   page_rep=$(step settings-page "$page") || fail "switching to $page did not answer"
   expect_eq "the panel did not switch to $page" "$page_rep" page "\"$page\""
 done
-note "open on $(jval "$settings" open), all 10 pages switched"
+note "open on $(jval "$settings" open), all 8 pages switched"
 sleep 0.7
 capture after-settings.ppm
 pixels before-settings.ppm after-settings.ppm "$MENU_BG" 300000 60000 "the settings panel"

@@ -27,12 +27,6 @@ Item {
   property bool urgent: false
   // 0..1 breathing for urgent marks, driven by the item.
   property real pulse: 1.0
-  // A column instead of a row (side indicators on a label plate).
-  property bool vertical: false
-  // Ink when the marks stand on a label plate (transparent: the dock's own).
-  property color markInk: "transparent"
-  // Passed to each mark (DockIndicator.moveKey).
-  property real moveKey: 0
 
   // How many marks this item has, and how the row draws them, is policy: it
   // comes from DockMarks.js, which the unit tests pin. The dots the repeater
@@ -43,14 +37,13 @@ Item {
   // centre.
   readonly property var plan: DockMarks.plan(marks.windows, marks.running)
   // How big a mark is, and how much room it needs, is policy too: it comes from
-  // DockMarkGeometry.js, which the unit tests pin, and the indicators and the
-  // label's reserved room read the same module. Sizes are on the output's pixel
-  // grid (see DockIndicator), so a dot and the accent bar share one centre
-  // line: each mark sits in a cell as wide across the row (or column) as the
-  // largest mark, centred by whole device pixels. Left to the Grid, the
+  // DockMarkGeometry.js, which the unit tests pin, and the indicators read the
+  // same module. Sizes are on the output's pixel grid (see DockIndicator), so a
+  // dot and the accent bar share one centre line: each mark sits in a cell as
+  // tall as the largest mark, centred by whole device pixels. Left to the Grid, the
   // half-pixel offset rounded the bar against one side of the dots.
   readonly property real dpr: marks.root ? marks.root.outputScale : 1
-  readonly property real cross: DockMarkGeometry.cell(Style.space, marks.dpr, marks.plan.dense, marks.vertical)
+  readonly property real cross: DockMarkGeometry.cell(Style.space, marks.dpr, marks.plan.dense)
   readonly property real dynamicSpacing: DockMarkGeometry.rowSpacing(Style.space, marks.dpr, marks.plan.dense)
 
   visible: marks.running
@@ -90,9 +83,9 @@ Item {
   Grid {
     id: indicatorRow
     spacing: marks.dynamicSpacing
-    columns: marks.vertical ? 1 : Math.max(marks.plan.slots, marks.shownDots + (marks.plan.overflow ? 1 : 0))
-    rows: marks.vertical ? Math.max(marks.plan.slots, marks.shownDots + (marks.plan.overflow ? 1 : 0)) : 1
-    flow: marks.vertical ? Grid.TopToBottom : Grid.LeftToRight
+    columns: Math.max(marks.plan.slots, marks.shownDots + (marks.plan.overflow ? 1 : 0))
+    rows: 1
+    flow: Grid.LeftToRight
     horizontalItemAlignment: Grid.AlignHCenter
     verticalItemAlignment: Grid.AlignVCenter
 
@@ -109,8 +102,8 @@ Item {
         // Along the row the cell grows and shrinks with its mark, so the
         // others close up as one goes instead of jumping when it is gone.
         readonly property real along: (marks.motion && marks.motion.layout) ? cell.appear : 1
-        width: marks.vertical ? marks.cross : mark.width * cell.along
-        height: marks.vertical ? mark.height * cell.along : marks.cross
+        width: mark.width * cell.along
+        height: marks.cross
 
         readonly property bool going: index >= marks.plan.dots
         property real appear: 0
@@ -140,16 +133,13 @@ Item {
 
         DockIndicator {
           id: mark
-          x: Math.round(((marks.vertical ? marks.cross : cell.width) - width) * marks.dpr / 2) / marks.dpr
-          y: Math.round(((marks.vertical ? cell.height : marks.cross) - height) * marks.dpr / 2) / marks.dpr
+          x: Math.round((cell.width - width) * marks.dpr / 2) / marks.dpr
+          y: Math.round((marks.cross - height) * marks.dpr / 2) / marks.dpr
           rootRef: marks.rootRef
-          vertical: marks.vertical
-          inkOverride: marks.markInk
           kind: cell.winActive ? "active" : (cell.winMinimized ? "minimized" : "window")
           dense: marks.plan.dense
           urgent: marks.urgent
           pulse: marks.pulse
-          moveKey: marks.moveKey
         }
       }
     }
@@ -169,7 +159,7 @@ Item {
         anchors.centerIn: parent
         text: "+" + (marks.plan.total - marks.plan.dots)
         textFormat: Text.PlainText
-        color: marks.markInk.a > 0 ? marks.markInk : (marks.root ? marks.root.dockForeground : Color.bar.text)
+        color: marks.root ? marks.root.dockForeground : Color.bar.text
         font.family: Style.font.family
         font.pixelSize: Math.max(7, Style.font.caption - 4)
         font.bold: true

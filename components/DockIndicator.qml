@@ -25,17 +25,8 @@ Rectangle {
   property bool urgent: false
   // Smaller marks when many sit side by side.
   property bool dense: false
-  // Stacked in a column (side indicators on a label plate): the accent bar
-  // stands upright.
-  property bool vertical: false
-  // Ink for marks standing on a label plate (transparent: the dock's own).
-  property color inkOverride: "transparent"
   // 0..1 breathing for urgent marks, driven by the item.
   property real pulse: 1.0
-  // Anything that moves the mark without changing its own x or y (a plate
-  // lifting it on hover, say): the owner binds it so the mark re-snaps.
-  property real moveKey: 0
-  onMoveKeyChanged: Qt.callLater(mark.resnap)
 
   // Marks are unsmoothed rectangles, so at a fractional scale (1.5) they lost
   // or gained a row of pixels depending on where they landed, and anything
@@ -48,12 +39,11 @@ Rectangle {
   onDprChanged: Qt.callLater(mark.resnap)
   readonly property real hairline: Math.max(1, Math.floor(mark.dpr)) / mark.dpr
   // Where the mark's dimensions come from: DockMarkGeometry.js, which the unit
-  // tests pin - the dock's classic 5px dots (4px dense), 12x4 accent bars (9x4
-  // dense) and the room a plate reserves, all in one place. A fix for
-  // fractional-scale borders once thinned every mark a pixel with it; the sizes
-  // there are the look the dock ships, and a side column on a plate keeps the
-  // full dot with an upright bar as thick: the dense dot looked lost there.
-  readonly property real dotSize: DockMarkGeometry.dot(Style.space, mark.dpr, dense, vertical)
+  // tests pin - the dock's classic 5px dots (4px dense) and 12x4 accent bars
+  // (9x4 dense), all in one place. A fix for fractional-scale borders once
+  // thinned every mark a pixel with it; the sizes there are the look the dock
+  // ships.
+  readonly property real dotSize: DockMarkGeometry.dot(Style.space, mark.dpr, dense)
   readonly property real barHeight: DockMarkGeometry.barThickness(Style.space, mark.dpr)
 
   property real snapX: 0
@@ -97,14 +87,11 @@ Rectangle {
   }
   readonly property color ink: urgent
     ? Color.urgent
-    : Util.alpha(mark.inkOverride.a > 0 ? mark.inkOverride : (root ? root.dockForeground : Color.bar.text), 0.88)
+    : Util.alpha(root ? root.dockForeground : Color.bar.text, 0.88)
 
   readonly property real barLength: DockMarkGeometry.barLength(Style.space, mark.dpr, dense)
-  // Upright in a column the bar is as thick as a dot: the 1.5 output is
-  // drawn at 2x and scaled down, so a thinner bar could not be centred on
-  // the dots and leaned a pixel to one side.
-  width: kind === "active" ? (mark.vertical ? mark.dotSize : mark.barLength) : dotSize
-  height: kind === "active" ? (mark.vertical ? mark.barLength : mark.barHeight) : dotSize
+  width: kind === "active" ? mark.barLength : dotSize
+  height: kind === "active" ? mark.barHeight : dotSize
   radius: (root && root.indicatorSquare) ? 0 : Math.min(width, height) / 2
 
   color: kind === "active" ? Color.accent

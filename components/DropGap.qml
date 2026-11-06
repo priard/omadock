@@ -20,16 +20,14 @@ Item {
   readonly property var lift: (root && root.dockCard) ? root.dockCard.liftRef : null
   readonly property bool lifting: !!gap.lift && gap.lift.active
 
-  // Enough that the line reads between tiles packed close together
-  // (plates one small gap apart), and a little anywhere so the dock
-  // answers the drag.
+  // Enough that the line reads between tiles packed close together, and a
+  // little anywhere so the dock answers the drag.
   readonly property real room: {
     if (!root) return 0
     // The element and the spacing after it; a spacer ends the run, where
     // the spacing comes before it.
     if (gap.lifting) return gap.lift.liftWidth + (gap.spacer ? 0 : root.gapWidth)
-    var seen = root.labelPlates ? root.plateSpacing.gap
-      : root.gapWidth + (root.iconSlot - root.baseIconArt) / (root.labelMode === "always" ? 2 : 1)
+    var seen = root.gapWidth + root.iconSlot - root.baseIconArt
     return DockLabels.gridRound(Math.max(Style.space(6), Style.space(18) - seen), root.outputScale)
   }
   width: gap.open ? gap.room : 0

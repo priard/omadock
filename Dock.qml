@@ -197,7 +197,6 @@ Item {
   DockStateLogic { id: stateLogic }
   DockPersistLogic { id: persistLogic }
   DockGroupCycleLogic { id: groupCycleLogic }
-  DockLabelLogic { id: labelLogic }
   DockFitHost { id: fitHost; dockRoot: root; rivals: [stackLife, groupLife, contextLife] }
   readonly property var fitHostRef: fitHost
 
@@ -256,8 +255,7 @@ Item {
   // window coordinates. Nothing that magnification changes feeds back into
   // those numbers, so the wave cannot chase itself.
   readonly property real magnifyPeak: 1.4
-  // On always-on label plates the zoom stays inside the plate's margin.
-  readonly property real zoomPeak: root.labelPlates ? 1.1 : 1.22
+  readonly property real zoomPeak: 1.22
   readonly property real magnifyRange: root.iconSlot * 2.2
   readonly property real baseIconArt: root.iconSize - Style.space(4)
   // Largest size an icon reaches under either hover effect; icons decode at
@@ -273,9 +271,7 @@ Item {
   // art's top margin matches the room under the indicators.
   readonly property real indicatorLift: Style.spaceReal(1.5)
   // Distance from the slot's bottom edge to the bottom of the artwork.
-  // With indicators beside the art on label plates, the art is centred.
-  readonly property real iconArtBottom: root.labelSideMarks ? Math.round((root.iconSlot - root.baseIconArt) / 2)
-    : Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2) + root.indicatorLift
+  readonly property real iconArtBottom: Math.round(root.indicatorBand + (root.iconSlot - root.indicatorBand - root.baseIconArt) / 2) + root.indicatorLift
   // Vertical offset of the artwork's centre from the slot's centre, for
   // things centred on the row (separators, preview tiles).
   readonly property real iconCenterOffset: -root.indicatorBand / 2
@@ -304,7 +300,7 @@ Item {
   // Pinned-group | running divider. Sits after the tile section when tiles
   // exist, so it doubles as the right tile divider.
   readonly property bool hasSeparator: (root.pinnedSection.length > 0 || root.hasTiles) && root.visibleRunningCount > 0
-  readonly property real gapWidth: fitHost.plan.t < 1 ? fitHost.plan.gap : (root.labelPlates ? root.plateSpacing.gap : Style.space(root.itemSpacing))
+  readonly property real gapWidth: fitHost.plan.t < 1 ? fitHost.plan.gap : Style.space(root.itemSpacing)
   // Split sections turn each separator into the gap between two panels. Each
   // panel reaches the card padding past its outer icons, so the separator
   // slot is sized to leave the chosen visible gap between the panels.
@@ -315,7 +311,7 @@ Item {
   // stood too far apart. Half sits between the two. Hidden takes the slot
   // and its spacing out (-gapWidth): the sections meet one gap apart.
   readonly property real separatorWidth: root.placement.split ? Math.max(Style.space(1), root.sectionGap + 2 * root.baseRowLeft - 2 * root.gapWidth)
-    : root.dividerStyle === "none" ? -root.gapWidth : root.labelPlates ? root.plateSpacing.separator : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
+    : root.dividerStyle === "none" ? -root.gapWidth : Style.space(1) + Math.round((root.iconSlot - root.baseIconArt) / 2)
   readonly property int groupSlots: (root.appGroups && DockModel.isList(root.appGroups)) ? root.appGroups.length : 0
   // Folders and buttons share the folder section, so they share its slot count.
   readonly property int folderSlots: (root.pinnedFolders ? root.pinnedFolders.length : 0)
@@ -356,7 +352,7 @@ Item {
   // Where the row starts within the card (card-local coordinates).
   readonly property real baseRowLeft: dockCard ? dockCard.contentLeftInset : Style.space(5)
 
-  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) { return styleLogic.slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth, ownLabel) }
+  function slotHomeCenter(elementIndex, slotsBefore, sepCount, extraLeftWidth) { return styleLogic.slotHomeCenter(root, elementIndex, slotsBefore, sepCount, extraLeftWidth) }
 
   // Width the tile section consumes ahead of elements that follow it,
   // including its left divider.
@@ -420,7 +416,7 @@ Item {
   property int configuredIconSize: 0
   readonly property int baseIconSize: root.configuredIconSize > 0 ? root.configuredIconSize : Math.max(28, Math.round(Style.bar.sizeHorizontal * 0.9))
   readonly property int iconSize: fitHost.plan.iconSize > 0 ? Math.min(root.baseIconSize, fitHost.plan.iconSize) : root.baseIconSize
-  readonly property int iconSlot: root.labelPlates ? DockLabels.gridInt(root.iconSize + Style.space(10), root.outputScale) : root.iconSize + Style.space(10)
+  readonly property int iconSlot: root.iconSize + Style.space(10)
 
   // ------------------------------------------------- model
 
@@ -741,9 +737,8 @@ Item {
   property bool iconHoverReveal: false
   // The mono / dots ink, kept readable against what sits behind the icons
   // (see readableOn): an accent tint over a theme gradient built from that
-  // same accent would otherwise vanish into it. On a label plate: the same against the plate.
+  // same accent would otherwise vanish into it.
   readonly property color iconTintColor: root.tintFor(root.iconTint, root.dockForeground, root.iconBackdropColor)
-  readonly property color plateIconTintColor: labelLogic.plateIconTint(root)
 
   function tintFor(mode, textColor, backdrop) { return styleLogic.tintFor(root, mode, textColor, backdrop) }
   function blackOrWhiteOn(backdrop) { return styleLogic.blackOrWhiteOn(root, backdrop) }
@@ -867,27 +862,6 @@ Item {
   readonly property bool clickToMinimize: root.minimizeMode !== "off"
   property bool showUrgentHint: true
   property bool urgentOnNotification: true
-  // ---- name labels beside the icons (DockLabelLogic, DockLabels.js)
-  property string labelMode: "off"        // off | always | hover
-  property string labelKind: "all"        // all | apps | groups | folders
-  property string labelFont: "theme"      // theme | sans | pixel
-  property string labelSize: "medium"     // small | medium | large
-  property string labelWeight: "medium"   // regular | medium | bold
-  property string labelColor: "auto"      // auto | theme | accent
-  property string labelBackground: "none" // none | pill | plate
-  property string labelShape: "dock"      // dock | pill | rounded | square
-  property string labelIndicators: "before" // before | after | under (always-on plates)
-  property string labelPlateHeight: "icon"  // icon | dock (always-on plates)
-  property string labelPinned: "always"     // always | running (always-on names of pinned apps)
-  readonly property bool labelPlates: root.labelMode === "always" && root.labelBackground === "plate"
-  readonly property var plateSpacing: labelLogic.plateSpacing(root)
-  readonly property bool labelSideMarks: DockLabels.sideMarks(root.labelMode, root.labelBackground, root.labelIndicators)
-  property string labelReveal: "slide"    // slide | typewriter | scramble
-  property string labelEffect: "none"     // none | glow | outline
-  property int labelMaxWidth: 140
-  property var labelNames: ({})           // appId -> the user's label text
-  property var labelExtras: ({})          // slot -> { owner, width } (DockLabels.withExtra)
-  property int labelsOpen: 0              // hover-mode labels open or closing
 
   property bool showNotificationBadges: true
   // Badge look: what the pill carries, which corner it sits on, its colour.
@@ -1780,16 +1754,9 @@ Item {
   function groupCycleFront(key, windows, frontIndex, angleDelta) { return groupCycleLogic.cycleFront(root, key, windows, frontIndex, angleDelta) }
   function focusPreviewedWindow(windows, frontIndex) { return groupCycleLogic.focusPreviewed(root, windows, frontIndex) }
 
-  // Name labels: rendering policy and the per-slot width registry
-  function labelStyle(kind) { return labelLogic.style(root, kind) }
-  function labelFillFor(ink, hover) { return labelLogic.fillFor(root, ink, hover) }
-  function labelPlateBox(tileH) { return labelLogic.plateBox(root, tileH) }
-  function labelName(appId, name) { return labelLogic.displayName(root, appId, name) }
-  function labelTooltipNeeded(kind, wins, hint, shortened) { return labelLogic.tooltipNeeded(root, kind, wins, hint, shortened) }
-  function labelExtraBefore(slot, ownLabel) { return labelLogic.extraBefore(root, slot, ownLabel) }
-  function setLabelExtra(slot, owner, width, before) { labelLogic.setExtra(root, slot, owner, width, before) }
-  function setLabelName(appId, name) { labelLogic.setName(root, appId, name) }
-  function labelNameRows() { return labelLogic.nameRows(root) }
+  // The name the dock shows for an app: its desktop entry's, else (the
+  // name is the class id) a readable form of the class id.
+  function appName(appId, name) { return (appId && (name === "" || name === appId)) ? DockLabels.prettyAppId(appId) : name }
 
   function withoutPointerWarp(action) { return stateLogic.withoutPointerWarp(root, action) }
 

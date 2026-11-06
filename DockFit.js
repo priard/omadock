@@ -1,51 +1,18 @@
 // The dock's fit to its screen (docs/superpowers/specs/2026-10-11-dock-fit-design.md):
 // when the row would be wider than its room, it gives width back in a fixed
-// order - shorter labels, folded labels, tighter spacing, smaller icons -
-// and only then moves items from the end of the row into "»". Plain JS with
-// no Qt globals, so the node tests run it in a vm context like DockLayout.js.
+// order - tighter spacing, smaller icons - and only then moves items from the
+// end of the row into "»". Plain JS with no Qt globals, so the node tests run
+// it in a vm context like DockLayout.js.
 //
-// Nothing in the input depends on the plan (label widths are the full,
-// unshortened names; counts are the dock's own lists), so the dock cannot
-// chase its own result.
+// Nothing in the input depends on the plan (counts are the dock's own lists),
+// so the dock cannot chase its own result.
 
-var FOLDS = ["none", "closedPinned", "apps", "all"]
 // Wave magnification: the hovered slot grows by 0.4 and its neighbours by
 // the cosine weights over +-2.2 slots, about 2.18 slots' worth in all.
 var WAVE_GROWTH = 0.4 * 2.18
 
-function _snapDown(v, dpr) { return dpr > 0 ? Math.floor(v * dpr + 1e-9) / dpr : v }
-// The smallest whole logical size from n up on whole device pixels (as
-// DockLabels.gridInt).
-function _gridInt(n, dpr) {
-  if (!(dpr > 0)) return Math.round(n)
-  for (var k = 0; k < 8; k++) {
-    var m = Math.round(n) + k
-    if (Math.abs(m * dpr - Math.round(m * dpr)) < 1e-9) return m
-  }
-  return Math.round(n)
-}
-
-function _slot(input, iconSize) { return _gridInt(iconSize + input.slotPad, input.dpr) }
-function _gap(input, t) { return _snapDown(input.gapMin + t * (input.gapMax - input.gapMin), input.dpr) }
-
-function _folded(item, fold) {
-  var l = item.label
-  if (!l) return true
-  if (l.asleep || fold === "all") return true
-  if (fold === "apps") return item.kind === "app"
-  if (fold === "closedPinned") return item.kind === "app" && !!item.pinned && !item.running
-  return false
-}
-
-function _labelWidth(input, item, cand, exact) {
-  var l = item.label
-  if (!input.labels || !l) return 0
-  // A plate row's tile lands on the device grid: one device pixel more,
-  // so the prediction is never narrower than what is drawn.
-  var grid = (input.dpr > 0 && !exact) ? 1 / input.dpr : 0
-  if (_folded(item, cand.fold)) return l.folded > 0 ? l.folded + grid : 0
-  return Math.min(l.text, Math.max(0, cand.labelMax - l.inner)) + l.outer + grid
-}
+function _slot(input, iconSize) { return Math.round(iconSize + input.slotPad) }
+function _gap(input, t) { return input.gapMin + t * (input.gapMax - input.gapMin) }
 
 // The items kept in the row for a cut: separators that no longer stand
 // between two kept items go too.
@@ -62,9 +29,9 @@ function _kept(items, cut) {
   return clean
 }
 
-// exact: the packed row as drawn at rest, without the Wave reserve, the grid
-// allowance and the Both sides gap item (DockCard.spreadShift measures the
-// right group's shift with it).
+// exact: the packed row as drawn at rest, without the Wave reserve and the
+// Both sides gap item (DockCard.spreadShift measures the right group's shift
+// with it).
 function rowWidth(input, cand, exact) {
   var slot = _slot(input, cand.iconSize)
   var gap = _gap(input, cand.t)
@@ -76,7 +43,7 @@ function rowWidth(input, cand, exact) {
     var it = kept[i]
     if (it.kind === "separator") w += sep
     else if (it.kind === "tile") w += Math.round(slot * input.tileFactor)
-    else w += slot + _labelWidth(input, it, cand, exact)
+    else w += slot
   }
   if (cand.overflowFrom >= 0) { w += slot; count++ }
   // Items the row always holds whatever the cut (Both sides' gap item: one
@@ -105,79 +72,42 @@ function _maxInt(lo, hi, ok) {
 }
 
 function _solve(input, room) {
-  var base = { labelMax: input.labelMax, fold: "none", t: 1, iconSize: input.iconSize, overflowFrom: -1 }
-  var c = Object.assign({}, base)
+  var c = { t: 1, iconSize: input.iconSize, overflowFrom: -1 }
   if (_fits(input, c, room)) return _done(input, c, 0)
-  // 1. shorter labels, then 2. folds, each with the most label room left.
-  if (input.labels) {
-    for (var f = 0; f < FOLDS.length - 1; f++) {
-      var fold = FOLDS[f]
-      var best = _maxInt(input.labelMin, input.labelMax, function(L) {
-        return _fits(input, { labelMax: L, fold: fold, t: 1, iconSize: input.iconSize, overflowFrom: -1 }, room)
-      })
-      if (best >= input.labelMin) {
-        c = { labelMax: best, fold: fold, t: 1, iconSize: input.iconSize, overflowFrom: -1 }
-        var span = Math.max(1, input.labelMax - input.labelMin)
-        var level = f === 0 ? 1 + (input.labelMax - best) / span : 2 + f / 3
-        return _done(input, c, level)
-      }
-    }
-  }
-  var fold2 = input.labels ? "all" : "none"
-  var lmax = input.labels ? input.labelMin : input.labelMax
-  if (input.labels && _fits(input, { labelMax: lmax, fold: "all", t: 1, iconSize: input.iconSize, overflowFrom: -1 }, room))
-    return _done(input, { labelMax: lmax, fold: "all", t: 1, iconSize: input.iconSize, overflowFrom: -1 }, 3)
-  // 3. spacing: bisect t.
-  if (_fits(input, { labelMax: lmax, fold: fold2, t: 0, iconSize: input.iconSize, overflowFrom: -1 }, room)) {
+  // 1. spacing: bisect t.
+  if (_fits(input, { t: 0, iconSize: input.iconSize, overflowFrom: -1 }, room)) {
     var lo = 0, hi = 1
     for (var k = 0; k < 24; k++) {
       var mid = (lo + hi) / 2
-      if (_fits(input, { labelMax: lmax, fold: fold2, t: mid, iconSize: input.iconSize, overflowFrom: -1 }, room)) lo = mid
+      if (_fits(input, { t: mid, iconSize: input.iconSize, overflowFrom: -1 }, room)) lo = mid
       else hi = mid
     }
-    return _done(input, { labelMax: lmax, fold: fold2, t: lo, iconSize: input.iconSize, overflowFrom: -1 }, 3 + (1 - lo))
+    return _done(input, { t: lo, iconSize: input.iconSize, overflowFrom: -1 }, 1 - lo)
   }
-  // 4. icons down to the floor.
+  // 2. icons down to the floor.
   var size = _maxInt(input.floor, input.iconSize, function(s) {
-    return _fits(input, { labelMax: lmax, fold: fold2, t: 0, iconSize: s, overflowFrom: -1 }, room)
+    return _fits(input, { t: 0, iconSize: s, overflowFrom: -1 }, room)
   })
   if (size >= input.floor) {
     var range = Math.max(1, input.iconSize - input.floor)
-    return _done(input, { labelMax: lmax, fold: fold2, t: 0, iconSize: size, overflowFrom: -1 }, 4 + (input.iconSize - size) / range)
+    return _done(input, { t: 0, iconSize: size, overflowFrom: -1 }, 1 + (input.iconSize - size) / range)
   }
-  // 5. overflow from the end: the most items kept that still fit.
+  // 3. overflow from the end: the most items kept that still fit.
   var n = (input.items || []).length
   var cut = _maxInt(0, n - 1, function(k) {
-    return _fits(input, { labelMax: lmax, fold: fold2, t: 0, iconSize: input.floor, overflowFrom: k }, room)
+    return _fits(input, { t: 0, iconSize: input.floor, overflowFrom: k }, room)
   })
   if (cut < 0) cut = 0
   // A cut right after a separator draws the same row; keep the separator
   // with the hidden part so the cut always follows a real item.
   var all = input.items || []
   while (cut > 0 && all[cut - 1].kind === "separator") cut--
-  return _done(input, { labelMax: lmax, fold: fold2, t: 0, iconSize: input.floor, overflowFrom: cut }, 5 + (n - cut) / Math.max(1, n))
+  return _done(input, { t: 0, iconSize: input.floor, overflowFrom: cut }, 2 + (n - cut) / Math.max(1, n))
 }
 
 function _done(input, c, level) {
-  return { level: level, labelMax: c.labelMax, fold: c.fold, t: c.t, gap: _gap(input, c.t),
+  return { level: level, t: c.t, gap: _gap(input, c.t),
     iconSize: c.iconSize, overflowFrom: c.overflowFrom, width: rowWidth(input, c), rest: rowWidth(input, c, true) }
-}
-
-// The items with a label width for every hidden one: a delegate the fit
-// hides drops its own report (it leaves the row), and planning it at 0
-// would let it back in, where it reports again and no longer fits. cache
-// (id -> label) holds the last report of each item.
-function retainLabels(items, cache, hidden) {
-  var next = {}
-  var out = []
-  for (var i = 0; i < (items || []).length; i++) {
-    var it = items[i]
-    var label = it.label
-    if (!label && hidden && hidden[it.id] && cache && cache[it.id]) label = cache[it.id]
-    if (label) next[it.id] = label
-    out.push(label === it.label ? it : Object.assign({}, it, { label: label }))
-  }
-  return { items: out, cache: next }
 }
 
 // The plan for this input. prev: the plan in force; a gentler plan than it

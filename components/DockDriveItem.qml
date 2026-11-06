@@ -52,18 +52,6 @@ Item {
     NumberAnimation { duration: (ditem.motion ? ditem.motion.hover : 0); easing.type: Easing.OutQuad }
   }
 
-  // Its place among the plates (DockCard.plateEdges).
-  property int plateSlot: -1
-
-  // A plate of its own with always-on plate labels, like the Omarchy
-  // button: a drive has no name on the dock (its tooltip says it).
-  TilePlate {
-    id: drivePlate
-    rootRef: ditem.rootRef
-    hovered: driveArea.containsMouse
-    slot: ditem.plateSlot
-  }
-
   Item {
     id: iconSlot
     width: root ? root.iconSlot : 0
@@ -87,8 +75,7 @@ Item {
       renderSize: root ? root.maxIconArt : 64
       visible: String(source) !== "" && !iconSlot.themedSymbolic
       iconStyle: root ? root.iconStyle : "original"
-      // On its plate the mono/dots tint is chosen against the plate.
-      tint: (root && drivePlate.visible) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
+      tint: root ? root.iconTintColor : Color.bar.text
       toneInvert: ditem.isSymbolic ? 1 : -1
       allowReveal: !ditem.isSymbolic
       grid: root ? root.iconGrid : 16
@@ -127,7 +114,7 @@ Item {
         // lightness, so lift it to white first or light colours come out grey.
         brightness: 1.0
         colorization: 1.0
-        colorizationColor: drivePlate.visible ? drivePlate.ink : (root ? root.symbolicIconColor : "#ffffff")
+        colorizationColor: root ? root.symbolicIconColor : "#ffffff"
       }
     }
   }

@@ -18,17 +18,17 @@ test("normalizeLevel keeps the three levels and defaults to full", () => {
 
 test("full animates everything", () => {
   assert.deepEqual(plain(M.plan("full")), { level: "full", fast: 120, base: 180, slow: 300, hover: 110, press: 90,
-    layout: true, scale: true, rise: true, oneShots: true, reveal: true, fade: true })
+    layout: true, scale: true, rise: true, oneShots: true, fade: true })
 })
 
 test("reduced keeps the fades and their timings, nothing that moves", () => {
   assert.deepEqual(plain(M.plan("reduced")), { level: "reduced", fast: 120, base: 180, slow: 300, hover: 110, press: 90,
-    layout: false, scale: false, rise: false, oneShots: false, reveal: false, fade: true })
+    layout: false, scale: false, rise: false, oneShots: false, fade: true })
 })
 
 test("off is instant", () => {
   assert.deepEqual(plain(M.plan("off")), { level: "off", fast: 0, base: 0, slow: 0, hover: 0, press: 0,
-    layout: false, scale: false, rise: false, oneShots: false, reveal: false, fade: false })
+    layout: false, scale: false, rise: false, oneShots: false, fade: false })
 })
 
 test("plan normalizes what it is given", () => {

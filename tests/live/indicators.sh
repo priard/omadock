@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Live: the running marks sit dead-centre on the icon they belong to, in every
-# shape the row takes - the accent bar of the focused window, the dots beside
-# it, the "+N" overflow pill past five windows, and the upright column that
-# side indicators draw on a label plate.
+# shape the row takes - the accent bar of the focused window and the dots
+# beside it.
 #
 # The marks are read as ink from a screenshot of the dock, so what is asserted
 # is the row that is actually drawn, not the source that draws it: renaming a
@@ -128,15 +127,15 @@ focus_ours() {
   sleep 0.6
 }
 
-# check <what it is> <row|column>: measures the target item's marks and fails
-# unless they are the expected number, the shape this check is about, and
-# centred on the icon.
+# check <what it is>: measures the target item's marks and fails unless they
+# are the expected number, the shape this check is about, and centred on the
+# icon.
 check() {
   focus_ours
-  python3 - "$TOL" "$2" "$TARGET" "$1" <<'PY' || fail "$1"
+  python3 - "$TOL" "$TARGET" "$1" <<'PY' || fail "$1"
 import collections, json, subprocess, sys, time
 
-tol, mode, item_id, label = float(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
+tol, item_id, label = float(sys.argv[1]), sys.argv[2], sys.argv[3]
 
 def out(*cmd):
     return subprocess.run(cmd, capture_output=True, text=True).stdout
@@ -170,19 +169,17 @@ for attempt in range(2):  # a second frame when the first caught the row mid-set
     if not item:
         report(f"the dock does not list {item_id}", False)
     x, y, w, h = item["x"], item["y"], item["w"], item["h"]
-    # Hovering the item being measured scales it and lifts its label, and the marks
+    # Hovering the item being measured scales it, and the marks
     # move with it: nothing on screen would match its rectangle.
     cursor = json.loads(out("hyprctl", "-j", "cursorpos"))
     if lx + x <= cursor.get("x", -1) < lx + x + w and ly + y <= cursor.get("y", -1) < ly + y + h:
         report("the pointer is over the item being measured: move it away and re-run", False)
 
-    # Row marks live in the item's bottom band (top-touching ink is icon art);
-    # column marks in the leading strip (art, plate and text start right of it).
-    # Both windows are slack, not policy reads: a window grown with the policy
-    # would follow a wrong size instead of catching it.
+    # Row marks live in the item's bottom band (top-touching ink is icon art).
+    # The band is slack, not a policy read: a band grown with the policy would
+    # follow a wrong size instead of catching it.
     band = max(10, round(8 * scale))
-    strip = max(12, round(14 * scale))
-    cx, cy, cw, ch = (x, y + h - band, w, band) if mode == "row" else (x, y, w, h)
+    cx, cy, cw, ch = x, y + h - band, w, band
     raw = {}
     for line in out("magick", shot, "-crop", f"{cw}x{ch}+{cx}+{cy}", "+repage", "txt:-").splitlines()[1:]:
         point, rest = line.split(":", 1)
@@ -198,8 +195,7 @@ for attempt in range(2):  # a second frame when the first caught the row mid-set
     ink = {p for p, v in raw.items() if max(abs(a - b) for a, b in zip(v, bg)) > 80}
 
     def groups(points):
-        # Diagonals count as touching: the overflow pill's "+2" is two glyphs, and
-        # they are one mark (joined below when AA splits them).
+        # Diagonals count as touching.
         rest, found = set(points), []
         while rest:
             seed = rest.pop()
@@ -223,46 +219,22 @@ for attempt in range(2):  # a second frame when the first caught the row mid-set
         """A speckle of grain that survived the cut is not ink."""
         return len(group) >= 3
 
-    if mode == "row":
-        marks = [g for g in groups(ink) if min(p[1] for p in g) > 0 and is_mark(g)]
-    else:
-        # What is a mark is decided by where the ink starts, not by how large it
-        # is: past five windows the "+N" pill's glyphs are wider than the icon's
-        # own, so the largest blob in the item is as often a mark as it is the
-        # plate, and reading one as the plate hid the marks behind it.
-        marks = [g for g in groups(ink) if is_mark(g) and min(p[0] for p in g) < strip]
+    marks = [g for g in groups(ink) if min(p[1] for p in g) > 0 and is_mark(g)]
     if marks or attempt > 0:  # fail closed: a real miss fails twice identically
         break
     time.sleep(2)
 if not marks:
     report(f"no marks under {item_id} (is anything running there?)", False)
-# A split "+N" pill (two glyphs sharing one band) rejoins below.
-if item["windows"] > 5 and len(marks) == 6:
-    bi = [box(g) for g in marks]
-    hit = [(i, j) for i in range(6) for j in range(i + 1, 6)
-           if 2 <= max(bi[j][0] - bi[i][2], bi[i][0] - bi[j][2]) <= 3
-           and max(bi[j][1] - bi[i][3], bi[i][1] - bi[j][3]) < 0]
-    if hit:
-        i, j = hit[0]
-        marks = [g for k, g in enumerate(marks) if k != i and k != j] + [marks[i] | marks[j]]
-
 xs = [p[0] for g in marks for p in g]
-ys = [p[1] for g in marks for p in g]
 widths = [box(g)[2] - box(g)[0] + 1 for g in marks]
 heights = [box(g)[3] - box(g)[1] + 1 for g in marks]
-# The item's own centre: the row hangs on it, and a plate's column is centred on
-# the icon art, which sits on the tile's centre line.
-off = (((min(xs) + max(xs) + 1) / 2 + cx) - (x + w / 2) if mode == "row"
-       else ((min(ys) + max(ys) + 1) / 2 + cy) - (y + h / 2))
+# The item's own centre: the row hangs on it.
+off = ((min(xs) + max(xs) + 1) / 2 + cx) - (x + w / 2)
 
 windows = item["windows"]
 expected = 5 if windows > 5 else max(1, min(windows, 5))
-# Shape check: the bar lies along the row, stands upright in a column; past
-# five windows the "+N" pill spans wider than the dots, never just taller.
-if mode == "row":
-    shape = widths[0] > heights[0] if windows == 1 else max(widths) >= 1.8 * min(widths)
-else:
-    shape = heights[0] > widths[0] if windows == 1 else max(heights) >= 1.6 * min(heights) or (windows > 5 and max(widths) >= 1.6 * min(widths))
+# Shape check: the bar lies along the row.
+shape = widths[0] > heights[0] if windows == 1 else max(widths) >= 1.8 * min(widths)
 ok = len(marks) == expected and abs(off) <= tol and shape
 line = (f"{item_id} · {windows} window(s) → {len(marks)} mark(s) of {expected} · "
         f"centre {abs(off):.1f} px off the icon's (tol {tol})")
@@ -293,8 +265,7 @@ fi
 
 counts > /tmp/omadock-ind-before
 # Flat grain-free card, modal anchored at its colour: busy art can't elect the modal.
-set_cfg autohide=false showBackground=true bgColor=#101010 grain=0 labelMode=off \
-  hoverEffect=off
+set_cfg autohide=false showBackground=true bgColor=#101010 grain=0 hoverEffect=off
 open_one
 TARGET=""
 for i in $(seq 40); do
@@ -313,34 +284,18 @@ done
 [ -n "$TARGET" ] || fail "the dock never listed the window this test opened"
 echo "measuring $TARGET, opened with $TERM_APP"
 
-# Each check measures the row\column as it is drawn and compares its ink with
-# the icon's own centre line. Past five windows the run is dense and the count
-# moves into the overflow pill - and a pill is a mark whose ink (its text) sits
-# inside its own cell, so a row that ends in one cannot be judged by where its
-# ink lands. Side indicators draw the same marks as a column, where the pill's
-# ink does span its cell, so the six-window case is checked there.
+# Each check measures the row as it is drawn and compares its ink with the
+# icon's own centre line. Past five windows the count moves into the overflow
+# pill, a mark whose ink (its text) sits inside its own cell, so a row that
+# ends in one cannot be judged by where its ink lands: it is not checked.
 
 # ------------------------------------------------- 1. the accent bar, alone
 wait_windows 1
-check "one window: the focused app's accent bar" row
+check "one window: the focused app's accent bar"
 
 # --------------------------------------- 2. the bar beside its open window
 open_one
 wait_windows 2
-check "two windows: the accent bar and a dot" row
-
-# ----------------------------- 3. the upright column on a label plate
-set_cfg labelMode=always labelBackground=plate labelIndicators=before labelPlateHeight=icon
-check "two windows on a plate: the upright bar and a dot" column
-
-# ------------------------------------------------- 4. the overflow pill
-# One window at a time, waiting for the dock to count each: its model updates
-# on a debounce, so launching on the count alone would overshoot.
-while [ "$(count_of "$TARGET")" -lt 6 ]; do
-  n=$(count_of "$TARGET")
-  open_one
-  wait_windows "$((n + 1))"
-done
-check "six windows on a plate: four dots and the overflow pill" column
+check "two windows: the accent bar and a dot"
 
 echo "INDICATORS PASSED"

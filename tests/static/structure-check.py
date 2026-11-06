@@ -37,12 +37,11 @@ ROOT_CEILINGS = {
 # repo could have doubled unnoticed). Lower one when a suite shrinks; move code
 # out of a suite rather than raising it.
 SHELL_CEILINGS = {
-    "tests/live/indicators.sh": 346,
+    "tests/live/indicators.sh": 301,
     "tests/live/probe.sh": 328,
     "tests/live/place-restore.sh": 250,
     "tests/live/teardown.sh": 125,
     "tests/live/ipc-roundtrip.sh": 115,
-    "tests/live/label-metrics.sh": 110,
     "tests/live/config-fuzz.sh": 84,
     "tests/live/common.sh": 24,
 }

@@ -12,7 +12,6 @@
 //   scale     entering and leaving elements scale (0.6 to 1)
 //   rise      popups and tooltips rise a few pixels as they appear
 //   oneShots  launch/urgent bounce, pulse, glow ripple, glitch
-//   reveal    label typewriter / scramble
 //   fade      opacity eases (Reduced keeps only this)
 
 var LEVELS = ["full", "reduced", "off"]
@@ -30,7 +29,7 @@ function plan(level) {
     level: l,
     fast: on ? 120 : 0, base: on ? 180 : 0, slow: on ? 300 : 0,
     hover: on ? 110 : 0, press: on ? 90 : 0,
-    layout: full, scale: full, rise: full, oneShots: full, reveal: full,
+    layout: full, scale: full, rise: full, oneShots: full,
     fade: on
   }
 }

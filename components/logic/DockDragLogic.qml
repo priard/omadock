@@ -37,7 +37,7 @@ QtObject {
       var slot = folders[i]
       // The held folder has folded away: it is no place to aim at.
       if (slot.lifted) continue
-      // The middle of the folder's tile (icon and any label), past the drop gap.
+      // The middle of the folder's tile, past the drop gap.
       var gap = slot.child.gapWidth || 0
       var iconCenter = slot.x + gap + (slot.width - gap) / 2
       if (rx < iconCenter) return i

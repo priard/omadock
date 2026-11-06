@@ -684,24 +684,6 @@ BorderSurface {
           }
         }
 
-        // The app's label text; blank goes back to its desktop name.
-        ContextRenameRow {
-          visible: root ? DockLabels.labelVisible(root.labelMode, root.labelKind, "app") : false
-          dockRoot: root
-          current: (root && Object.prototype.hasOwnProperty.call(root.labelNames, root.contextAppId)) ? root.labelNames[root.contextAppId] : ""
-          placeholder: {
-            if (!root) return ""
-            var e = DockModel.entryFor(root.appRows, root.contextAppId)
-            return (e && e.name && e.name !== root.contextAppId) ? e.name : DockLabels.prettyAppId(root.contextAppId)
-          }
-          maximumLength: DockLabels.MAX_LABEL_NAME
-          onCommitted: function(name) {
-            if (!root) return
-            root.setLabelName(root.contextAppId, name)
-            root.closeContext()
-          }
-        }
-
         ContextRow {
           text: (root && root.contextWindows > 1) ? Tr.t("menu.closeAllWindows", "Close All Windows") : Tr.t("menu.closeWindow", "Close Window")
           visible: root ? (root.contextWindows > 0) : false

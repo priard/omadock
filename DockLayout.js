@@ -31,8 +31,8 @@ function stretchedBox(place, windowWidth, inset) {
   return null
 }
 
-// Rounds to whole device pixels when a scale is given (label plates keep
-// their edges on the grid); whole logical pixels otherwise.
+// Rounds to whole device pixels when a scale is given; whole logical pixels
+// otherwise.
 function snap(v, dpr) {
   return dpr > 0 ? Math.round(v * dpr) / dpr : Math.round(v)
 }

@@ -15,8 +15,6 @@ Item {
 
   property var groupData: null
   property real homeCenter: 0
-  property int labelSlot: -1
-  readonly property real labelExtra: label.extra
   // A drag in the dock lands before this group: room opens ahead of it.
   property bool dropLineHere: false
   readonly property real dropGap: dropGapItem.width
@@ -68,10 +66,9 @@ Item {
     openPopup()
   }
 
-  width: (root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0) + gitem.labelExtra + gitem.dropGap
+  width: (root ? (root.iconSlot * (root.waveHover ? gitem.magnifyScale : 1)) : 0) + gitem.dropGap
   height: root ? root.iconSlot : 0
-  // An open hover label is drawn over the neighbours.
-  z: Math.round(gitem.magnifyScale * 100) + (label.overlay && label.progress > 0.01 ? 1000 : 0)
+  z: Math.round(gitem.magnifyScale * 100)
 
   readonly property bool isOpen: root ? root.activeAppGroupId === gitem.groupId : false
   readonly property bool isDropTarget: (root && (root.dropTargetGroupId === gitem.groupId || root.dropTargetAppId === gitem.groupId))
@@ -177,7 +174,7 @@ Item {
     id: iconSlot
     width: root ? root.iconSlot : 0
     height: root ? root.iconSlot : 0
-    x: gitem.dropGap + (label.mirror ? gitem.labelExtra - label.lead : label.lead) + Math.round((gitem.width - gitem.dropGap - gitem.labelExtra - width) / 2)
+    x: gitem.dropGap + Math.round((gitem.width - gitem.dropGap - width) / 2)
     anchors.verticalCenter: parent.verticalCenter
 
     Item {
@@ -307,7 +304,7 @@ Item {
                 source: miniCell.miniSource
                 renderSize: miniCell.miniSize * 2
                 iconStyle: root ? root.iconStyle : "original"
-                tint: (root && label.plate && label.shown) ? root.plateIconTintColor : (root ? root.iconTintColor : Color.bar.text)
+                tint: root ? root.iconTintColor : Color.bar.text
                 // Same cell size as a full icon, so the minis match it.
                 grid: root ? Math.round(root.iconGrid * miniCell.miniSize / Math.max(1, root.baseIconArt)) : 8
                 outputScale: root ? root.outputScale : 1
@@ -333,17 +330,12 @@ Item {
     anchors.bottomMargin: Style.space(1) + (root ? root.indicatorLift : 0)
     width: indicatorRow.width
     height: indicatorRow.height
-    // On a plate with side indicators the label draws these as a column.
-    visible: (gitem.hasRunningApps || gitem.isOpen) && !label.sideMarks
+    visible: gitem.hasRunningApps || gitem.isOpen
     z: 2
 
     DockIndicatorRow {
       id: indicatorRow
       rootRef: gitem.rootRef
-      markInk: (label.plate && label.shown) ? label.ink : "transparent"
-      // On a plate the marks rise with it.
-      transform: Translate { y: (label.plate && label.shown) ? label.rise : 0 }
-      moveKey: (label.plate && label.shown) ? label.rise : 0
       windows: gitem.groupWindows
       running: gitem.hasRunningApps || gitem.isOpen
       focused: gitem.isOpen || gitem.hasFocusedMember
@@ -396,20 +388,6 @@ Item {
     }
   }
 
-  // Name beside the tile (DockLabel, policy in DockLabelLogic).
-  DockLabel {
-    id: label
-    z: -1
-    rootRef: gitem.rootRef
-    folded: root ? root.fitHostRef.folds("group", true, false) : false
-    kind: "group"
-    name: gitem.groupName
-    hovered: groupArea.containsMouse && !groupArea.dragging
-    iconBox: iconSlot
-    tileLead: gitem.dropGap
-    slot: gitem.labelSlot
-    marksFrom: indicatorRow
-  }
 
   // Hover tooltip: the member windows as preview cards, like an app's.
   HoverTooltip {
@@ -419,8 +397,7 @@ Item {
     cycleIndex: gitem.previewIndex
     fallbackIcon: Quickshell.iconPath("folder", true)
     hovered: groupArea.containsMouse
-    blocked: (!root || !root.showTooltips || root.activeAppGroupId !== "")
-      || (root && !root.labelTooltipNeeded("group", gitem.tooltipWindows.length > 0, false, label.shortened))
+    blocked: !root || !root.showTooltips || root.activeAppGroupId !== ""
     target: iconSlot
     showTooltips: root ? root.showTooltips : true
     tooltipDelay: root ? root.tooltipDelay : 450

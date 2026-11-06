@@ -36,7 +36,6 @@ PanelWindow {
   // (openSettingsPage), so "about" keeps its id.
   readonly property var pages: [
     { id: "appearance", label: "Appearance", glyph: "󰏘" },
-    { id: "labels", label: "Labels", glyph: "󰓹" },
     { id: "icons", label: "Icons", glyph: "󰩨" },
     { id: "motion", label: "Motion & Effects", glyph: "󰨙" },
     { id: "behavior", label: "Behavior", glyph: "󰒓" },
@@ -507,12 +506,6 @@ PanelWindow {
             root: panel.root
             panel: panel
             visible: panel.page === "appearance"
-          }
-
-          SettingsLabels {
-            root: panel.root
-            panel: panel
-            visible: panel.page === "labels"
           }
 
           SettingsIcons {

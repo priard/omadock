@@ -172,12 +172,11 @@ test("every search key registers exactly one settings row", () => {
 test("the settings module keeps no retired page ids", () => {
   assert.ok(!settingsSources.includes('panel.page === "effects"'))
   assert.ok(!settingsSources.includes('panel.page === "size"'))
+  assert.ok(!settingsSources.includes('panel.page === "labels"'))
 })
 
-test("settings search finds the labels page", () => {
-  const hits = plain(M.searchSettings("typewriter"))
-  assert.ok(hits.some((h) => h.key === "labelReveal" && h.page === "labels"))
-  assert.ok(!plain(M.SETTINGS_SEARCH).some((e) => e.key === "labelPlacement" || e.key === "showLabels"))
+test("settings search has no entries for the removed labels page", () => {
+  assert.ok(!plain(M.SETTINGS_SEARCH).some((e) => e.page === "labels"))
 })
 
 test("settings search finds both sides", () => {

@@ -14,11 +14,6 @@ Item {
   width: tile.root ? tile.root.iconSlot : 0
   height: tile.root ? tile.root.iconSlot : 0
 
-  // A plate of its own in a plate row (TilePlate), like the Omarchy button.
-  // Its place among the plates (DockCard.plateEdges): after every labelled item.
-  readonly property int plateSlot: tile.fit ? tile.fit.shown.button + tile.fit.shown.pinned + tile.fit.shown.running + tile.fit.shown.folders : 0
-  TilePlate { id: plate; rootRef: tile.rootRef; hovered: area.containsMouse; slot: tile.plateSlot }
-
   Text {
     id: glyph
     anchors.horizontalCenter: parent.horizontalCenter
@@ -30,7 +25,7 @@ Item {
     verticalAlignment: Text.AlignVCenter
     text: "»"
     textFormat: Text.PlainText
-    color: tile.root ? (plate.visible ? plate.ink : tile.root.dockForeground) : Color.bar.text
+    color: tile.root ? tile.root.dockForeground : Color.bar.text
     font.family: Style.font.family
     font.pixelSize: Math.round(width * 0.7)
     font.bold: true

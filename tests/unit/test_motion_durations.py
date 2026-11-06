@@ -2,7 +2,7 @@
 
 A literal duration ignores the Animations setting (Reduced / Off). The
 effects that are animations themselves keep their own timings and are
-listed here; they are gated by motion.oneShots / motion.reveal instead."""
+listed here; they are gated by motion.oneShots instead."""
 import pathlib
 import re
 import unittest
@@ -33,9 +33,6 @@ ALLOWED = {
     # glow ripple, glitch burst (oneShots)
     ("components/HoverFx.qml", "property: \"ring\""),
     ("components/HoverFx.qml", "property: \"glitchT\""),
-    # label typewriter / erase (reveal)
-    ("components/DockLabel.qml", "duration: Math.min(300, 25 *"),
-    ("components/DockLabel.qml", "id: eraseAnim"),
     # the settings window's search-hit highlight (not the dock)
     ("components/settings/SettingRow.qml", "ColorAnimation { duration: 350 }"),
     ("components/settings/SectionLabel.qml", "ColorAnimation { duration: 350 }"),

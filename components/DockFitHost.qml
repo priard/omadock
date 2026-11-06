@@ -3,14 +3,13 @@ import Quickshell
 import qs.Commons
 import "../DockFit.js" as DockFit
 import "../DockKeys.js" as DockKeys
-import "../DockLabels.js" as DockLabels
 import "../DockModel.js" as DockModel
 
 // The dock's fit to its screen (DockFit.js): gathers the row's items and
 // sizes from the dock, keeps the plan, and recomputes it a turn later
 // (child Timer: a burst of changes gives one plan). Dock.qml reads plan for
-// its effective icon size and spacing; labels and row items reach this
-// through root.fitHostRef, since Dock.qml has no lines left under its cap.
+// its effective icon size and spacing; row items reach this through
+// root.fitHostRef, since Dock.qml has no lines left under its cap.
 Item {
   id: host
   property var dockRoot: null
@@ -18,19 +17,10 @@ Item {
   width: 0
   height: 0
 
-  // ---- what the planner reads from the labels: each one's full,
-  // unshortened width (DockLabels.withNatural), keyed by label slot.
-  property var labelNaturals: ({})
-  function setNatural(slot, owner, entry) {
-    if (slot < 0) return
-    var next = DockLabels.withNatural(host.labelNaturals, slot, owner, entry)
-    if (next !== host.labelNaturals) host.labelNaturals = next
-  }
-
   // ---- the plan
   // A room in px that replaces the measured one (-1: measure).
   property real availableOverride: -1
-  property var plan: ({ level: 0, labelMax: 0, fold: "none", t: 1, gap: 0, iconSize: 0, overflowFrom: -1, width: 0, rest: 0 })
+  property var plan: ({ level: 0, t: 1, gap: 0, iconSize: 0, overflowFrom: -1, width: 0, rest: 0 })
   property var hidden: ({})
   property var shown: ({ button: 1, pinned: 0, tiles: 0, running: 0, folders: 0, drives: 0 })
   property var hiddenItems: []
@@ -39,23 +29,13 @@ Item {
   readonly property bool frozen: !!host.root && host.root.dockDragActive
   onFrozenChanged: if (!host.frozen) host.schedule()
 
-  // Whether the plan folds a name of this kind.
-  function folds(kind, pinned, running) {
-    var f = host.plan.fold
-    return f === "all" || (f === "apps" && kind === "app") || (f === "closedPinned" && kind === "app" && !!pinned && !running)
-  }
-
   // Spacing as configured, and the minimum the plan may go down to.
-  function gapAt(t) {
-    var max = root.labelPlates ? root.plateSpacing.gap : Style.space(root.itemSpacing)
-    var min = root.labelPlates ? Style.space(4) : 0
-    return min + t * (max - min)
-  }
+  function gapAt(t) { return t * Style.space(root.itemSpacing) }
   // Dock.separatorWidth at spacing fraction t (split sections widen with it).
   function separatorWidthAt(t) {
     if (root.placement.split) return Math.max(Style.space(1), Style.space(root.sectionSpacing) * t + 2 * root.baseRowLeft - 2 * host.gapAt(t))
     if (root.dividerStyle === "none") return -host.gapAt(t)
-    return root.labelPlates ? root.plateSpacing.separator : Style.space(1) + Style.space(7)
+    return Style.space(1) + Style.space(7)
   }
 
   function room() {
@@ -68,25 +48,14 @@ Item {
     return win.width - 4 * Style.gapsOut - insets
   }
 
-  function labelFor(slot, asleep) {
-    var n = host.labelNaturals[slot]
-    if (!n) return null
-    return { text: n.text, inner: n.inner, outer: n.outer, folded: n.folded, asleep: !!asleep }
-  }
-
-  // The row in order, with the label slots the delegates use.
+  // The row in order.
   function items() {
     var out = []
-    var slot = 0
-    if (root.showAppsButton) { out.push({ id: "button", kind: "button", label: null }); slot++ }
+    if (root.showAppsButton) out.push({ id: "button", kind: "button" })
     var pins = root.pinnedRow || []
     for (var i = 0; i < pins.length; i++) {
       var p = pins[i]
-      var isGroup = !!p.group
-      var e = p.entry || {}
-      out.push({ id: "pin:" + root.pinnedRowKey(p), kind: isGroup ? "group" : "app", pinned: true, running: !!e.running,
-        label: host.labelFor(slot, !isGroup && root.labelPinned === "running" && !e.running) })
-      slot++
+      out.push({ id: "pin:" + root.pinnedRowKey(p), kind: p.group ? "group" : "app" })
     }
     var tiles = root.tileModel || []
     if (tiles.length > 0 && root.hasLeftTileSeparator) out.push({ id: "sep:pinTiles", kind: "separator" })
@@ -96,40 +65,33 @@ Item {
     for (var r = 0; r < run.length; r++) {
       var re = run[r]
       if (root.showMinimizedTiles && DockModel.allWindowsMinimized(re.windowList, root.liveWsNameOf, root.minimizedWorkspace)) continue
-      out.push({ id: "run:" + re.appId, kind: "app", pinned: false, running: true, label: host.labelFor(slot, false) })
-      slot++
+      out.push({ id: "run:" + re.appId, kind: "app" })
     }
     var folders = (root.pinnedFolders || []).concat(root.pinnedButtons || [])
     if (root.hasFolderSeparator) out.push({ id: "sep:folders", kind: "separator" })
     for (var f = 0; f < folders.length; f++) {
-      out.push({ id: "folder:" + DockKeys.folderKey(folders[f]), kind: "folder", pinned: true, label: host.labelFor(slot, false) })
-      slot++
+      out.push({ id: "folder:" + DockKeys.folderKey(folders[f]), kind: "folder" })
     }
     var drives = (root.showRemovableDrives && root.mountedDrives) ? root.mountedDrives : []
     if (root.hasDriveSeparator) out.push({ id: "sep:drives", kind: "separator" })
-    for (var d = 0; d < drives.length; d++) out.push({ id: "drive:" + DockKeys.driveKey(drives[d]), kind: "drive", label: null })
+    for (var d = 0; d < drives.length; d++) out.push({ id: "drive:" + DockKeys.driveKey(drives[d]), kind: "drive" })
     return out
   }
 
-  // Each item's last label report (DockFit.retainLabels).
-  property var _labelCache: ({})
   function recompute() {
     if (!root || host.frozen) return
-    var kept = DockFit.retainLabels(host.items(), host._labelCache, host.hidden)
-    host._labelCache = kept.cache
-    var list = kept.items
+    var list = host.items()
     var spread = root.placement.align === "spread"
     var input = {
       available: host.room(), items: list,
-      labels: root.labelMode === "always", labelMax: root.labelMaxWidth, labelMin: 80,
       iconSize: root.baseIconSize, floor: Math.max(24, Math.round(root.baseIconSize / 2)),
       slotPad: Style.space(10), gapMax: host.gapAt(1), gapMin: host.gapAt(0),
       sepMax: host.separatorWidthAt(1), sepMin: host.separatorWidthAt(0),
-      tileFactor: 1.5, wave: root.waveHover, dpr: root.labelPlates ? root.outputScale : 0,
+      tileFactor: 1.5, wave: root.waveHover,
       margin: Style.space(8),
       // Both sides: the gap item is always in the row (DockCard), one more
-      // spacing and its floor of one device pixel (DockLayout.spreadGap).
-      fixedGaps: spread ? 1 : 0, fixedWidth: spread ? (root.labelPlates ? 1 / root.outputScale : 1) : 0
+      // spacing and its floor of one pixel (DockLayout.spreadGap).
+      fixedGaps: spread ? 1 : 0, fixedWidth: spread ? 1 : 0
     }
     var next = DockFit.plan(input, host.plan.iconSize > 0 ? host.plan : null)
     var hid = {}
@@ -157,8 +119,8 @@ Item {
   Timer { id: later; interval: 0; onTriggered: host.recompute() }
   function schedule() { later.restart() }
 
-  // Everything the input reads. The plan's own outputs (iconSize, gapWidth,
-  // labelExtras) are deliberately not here.
+  // Everything the input reads. The plan's own outputs (iconSize, gapWidth)
+  // are deliberately not here.
   Connections {
     target: host.root
     function onPinnedRowChanged() { host.schedule() }
@@ -167,16 +129,12 @@ Item {
     function onPinnedFoldersChanged() { host.schedule() }
     function onPinnedButtonsChanged() { host.schedule() }
     function onMountedDrivesChanged() { host.schedule() }
-    function onLabelModeChanged() { host.schedule() }
-    function onLabelMaxWidthChanged() { host.schedule() }
-    function onLabelPinnedChanged() { host.schedule() }
     function onBaseIconSizeChanged() { host.schedule() }
     function onItemSpacingChanged() { host.schedule() }
     function onSectionSpacingChanged() { host.schedule() }
     function onPlacementChanged() { host.schedule() }
     function onHoverEffectChanged() { host.schedule() }
     function onShowAppsButtonChanged() { host.schedule() }
-    function onLabelBackgroundChanged() { host.schedule() }
     function onShowRemovableDrivesChanged() { host.schedule() }
     function onShowMinimizedTilesChanged() { host.schedule() }
   }
@@ -184,7 +142,6 @@ Item {
     target: host.root ? host.root.dockWindowRef : null
     function onWidthChanged() { host.schedule() }
   }
-  onLabelNaturalsChanged: host.schedule()
   onAvailableOverrideChanged: host.schedule()
   Component.onCompleted: host.schedule()
 

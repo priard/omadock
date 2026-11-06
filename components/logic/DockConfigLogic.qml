@@ -1,7 +1,6 @@
 import QtQuick
 import "../../DockModel.js" as DockModel
 import "../../Buttons.js" as Buttons
-import "../../DockLabels.js" as DockLabels
 import "../../DockLayout.js" as DockLayout
 import "../../DockMotion.js" as DockMotion
 import "../../DockFloating.js" as DockFloating
@@ -21,9 +20,6 @@ QtObject {
       ? parsed.hoverEffect
       : ((parsed && parsed.magnification === false) ? "off" : "zoom")
     root.launchBounce = parsed && parsed.launchBounce !== false
-    // Label looks (the file's, before readLabelConfig runs).
-    var labelLook = DockLabels.pickLabelLook(parsed, root)
-    for (var llk in labelLook) root[llk] = labelLook[llk]
     root.configuredIconSize = parsed && typeof parsed.iconSize === "number" && isFinite(parsed.iconSize) && parsed.iconSize > 0
       ? Math.max(16, Math.min(96, Math.round(parsed.iconSize))) : 0
     if (parsed && (parsed.opacity === "theme" || parsed.opacity === "auto" || parsed.opacity === -1)) {
@@ -147,10 +143,6 @@ QtObject {
     root.badgeStyle = (parsed && parsed.badgeStyle === "dot") ? "dot" : "count"
     root.badgePosition = (parsed && ["top-left", "top-right", "bottom-left", "bottom-right"].indexOf(parsed.badgePosition) >= 0) ? parsed.badgePosition : "top-right"
     root.badgeColor = (parsed && ["accent", "urgent", "neutral"].indexOf(parsed.badgeColor) >= 0) ? parsed.badgeColor : "accent"
-    // Name labels (DockLabels.readLabelConfig), including the first release's
-    // showLabels / labelPlacement / labelContrast spellings.
-    var labels = DockLabels.readLabelConfig(parsed)
-    for (var lk in labels) root[lk] = labels[lk]
     root.urgentSound = parsed ? parsed.urgentSound !== false : true
     root.urgentSoundName = DockModel.cleanSoundName(parsed ? parsed.urgentSoundName : "bell")
     root.revealDelay = parsed && typeof parsed.revealDelay === "number"
@@ -247,7 +239,6 @@ QtObject {
     conf.badgeStyle = root.badgeStyle
     conf.badgePosition = root.badgePosition
     conf.badgeColor = root.badgeColor
-    DockLabels.writeLabelConfig(conf, root)
     conf.urgentSound = root.urgentSound
     conf.urgentSoundName = root.urgentSoundName
     conf.revealDelay = root.revealDelay
