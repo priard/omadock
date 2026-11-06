@@ -2168,7 +2168,7 @@ Item {
       ? WlrKeyboardFocus.OnDemand
       : WlrKeyboardFocus.None
     exclusionMode: (!root.autohide && !root.floatingWatch.yieldDock) ? ExclusionMode.Normal : ExclusionMode.Ignore
-    exclusiveZone: (!root.autohide && !root.floatingWatch.yieldDock) ? Math.round((dockCardComp ? dockCardComp.dockCard.height + dockCardComp.shadowRoom : 0) + root.edgeGap * 2) : 0
+    exclusiveZone: (!root.autohide && !root.floatingWatch.yieldDock) ? Math.round((dockCardComp ? dockCardComp.dockCard.height - (root.showBackground ? 0 : dockCardComp.dockCard.contentTopInset) + dockCardComp.shadowRoom : 0) + root.edgeGap) : 0
     anchors {
       bottom: true
       left: true
