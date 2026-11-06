@@ -54,7 +54,7 @@ Column {
   SliderRow {
     key: "iconContrast"
     label: "Contrast"
-    hint: "Separates the symbol from its backdrop; high values flatten icons to a simple, poster-like shape."
+    hint: "Separates the symbol from its backdrop; high values flatten it."
     visible: root ? (root.iconStyle === "mono" || root.iconStyle === "dots") : false
     minimum: 0
     maximum: 1
@@ -80,7 +80,7 @@ Column {
   SwitchRow {
     key: "iconHoverOriginal"
     label: "Show original on hover"
-    hint: "The icon under the pointer drops the style and shows as shipped. Icons in an opened group follow this too."
+    hint: "The icon under the pointer shows without the style."
     visible: root ? root.iconStyle !== "original" : false
     checked: root ? root.iconHoverOriginal : false
     onToggled: root.setOption("iconHoverOriginal", !root.iconHoverOriginal)
@@ -88,7 +88,7 @@ Column {
   SwitchRow {
     key: "iconHoverReveal"
     label: "Dithered reveal"
-    hint: "The original icon appears cell by cell, rising from the bottom, instead of all at once."
+    hint: "The original icon appears cell by cell from the bottom."
     visible: root ? (root.iconHoverOriginal && (root.iconStyle === "mono" || root.iconStyle === "dots")) : false
     checked: root ? root.iconHoverReveal : false
     onToggled: root.setOption("iconHoverReveal", !root.iconHoverReveal)

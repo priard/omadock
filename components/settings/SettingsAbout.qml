@@ -43,7 +43,7 @@ Column {
   ChoiceRow {
     key: "updateChannel"
     label: "Update channel"
-    hint: "Stable receives verified releases; Experimental gets features early. Switching reloads the shell immediately."
+    hint: "Experimental gets features early. Switching reloads the shell."
     options: [{ value: "stable", label: "Stable" }, { value: "experiment", label: "Experimental" }]
     value: panel.channel !== "" ? panel.channel : "stable"
     onPicked: function(v) {

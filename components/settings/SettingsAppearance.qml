@@ -207,7 +207,7 @@ Column {
   SwitchRow {
     key: "borderOpacityTheme"
     label: "Border opacity from theme"
-    hint: "Derive the rim opacity from the dock's opacity, as themes expect. Turn off to set it by hand."
+    hint: "Derive the rim opacity from the dock's opacity. Off sets it by hand."
     checked: root ? root.borderOpacity < 0 : true
     visible: root ? root.showBorder : true
     onToggled: root.setBorderOpacity(root.borderOpacity < 0 ? 1.0 : -1.0)
@@ -227,7 +227,7 @@ Column {
   ChoiceRow {
     key: "dividerLength"
     label: "Divider length style"
-    hint: "Classic preserves the original icon-height lines. Long uses an adjustable share of the dock height."
+    hint: "Classic matches the icons; Long takes a set share of the dock height."
     visible: root ? (!root.placement.split && root.dividerStyle !== "none") : true
     options: [{ value: "classic", label: "Classic" }, { value: "long", label: "Long" }]
     value: root ? root.dividerGeometry : "classic"
@@ -236,7 +236,7 @@ Column {
   ChoiceRow {
     key: "dividerStyle"
     label: "Divider style"
-    hint: "Theme draws the lines like the border, in its colour, opacity and width. Custom sets the width and opacity by hand. Hidden drops the lines and the room around them, for docks whose plates already show the sections."
+    hint: "Theme matches the border; Custom sets width and opacity; Hidden removes the lines."
     visible: root ? !root.placement.split : true
     options: (root && !root.showBorder)
       ? [{ value: "simple", label: "Simple" }, { value: "custom", label: "Custom" }, { value: "none", label: "Hidden" }]
@@ -315,7 +315,7 @@ Column {
   SwitchRow {
     key: "splitSections"
     label: "Split sections"
-    hint: "Each part between the dividers becomes its own panel, with a gap in place of the divider."
+    hint: "Each part between the dividers becomes its own panel."
     checked: root ? root.splitSections : false
     onToggled: root.setOption("splitSections", !root.splitSections)
   }
@@ -349,7 +349,7 @@ Column {
   SwitchRow {
     key: "appsButton"
     label: "Omarchy button"
-    hint: "The launcher at the start of the dock. Without it, right-click the dock background to reach these settings."
+    hint: "The launcher at the start of the dock. Without it, right-click the dock for settings."
     checked: root ? root.showAppsButton : true
     onToggled: root.setOption("showAppsButton", !root.showAppsButton)
   }

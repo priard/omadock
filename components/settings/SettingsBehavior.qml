@@ -44,7 +44,7 @@ Column {
   ChoiceRow {
     key: "floatingDock"
     label: "Floating workspaces"
-    hint: "Omarchy shows its own dock on floating workspaces. Hiding it runs omarchy plugin disable omarchy.dock; after removing omadock, bring it back with omarchy plugin enable omarchy.dock."
+    hint: "Omarchy shows its own dock on floating workspaces. Pick which one stays."
     visible: root ? root.floatingWatch.available : false
     options: [
       { value: "hide-omarchy", label: "Hide Omarchy dock" },
@@ -79,7 +79,7 @@ Column {
   ChoiceRow {
     key: "restoreWorkspace"
     label: "Restore on"
-    hint: "Where a minimized window comes back to. Windows restores it to the workspace it was minimized from."
+    hint: "Where a minimized window comes back to."
     options: [
       { value: "current", label: "Current workspace" },
       { value: "origin", label: "Original workspace" }
@@ -90,7 +90,7 @@ Column {
   SwitchRow {
     key: "restoreSlot"
     label: "Restore original slot"
-    hint: "Put the window back in the place it held in the tiling layout, not at the end. Only when the layout has not changed in the meantime."
+    hint: "Put the window back where it was in the tiling layout, if the layout has not changed."
     checked: root ? root.restoreSlot : false
     onToggled: root.setOption("restoreSlot", !root.restoreSlot)
   }

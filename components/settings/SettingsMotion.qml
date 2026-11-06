@@ -18,7 +18,7 @@ Column {
   ChoiceRow {
     key: "animations"
     label: "Animations"
-    hint: "Reduced keeps short fades and drops movement and bounces. Off changes everything at once."
+    hint: "Reduced keeps short fades; Off changes everything at once."
     options: [
       { value: "full", label: "Full" },
       { value: "reduced", label: "Reduced" },
@@ -99,7 +99,7 @@ Column {
     SliderRow {
       key: "blurSize"
       label: "Blur strength"
-      hint: "Hyprland has one blur size for everything, so this also changes it for windows and other panels. Back to your own value when blur leaves this mode."
+      hint: "Hyprland has one blur size, so this changes it for windows too."
       visible: root ? root.blurMode === "on" : false
       minimum: 1
       maximum: 20
@@ -110,7 +110,7 @@ Column {
     SliderRow {
       key: "grain"
       label: "Grain"
-      hint: "Film grain over the background. Works on solid, translucent and blurred backgrounds alike."
+      hint: "Film grain over the background."
       minimum: 0
       maximum: 1
       step: 0.05
