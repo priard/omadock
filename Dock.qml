@@ -2301,7 +2301,7 @@ Item {
         dockRoot: root
         open: true
         centerX: root.activeStackX
-        body: folderStackPopoverComp
+        body: folderStackPopoverComp; holdsKeyboard: folderStackPopoverComp.wantsKeyboard
         onDismissed: root.closeFolderStack()
 
         FolderPopup {

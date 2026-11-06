@@ -22,6 +22,51 @@ BorderSurface {
 
   visible: isOpen
 
+  // Quick Look: Space over a file previews it, Space again (or Escape)
+  // closes it. The popup holds the keyboard only while the pointer is on it
+  // or a preview is up, so clicks on the dock keep working otherwise.
+  property var lookEntry: null
+  readonly property bool wantsKeyboard: isOpen && (bodyHover.hovered || lookEntry !== null)
+  readonly property var hoveredEntry: {
+    if (!bodyHover.hovered) return null
+    var p = bodyHover.point.position
+    var view = activeView
+    var i = view.indexAt(p.x, p.y + view.contentY)
+    return i >= 0 && i < entries.length ? entries[i] : null
+  }
+  onWantsKeyboardChanged: if (wantsKeyboard) keys.forceActiveFocus()
+  onIsOpenChanged: if (!isOpen) lookEntry = null
+  // Moving over another file while previewing shows that one instead.
+  onHoveredEntryChanged: if (lookEntry && hoveredEntry && !hoveredEntry.isDir) lookEntry = hoveredEntry
+
+  Item {
+    id: keys
+    focus: true
+    Keys.onPressed: function(event) {
+      if (event.key === Qt.Key_Space) {
+        const e = folderStackPopover.hoveredEntry
+        folderStackPopover.lookEntry = folderStackPopover.lookEntry ? null : (e && !e.isDir ? e : null)
+        event.accepted = true
+      } else if (event.key === Qt.Key_Escape) {
+        if (folderStackPopover.lookEntry) folderStackPopover.lookEntry = null
+        else if (root) root.closeFolderStack()
+        event.accepted = true
+      }
+    }
+  }
+
+  QuickLook {
+    id: quickLook
+    readonly property real surfaceW: folderStackPopover.parent ? folderStackPopover.parent.width : 900
+    entry: folderStackPopover.lookEntry
+    dockRoot: root
+    maxW: Math.min(Style.space(900), surfaceW - Style.space(16))
+    maxH: Math.max(Style.space(160), folderStackPopover.y - Style.space(10))
+    x: Math.max(-folderStackPopover.x, Math.min(surfaceW - folderStackPopover.x - width, (folderStackPopover.width - width) / 2))
+    y: -height - Style.space(8)
+    z: 10
+  }
+
   z: 100
   color: Color.menu.background
   borderSpec: Border.surfaceSpec("menu", "border", Color.menu.border, 1)
@@ -169,6 +214,8 @@ BorderSurface {
     anchors.bottom: footerColumn.top
     anchors.bottomMargin: Style.space(2)
     clip: true
+
+    HoverHandler { id: bodyHover }
 
     // Wheel only: the views do not flick, so pressing an entry can start a
     // drag out instead of scrolling. Handled here, outside the views, since a
