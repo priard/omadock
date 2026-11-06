@@ -4,7 +4,8 @@ import qs.Ui
 import "../strings"
 
 // Base settings row: label + optional hint on the left, control slot on
-// the right. A non-empty key makes the row a search target; SettingsPanel
+// the right; stacked rows (wide controls, ChoiceRow) put the control under
+// the texts, left-aligned, so the hint gets the full width. A non-empty key makes the row a search target; SettingsPanel
 // registers it and sets highlighted when its search hit is picked.
 
 Item {
@@ -16,6 +17,7 @@ Item {
   property string key: ""
   // Set by SettingsPanel while this row is the picked search target.
   property bool highlighted: false
+  property bool stacked: false
   // A row with a key translates its own texts ("setting.<key>.label" and
   // ".hint"); a page passes a row whose text changes already translated.
   readonly property string shownLabel: settingRow.key !== "" ? Tr.t("setting." + settingRow.key + ".label", settingRow.label) : settingRow.label
@@ -32,14 +34,17 @@ Item {
   }
 
   width: parent ? parent.width : Style.space(420)
-  implicitHeight: Math.max(Style.space(44), texts.implicitHeight + Style.spacing.lg * 2, slot.childrenRect.height + Style.spacing.md * 2)
+  implicitHeight: settingRow.stacked
+    ? texts.implicitHeight + Style.spacing.sm + slot.childrenRect.height + Style.spacing.lg * 2
+    : Math.max(Style.space(44), texts.implicitHeight + Style.spacing.lg * 2, slot.childrenRect.height + Style.spacing.md * 2)
 
   Column {
     id: texts
     anchors.left: parent.left
-    anchors.right: slot.left
-    anchors.rightMargin: Style.spacing.xxl
-    anchors.verticalCenter: parent.verticalCenter
+    anchors.right: settingRow.stacked ? parent.right : slot.left
+    anchors.rightMargin: settingRow.stacked ? 0 : Style.spacing.xxl
+    anchors.verticalCenter: settingRow.stacked ? undefined : parent.verticalCenter
+    y: Style.spacing.lg
     spacing: Style.spacing.xxs
 
     // Folder names, group names and paths reach these two unwrapped: they
@@ -67,8 +72,9 @@ Item {
 
   Item {
     id: slot
-    anchors.right: parent.right
-    anchors.verticalCenter: parent.verticalCenter
+    anchors.right: settingRow.stacked ? undefined : parent.right
+    anchors.verticalCenter: settingRow.stacked ? undefined : parent.verticalCenter
+    y: texts.y + texts.height + Style.spacing.sm
     width: childrenRect.width
     height: childrenRect.height
   }

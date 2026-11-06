@@ -3,10 +3,11 @@ import qs.Commons
 import qs.Ui
 import "../strings"
 
-// SettingRow with a button-group choice.
+// SettingRow with a button-group choice, stacked under its texts.
 
 SettingRow {
   id: choiceRow
+  stacked: true
   property var options: []
   property string value: ""
   signal picked(string value)
